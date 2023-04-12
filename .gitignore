@@ -1,3 +1,5 @@
+## 1 - C++
+
 # Prerequisites
 *.d
 
@@ -30,3 +32,29 @@
 *.exe
 *.out
 *.app
+
+
+## 2 - MOOS
+
+# Log files
+*.alog
+*.blog
+*.ylog
+*.klog
+*.slog
+*.moos++
+*._moos
+*._bhv
+.LastOpenedMOOSLogDirectory
+MOOSLog*/
+
+# Build dirs
+build/
+bin/
+lib/
+
+# Temp files (emacs, etc)
+*#
+*~
+targ*.moos
+targ*.bhv

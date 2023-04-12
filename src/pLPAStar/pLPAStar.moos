@@ -1,0 +1,9 @@
+//------------------------------------------------
+// pLPAStar config block
+
+ProcessConfig = pLPAStar
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+
