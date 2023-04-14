@@ -11,6 +11,7 @@ ProcessConfig = uFldNodeBroker
   bridge = src=VIEW_POLYGON
   bridge = src=VIEW_POINT
   bridge = src=VIEW_SEGLIST
+  bridge = src=VEHICLE_CONNECT
   bridge = src=APPCAST
   bridge = src=NODE_PSHARE_VARS
   bridge = src=NODE_REPORT_LOCAL,  alias=NODE_REPORT

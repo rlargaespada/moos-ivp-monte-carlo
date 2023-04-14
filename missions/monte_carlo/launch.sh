@@ -7,15 +7,14 @@
 #  Part 1: Set global var defaults
 #----------------------------------------------------------
 TIME_WARP=1
-JUST_MAKE=false
-GUI=true
+JUST_MAKE="false"
+GUI="true"
 
 PLANNER="lpastar"; _PLANNER_OPTIONS=($PLANNER "dstar_lite" "gcs" "gcs_r")
 LAYOUT="base"; _LAYOUT_OPTIONS=($LAYOUT "uturn" "sturn")
 NUM_TRIALS=100
-MAP="forest_lake"; _MAP_OPTIONS=($MAP "pavlab")
 
-USE_OBS_AVOID=true
+USE_OBS_AVOID="true"
 DRIFT_STRENGTH=0
 DRIFT_DIR="x"; _DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
 
@@ -63,9 +62,6 @@ for ARGI; do
         echo "    Default is \"$LAYOUT\".                        "
         echo "  --num_trials=<num>, -n=<num>                     "
         echo "    Number of Monte Carlo trials to run, must be an integer."
-        echo "  --map=<map>, -m=<map>                   "
-        echo "    Map to use, must be one of [${_MAP_OPTIONS[@]}]."
-        echo "    Default is \"$MAP\".                           "
         echo "  --no_obs_avoid                                   "
         echo "    Do not use pObstacleMgr obstacle avoidance behaviors during trials."
         echo "  --drift_strength=<strength>                      "
@@ -78,9 +74,9 @@ for ARGI; do
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
         TIME_WARP=$ARGI
     elif [ "${ARGI}" = "--just_make" -o "${ARGI}" = "-j" ] ; then
-        JUST_MAKE=true
+        JUST_MAKE="true"
     elif [ "${ARGI}" = "--nogui" ] ; then
-        GUI=false
+        GUI="false"
 
     elif [ "${ARGI::10}" = "--planner=" -o "${ARGI::3}" = "-p=" ] ; then
         PLANNER="$(validate_arg $ARGI ${_PLANNER_OPTIONS[@]})"
@@ -96,15 +92,9 @@ for ARGI; do
         fi
     elif [ "${ARGI::13}" = "--num_trials=" -o "${ARGI::3}" = "-n=" ] ; then
         NUM_TRIALS="${ARGI#*=}"
-    elif [ "${ARGI::9}" = "--map=" -o "${ARGI::3}" = "-m=" ] ; then
-        MAP="$(validate_arg $ARGI ${_MAP_OPTIONS[@]})"
-        if [ $? = 1 ] ; then  # check return code of validate_arg
-            echo $MAP
-            exit 1
-        fi
 
     elif [ "${ARGI}" = "--no_obs_avoid" ] ; then
-        USE_OBS_AVOID=false
+        USE_OBS_AVOID="false"
     elif [ "${ARGI::17}" = "--drift_strength=" ] ; then
         DRIFT_STRENGTH="${ARGI#*=}"
     elif [ "${ARGI::12}" = "--drift_dir=" ] ; then
@@ -123,34 +113,46 @@ done
 #-------------------------------------------------------
 #  Part 3: Create the .moos and .bhv files. 
 #-------------------------------------------------------
+# Shoreside config
 SHORE_MOOSDB="9000"
 SHORE_PSHARE="9200"
+OBS_CONST_FILE="targ_obstacles_const.txt"
+OBS_KNOWN_FILE="targ_obstacles_known.txt"
+OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
+# define obstacle region, pMarineViewer pan based on layout
+
+
+# V1 configuration
 V1_NAME="artemis"
-V1_START_POS="0,-20"  # depends on MAP
-V1_GOAL_POS="0,0"  # depends on MAP
+V1_START_POS="0,-20"  # depends on LAYOUT
+V1_GOAL_POS="0,0"  # depends on LAYOUT
 V1_COLOR="red"
 V1_MOOSDB="9100"
 V1_PSHARE="9300"
 
 
+# generate obstacle files
+nsplug meta_obstacles_const.txt $OBS_CONST_FILE -i -f LAYOUT=$LAYOUT
+
+
 nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
-       PSHARE_PORT=$SHORE_PSHARE    MAP=$MAP    LAYOUT=$LAYOUT       \
-       VNAMES=$V1_NAME    NUM_TRIALS=$NUM_TRIALS    GUI=$GUI
+       PSHARE_PORT=$SHORE_PSHARE  LAYOUT=$LAYOUT    VNAMES=$V1_NAME  \
+       NUM_TRIALS=$NUM_TRIALS    GUI=$GUI                            \
+       OBS_CONST_FILE=$OBS_CONST_FILE
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
        V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
        SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
-       START_POS=$V1_START_POS    VCOLOR=$V1_COLOR    MAP=$MAP
-# # add PLANNER, USE_OBS_AVOID, DRIFT_STRENGTH, DRIFT_DIR, GOAL_POS, IP_ADDR, MAP
+       START_POS=$V1_START_POS    VCOLOR=$V1_COLOR
+# # add PLANNER, USE_OBS_AVOID, DRIFT_STRENGTH, DRIFT_DIR, GOAL_POS, IP_ADDR
 
-# nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$VNAME1    \
-#        START_POS=$START_POS1   LOITER_POS=$LOITER_POS1        \
-# #        COLAVD=$COLAVD          OBAVD=$OBAVD
+nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
+       START_POS=$V1_START_POS
 
-if [ ${JUST_MAKE} = true ] ; then
+if [ ${JUST_MAKE} = "true" ] ; then
     echo "Files assembled; nothing launched; exiting per request."
     exit 0
 fi
@@ -159,11 +161,11 @@ fi
 #----------------------------------------------------------
 #  Part 4: Launch the processes
 #----------------------------------------------------------
-# echo "Launching Shoreside MOOS Community. WARP is" $TIME_WARP
-# pAntler targ_shoreside.moos >& /dev/null &
+echo "Launching Shoreside MOOS Community. WARP is" $TIME_WARP
+pAntler targ_shoreside.moos >& /dev/null &
 
-# echo "Launching $V1_NAME MOOS Community. WARP is" $TIME_WARP
-# pAntler targ_$V1_NAME.moos >& /dev/null &
+echo "Launching $V1_NAME MOOS Community. WARP is" $TIME_WARP
+pAntler targ_$V1_NAME.moos >& /dev/null &
 
-# uMAC -t targ_shoreside.moos
-# kill -- -$$
+uMAC -t targ_shoreside.moos
+kill -- -$$

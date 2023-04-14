@@ -14,7 +14,9 @@ Processconfig = ANTLER
 
   Run = MOOSDB           @ NewConsole = false
   Run = pRealm           @ NewConsole = false
+#ifdef GUI true
   Run = pMarineViewer    @ NewConsole = false
+#endif
   // Run = pLogger          @ NewConsole = false
   // Run = uXMS             @ NewConsole = false
   // Run = uProcessWatch    @ NewConsole = false  need this incase sim fails midway thru
@@ -23,8 +25,7 @@ Processconfig = ANTLER
   Run = pHostInfo        @ NewConsole = false
   Run = uFldShoreBroker  @ NewConsole = false
 
-  // Run = uFldNodeComms    @ NewConsole = false useful for multiple vehicles
-  // Run = uFldObstacleSim  @ NewConsole = false
+  Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_CONSTANT
   // Run = uFldCollObDetect @ NewConsole = false
 }
 
@@ -37,11 +38,8 @@ ProcessConfig = pMarineViewer
   AppTick = 4
   CommsTick = 4
 
-#ifdef MAP pavlab
-  tiff_file            = MIT_SP.tif
-#else
+  // tiff_file            = MIT_SP.tif
   tiff_file            = forrest19.tif
-#endif
 
   set_pan_x            = -90
   set_pan_y            = -280
@@ -118,4 +116,23 @@ ProcessConfig = uFldShoreBroker
 
   qbridge = DEPLOY, RETURN, RETURN_UPDATES
   qbridge = MOOS_MANUAL_OVERRIDE, APPCAST_REQ
+
+  bridge   = src=GIVEN_OBSTACLE
+  bridge   = src=TRACKED_FEATURE
+}
+
+
+ProcessConfig = uFldObstacleSim_CONSTANT
+{
+  AppTick       = 1
+  CommsTick     = 1
+
+  obstacle_file = $(OBS_CONST_FILE)
+  draw_region = false  // region is whole map, so no need to draw
+  post_visuals = $(GUI)
+  post_points = false  // vehicle knows about constant obstacles
+
+  // min_duration = 400
+  // max_duration = 500
+  // refresh_interval = 200
 }
