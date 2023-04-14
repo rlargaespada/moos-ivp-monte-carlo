@@ -1,0 +1,11 @@
+//---------------------------------------------------------
+// pShare config block (created from plugin)
+
+ProcessConfig = pShare
+{
+  AppTick    = 4
+  CommsTick  = 4
+
+  input = route =  $(IP_ADDR):$(PSHARE_PORT)
+}
+

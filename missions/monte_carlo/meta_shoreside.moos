@@ -1,0 +1,121 @@
+//*******************************************************
+// ShoreSide Configuration File
+
+ServerHost = $(IP_ADDR)
+ServerPort = $(SHORE_MOOSDB)
+Community  = shoreside
+
+#include plug_origin_warp.moos
+
+//--------------------------------------------------------
+Processconfig = ANTLER
+{
+  MSBetweenLaunches = 100
+
+  Run = MOOSDB           @ NewConsole = false
+  Run = pRealm           @ NewConsole = false
+  Run = pMarineViewer    @ NewConsole = false
+  // Run = pLogger          @ NewConsole = false
+  // Run = uXMS             @ NewConsole = false
+  // Run = uProcessWatch    @ NewConsole = false  need this incase sim fails midway thru
+
+  Run = pShare           @ NewConsole = false
+  Run = pHostInfo        @ NewConsole = false
+  Run = uFldShoreBroker  @ NewConsole = false
+
+  // Run = uFldNodeComms    @ NewConsole = false useful for multiple vehicles
+  // Run = uFldObstacleSim  @ NewConsole = false
+  // Run = uFldCollObDetect @ NewConsole = false
+}
+
+
+//------------------------------------------
+// pMarineViewer config block
+
+ProcessConfig = pMarineViewer
+{
+  AppTick = 4
+  CommsTick = 4
+
+#ifdef MAP pavlab
+  tiff_file            = MIT_SP.tif
+#else
+  tiff_file            = forrest19.tif
+#endif
+
+  set_pan_x            = -90
+  set_pan_y            = -280
+  zoom                 = 0.65
+  vehicle_shape_scale  = 1.5
+  vehicles_name_mode   = names+shortmode
+  hash_delta           = 50
+  hash_shade           = 0.22
+  hash_viewable        = true
+
+  trails_point_size   = 1
+
+  //op_vertex = x=-83, y=-47,    lwidth=1,lcolor=yellow,looped=true,group=moa
+  //op_vertex = x=-46.4, y=-129.2, lwidth=1,lcolor=yellow,looped=true,group=moa
+  //op_vertex = x=94.6, y=-62.2,   lwidth=1,lcolor=yellow,looped=true,group=moa
+  //op_vertex = x=58,   y=20,    lwidth=1,lcolor=yellow,looped=true,group=moa
+
+  // Appcast configuration
+  appcast_height       = 75
+  appcast_width        = 30
+  appcast_viewable     = true
+  appcast_color_scheme = indigo
+  nodes_font_size      = xlarge
+  procs_font_size      = xlarge
+  appcast_font_size    = large
+
+  // datum_viewable = true
+  // datum_size     = 18
+  // gui_size = small
+
+  // left_context[survey-point] = DEPLOY=true
+  // left_context[survey-point] = MOOS_MANUAL_OVERRIDE=false
+  // left_context[survey-point] = RETURN=false
+
+  right_context[return] = DEPLOY_ALL=true
+  right_context[return] = MOOS_MANUAL_OVERRIDE_ALL=false
+  right_context[return] = RETURN_ALL=false
+
+  scope = PHI_HOST_INFO
+  scope = RETURN_ALL
+  scope = WPT_STAT
+  scope = VIEW_SEGLIST
+  scope = VIEW_POINT
+  scope = VIEW_POLYGON
+  scope = MVIEWER_LCLICK
+  scope = MVIEWER_RCLICK
+
+  button_one = DEPLOY # DEPLOY_ALL=true
+  button_one = MOOS_MANUAL_OVERRIDE_ALL=false # RETURN_ALL=false
+  button_two = RETURN # RETURN_ALL=true
+  // button_three = SLOWER # WPT_UPDATE=speed=1.5
+  // button_four = FASTER # WPT_UPDATE=speed=3.5
+
+  // action  = MENU_KEY=deploy # DEPLOY_ALL = true # RETURN_ALL = false
+  // action+ = MENU_KEY=deploy # MOOS_MANUAL_OVERRIDE_ALL=false
+  // action = RETURN_ALL=true
+  // action = UPDATES_RETURN_ALL=speed=1.4
+}
+
+
+#include plug_pShare.moos
+#include plug_pHostInfo.moos
+//------------------------------------------
+// uFldShoreBroker config block
+
+ProcessConfig = uFldShoreBroker
+{
+  AppTick       = 4
+  CommsTick     = 4
+
+  // Note: [QBRIDGE = FOO]  is shorthand for                    
+  //       [BRIDGE = src=FOO_$V,  alias=FOO] and                
+  //       [BRIDGE = src=FOO_ALL, alias=FOO]
+
+  qbridge = DEPLOY, RETURN, RETURN_UPDATES
+  qbridge = MOOS_MANUAL_OVERRIDE, APPCAST_REQ
+}

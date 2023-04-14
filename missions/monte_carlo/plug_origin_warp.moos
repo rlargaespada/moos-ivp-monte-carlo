@@ -1,0 +1,11 @@
+MOOSTimeWarp = $(WARP)
+
+#ifdef MAP forest_lake
+LatOrigin  = 43.825300
+LongOrigin = -70.330400
+
+#else
+LatOrigin  = 42.358456 
+LongOrigin = -71.087589
+
+#endif
