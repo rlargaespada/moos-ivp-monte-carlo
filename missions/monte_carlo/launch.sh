@@ -22,7 +22,7 @@ DRIFT_DIR="x"; _DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
 #----------------------------------------------------------
-# make sure argument is valid  #? move this into moos app config handling?
+# make sure argument is valid 
 function validate_arg () {
     local user_arg=$1  # save first arg to a variable
     shift  # shift all args to the left (original $1 is lost)
@@ -125,6 +125,8 @@ OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
 # V1 configuration
 V1_NAME="artemis"
+# V1_START_POS="-100,-220"  # depends on LAYOUT
+# V1_GOAL_POS="210,30"  # depends on LAYOUT
 V1_START_POS="0,-20"  # depends on LAYOUT
 V1_GOAL_POS="0,0"  # depends on LAYOUT
 V1_COLOR="red"
@@ -146,11 +148,14 @@ nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
        V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
        SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
-       START_POS=$V1_START_POS    VCOLOR=$V1_COLOR
-# # add PLANNER, USE_OBS_AVOID, DRIFT_STRENGTH, DRIFT_DIR, GOAL_POS, IP_ADDR
+       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
+       VCOLOR=$V1_COLOR
+# add PLANNER, DRIFT_STRENGTH, DRIFT_DIR
 
 nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
-       START_POS=$V1_START_POS
+       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
+       USE_OBS_AVOID=$USE_OBS_AVOID
+
 
 if [ ${JUST_MAKE} = "true" ] ; then
     echo "Files assembled; nothing launched; exiting per request."

@@ -26,6 +26,8 @@ Processconfig = ANTLER
   Run = uFldShoreBroker  @ NewConsole = false
 
   Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_CONSTANT
+  // Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_KNOWN
+  // Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_UNKNOWN
   // Run = uFldCollObDetect @ NewConsole = false
 }
 
@@ -132,7 +134,7 @@ ProcessConfig = uFldObstacleSim_CONSTANT
   post_visuals = $(GUI)
   post_points = false  // vehicle knows about constant obstacles
 
-  // min_duration = 400
-  // max_duration = 500
-  // refresh_interval = 200
+  min_duration = 120
+  max_duration = 180
+  refresh_interval = 100
 }

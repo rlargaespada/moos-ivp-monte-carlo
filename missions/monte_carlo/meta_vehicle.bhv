@@ -4,6 +4,12 @@
 initialize   DEPLOY = false
 initialize   RETURN = false
 
+#ifdef USE_OBS_AVOID true
+initialize USE_OBS_AVOID = true
+#else
+initialize USE_OBS_AVOID = false
+#endif
+
 //----------------------------------------------
 Behavior = BHV_Waypoint
 { 
@@ -76,7 +82,7 @@ Behavior=BHV_Waypoint
   speed = 2.0
   capture_radius = 2.0
   slip_radius = 8.0
-  points = 0,0
+  points = $(GOAL_POS)
 }
 
 
@@ -94,4 +100,26 @@ Behavior=BHV_ConstantSpeed
   speed = 0.5
   duration = 10
   duration_reset = CONST_SPD_RESET=true
+}
+
+
+ //----------------------------------------------
+Behavior=BHV_AvoidObstacleV21
+{
+  name       = avd_obstacles_
+  pwt        = 500
+  condition  = DEPLOY = true
+  condition  = USE_OBS_AVOID = true
+  templating = spawn
+  updates    = OBSTACLE_ALERT
+
+  use_refinery = true
+
+  allowable_ttc = 10
+  // buffer_dist = 3
+  pwt_outer_dist = 20
+  pwt_inner_dist = 10
+  min_util_cpa_dist = 8
+  max_util_cpa_dist = 16
+  completed_dist = 25
 }
