@@ -1,4 +1,10 @@
 //*******************************************************
+// definitions
+#define OBS_REFRESH_INTERVAL 100
+#define OBS_MIN_DURATION 120
+#define OBS_MAX_DURATION 180
+
+//*******************************************************
 // ShoreSide Configuration File
 
 ServerHost = $(IP_ADDR)
@@ -134,7 +140,7 @@ ProcessConfig = uFldObstacleSim_CONSTANT
   post_visuals = $(GUI)
   post_points = false  // vehicle knows about constant obstacles
 
-  min_duration = 120
-  max_duration = 180
-  refresh_interval = 100
+  min_duration = $(OBS_MIN_DURATION)
+  max_duration = $(OBS_MAX_DURATION)
+  refresh_interval = $(OBS_REFRESH_INTERVAL)
 }

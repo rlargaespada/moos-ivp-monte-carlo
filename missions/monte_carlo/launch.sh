@@ -11,7 +11,6 @@ JUST_MAKE="false"
 GUI="true"
 
 PLANNER="lpastar"; _PLANNER_OPTIONS=($PLANNER "dstar_lite" "gcs" "gcs_r")
-LAYOUT="base"; _LAYOUT_OPTIONS=($LAYOUT "uturn" "sturn")
 NUM_TRIALS=100
 
 USE_OBS_AVOID="true"
@@ -57,9 +56,6 @@ for ARGI; do
         echo "  --planner=<planner>, -p=<planner>                "
         echo "    Planner to run, must be one of [${_PLANNER_OPTIONS[@]}]."
         echo "    Default is \"$PLANNER\".                       "
-        echo "  --layout=<layout>, -l=<layout>                   "
-        echo "    Layout of constant obstacles, must be one of [${_LAYOUT_OPTIONS[@]}]."
-        echo "    Default is \"$LAYOUT\".                        "
         echo "  --num_trials=<num>, -n=<num>                     "
         echo "    Number of Monte Carlo trials to run, must be an integer."
         echo "  --no_obs_avoid                                   "
@@ -82,12 +78,6 @@ for ARGI; do
         PLANNER="$(validate_arg $ARGI ${_PLANNER_OPTIONS[@]})"
         if [ $? = 1 ] ; then  # check return code of validate_arg
             echo $PLANNER
-            exit 1
-        fi
-    elif [ "${ARGI::9}" = "--layout=" -o "${ARGI::3}" = "-l=" ] ; then
-        LAYOUT="$(validate_arg $ARGI ${_LAYOUT_OPTIONS[@]})"
-        if [ $? = 1 ] ; then  # check return code of validate_arg
-            echo $LAYOUT
             exit 1
         fi
     elif [ "${ARGI::13}" = "--num_trials=" -o "${ARGI::3}" = "-n=" ] ; then
@@ -120,29 +110,25 @@ OBS_CONST_FILE="targ_obstacles_const.txt"
 OBS_KNOWN_FILE="targ_obstacles_known.txt"
 OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
-# define obstacle region, pMarineViewer pan based on layout
-
-
 # V1 configuration
 V1_NAME="artemis"
-# V1_START_POS="-100,-220"  # depends on LAYOUT
-# V1_GOAL_POS="210,30"  # depends on LAYOUT
-V1_START_POS="0,-20"  # depends on LAYOUT
-V1_GOAL_POS="0,0"  # depends on LAYOUT
+# V1_START_POS="-100,-220"
+# V1_GOAL_POS="210,30"
+V1_START_POS="0,-20"
+V1_GOAL_POS="0,0"
 V1_COLOR="red"
 V1_MOOSDB="9100"
 V1_PSHARE="9300"
 
 
 # generate obstacle files
-nsplug meta_obstacles_const.txt $OBS_CONST_FILE -i -f LAYOUT=$LAYOUT
+nsplug meta_obstacles_const.txt $OBS_CONST_FILE -i -f
 
 
 nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
-       PSHARE_PORT=$SHORE_PSHARE  LAYOUT=$LAYOUT    VNAMES=$V1_NAME  \
-       NUM_TRIALS=$NUM_TRIALS    GUI=$GUI                            \
-       OBS_CONST_FILE=$OBS_CONST_FILE
+       PSHARE_PORT=$SHORE_PSHARE    VNAMES=$V1_NAME    GUI=$GUI      \
+       NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
