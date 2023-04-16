@@ -17,6 +17,12 @@ USE_OBS_AVOID="true"
 DRIFT_STRENGTH=0
 DRIFT_DIR="x"; _DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
 
+RANDOM_OBS_REGION="-135,-200:-90,-50:45,17:250,17:250,-50:185,-200"
+RANDOM_OBS_MIN_RANGE=10
+RANDOM_OBS_MIN_SIZE=8
+RANDOM_OBS_MAX_SIZE=15
+RANDOM_OBS_AMT=7
+
 
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
@@ -112,10 +118,9 @@ OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
 # V1 configuration
 V1_NAME="artemis"
-# V1_START_POS="-100,-220"
-# V1_GOAL_POS="210,30"
-V1_START_POS="0,-20"
-V1_GOAL_POS="0,0"
+V1_START_POS="-100,-220"
+V1_GOAL_POS="210,30"
+# V1_GOAL_POS="0,0"
 V1_COLOR="red"
 V1_MOOSDB="9100"
 V1_PSHARE="9300"
@@ -123,12 +128,18 @@ V1_PSHARE="9300"
 
 # generate obstacle files
 nsplug meta_obstacles_const.txt $OBS_CONST_FILE -i -f
-
+gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
+              --min_size=$RANDOM_OBS_MIN_SIZE --max_size=$RANDOM_OBS_MAX_SIZE \
+              --amt=$RANDOM_OBS_AMT > $OBS_KNOWN_FILE
+# gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
+#               --min_size=$RANDOM_OBS_MIN_SIZE --max_size=$RANDOM_OBS_MAX_SIZE \
+#               --amt=$RANDOM_OBS_AMT > $OBS_UNKNOWN_FILE
 
 nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
        PSHARE_PORT=$SHORE_PSHARE    VNAMES=$V1_NAME    GUI=$GUI      \
        NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
+       OBS_KNOWN_FILE=$OBS_KNOWN_FILE
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \

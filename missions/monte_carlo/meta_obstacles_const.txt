@@ -1,6 +1,6 @@
 # gen_obstacles
 
-# region is entire map
+# region is entire forest_lake map
 region    = pts={-159,91:-159,-357:276,-357:276,91}
 # additional settings are unused since these obstacles aren't regenerated
 min_range = 2

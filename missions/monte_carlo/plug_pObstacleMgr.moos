@@ -5,7 +5,7 @@ ProcessConfig = pObstacleMgr
 
 
   post_dist_to_polys = close
-  alert_range = 40   //? set by OBM_ALERT_REQUEST?
+  alert_range = 30   //? set by OBM_ALERT_REQUEST?
   given_max_duration = 180
 
   // parameters for handling unknown obstacles

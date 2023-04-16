@@ -32,7 +32,7 @@ Processconfig = ANTLER
   Run = uFldShoreBroker  @ NewConsole = false
 
   Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_CONSTANT
-  // Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_KNOWN
+  Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_KNOWN
   // Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_UNKNOWN
   // Run = uFldCollObDetect @ NewConsole = false
 }
@@ -136,11 +136,83 @@ ProcessConfig = uFldObstacleSim_CONSTANT
   CommsTick     = 1
 
   obstacle_file = $(OBS_CONST_FILE)
-  draw_region = false  // region is whole map, so no need to draw
   post_visuals = $(GUI)
-  post_points = false  // vehicle knows about constant obstacles
 
+  // parameters to draw constant obstacles
+  // poly_vert_color = gray50
+  // poly_edge_color = gray50
+  // poly_fill_color = white
+  // poly_label_color = invisible
+
+  // poly_vert_size = 1
+  // poly_edge_size = 1
+  // poly_transparency = 0.15
+
+  poly_vert_color = sandybrown
+  poly_edge_color = sandybrown
+  // poly_fill_color = saddlebrowm  //! this is misspelled
+  poly_fill_color = chocolate
+  poly_label_color = invisible
+
+  poly_vert_size = 1
+  poly_edge_size = 1
+  poly_transparency = 0.15
+
+  // obstacle region is whole map, so no need to draw
+  draw_region = false
+
+  // vehicle knows about constant obstacles, so post polygons
+  post_points = false
+
+  // obstacle repost configuration
   min_duration = $(OBS_MIN_DURATION)
   max_duration = $(OBS_MAX_DURATION)
   refresh_interval = $(OBS_REFRESH_INTERVAL)
+
+  // obstacle reset configuration
+  // for constant obstacles, don't want obstacles to reset
+  // obstacle region is entire map
+  // vehicles will never exit obstacle region, so obstacles
+  // will never reset
+  // reset_interval = -1  // don't allow timed resets
+  reset_range = 1000  // add a buffer to map limits for safety
+}
+
+
+ProcessConfig = uFldObstacleSim_KNOWN
+{
+  AppTick       = 1
+  CommsTick     = 1
+
+  obstacle_file = $(OBS_KNOWN_FILE)
+  post_visuals = $(GUI)
+
+  // parameters to draw known obstacles
+  poly_vert_color = royalblue
+  poly_edge_color = royalblue
+  poly_fill_color = cornflowerblue
+  poly_label_color = invisible
+
+  poly_vert_size = 1
+  poly_edge_size = 1
+  poly_transparency = 0.15
+
+  // parameters to draw obstacle region
+  draw_region = true
+  region_vert_color = hotpink
+  region_edge_color = hotpink
+
+  // vehicle knows about known obstacles, so post polygons
+  post_points = false
+
+  // obstacle repost configuration
+  min_duration = $(OBS_MIN_DURATION)
+  max_duration = $(OBS_MAX_DURATION)
+  refresh_interval = $(OBS_REFRESH_INTERVAL)
+
+  // obstacle reset configuration
+  // reset_interval = -1  // don't allow timed resets
+  reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
+  reset_range = 10
+  reuse_ids = true
 }

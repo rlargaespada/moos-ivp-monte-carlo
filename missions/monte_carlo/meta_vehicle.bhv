@@ -10,10 +10,84 @@ initialize USE_OBS_AVOID = true
 initialize USE_OBS_AVOID = false
 #endif
 
-//----------------------------------------------
-Behavior = BHV_Waypoint
+// //----------------------------------------------
+// Behavior = BHV_Waypoint
+// { 
+//   name      = waypt_survey
+//   pwt       = 100
+//   condition = RETURN = false
+//   condition = DEPLOY = true
+//   endflag   = RETURN = true
+//   UPDATES   = WPT_UPDATE
+//   perpetual = true
+
+
+//   speed_alt = 1.2
+//   use_alt_speed = true
+//   lead = 8
+//   lead_damper = 1
+//   lead_to_start = true
+//   speed = 12  // meters per second
+//   capture_line = true
+//   capture_radius = 5.0
+//   slip_radius = 15.0
+//   efficiency_measure = all
+
+//   // points = pts={107.5,-53.5:112,-43.8:112,-46.1:111.7,-49.3:108.3,-52.7:107.7,-53.3}
+//   polygon = 60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40
+
+//   order = normal
+//   repeat  = 3
+
+//   visual_hints = nextpt_color=yellow
+//   visual_hints = nextpt_vertex_size=8
+//   visual_hints = nextpt_lcolor=gray70
+//   visual_hints = vertex_color=dodger_blue, edge_color=white
+//   visual_hints = vertex_size=5, edge_size=1
+
+// //             lead = 8
+// //      lead_damper = 1
+// //            speed = 2   // meters per second
+// //     capture_line = true
+// //   capture_radius = 5.0
+// //      slip_radius = 15.0
+// //           repeat = 1
+
+// // #ifdef REGION  pavlab
+// //     points = 60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40
+// // #else
+// //     points = 60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40
+// // #endif
+
+// //     visual_hints = nextpt_color=yellow
+// //     visual_hints = nextpt_vertex_size=8
+// //     visual_hints = nextpt_lcolor=gray70
+// //     visual_hints = vertex_color=dodger_blue, edge_color=white
+// //     visual_hints = vertex_size=5, edge_size=1
+// }
+
+
+// ----------------------------------------------
+Behavior=BHV_Waypoint
+{
+  name       = waypt_return
+  pwt        = 100
+  condition  = RETURN = true
+  condition  = DEPLOY = true
+  perpetual  = true
+  endflag    = RETURN = false
+  endflag    = DEPLOY = false
+  endflag    = MISSION = complete
+
+  speed = 2.0
+  capture_radius = 2.0
+  slip_radius = 8.0
+  points = $(START_POS)
+}
+
+Behavior=BHV_Waypoint
 { 
-  name      = waypt_survey
+  name      = waypt_monte_carlo
   pwt       = 100
   condition = RETURN = false
   condition = DEPLOY = true
@@ -33,56 +107,20 @@ Behavior = BHV_Waypoint
   slip_radius = 15.0
   efficiency_measure = all
 
-  // points = pts={107.5,-53.5:112,-43.8:112,-46.1:111.7,-49.3:108.3,-52.7:107.7,-53.3}
-  polygon = 60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40
+  // include edges of obstacle behavior?
+  points = $(START_POS):$(GOAL_POS)
 
   order = normal
-  repeat  = 3
+  repeat = 3
+  //! in final sim, performance analyzer will stop this behavior
+  // repeat = forever
+  cycleflag = REACHED_GOAL=true
 
   visual_hints = nextpt_color=yellow
   visual_hints = nextpt_vertex_size=8
   visual_hints = nextpt_lcolor=gray70
   visual_hints = vertex_color=dodger_blue, edge_color=white
   visual_hints = vertex_size=5, edge_size=1
-
-//             lead = 8
-//      lead_damper = 1
-//            speed = 2   // meters per second
-//     capture_line = true
-//   capture_radius = 5.0
-//      slip_radius = 15.0
-//           repeat = 1
-
-// #ifdef REGION  pavlab
-//     points = 60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40
-// #else
-//     points = 60,-40 : 60,-160 : 150,-160 : 180,-100 : 150,-40
-// #endif
-
-//     visual_hints = nextpt_color=yellow
-//     visual_hints = nextpt_vertex_size=8
-//     visual_hints = nextpt_lcolor=gray70
-//     visual_hints = vertex_color=dodger_blue, edge_color=white
-//     visual_hints = vertex_size=5, edge_size=1
-}
-
-
-//----------------------------------------------
-Behavior=BHV_Waypoint
-{
-  name       = waypt_return
-  pwt        = 100
-  condition  = RETURN = true
-  condition  = DEPLOY = true
-  perpetual  = true
-  endflag    = RETURN = false
-  endflag    = DEPLOY = false
-  endflag    = MISSION = complete
-
-  speed = 2.0
-  capture_radius = 2.0
-  slip_radius = 8.0
-  points = $(GOAL_POS)
 }
 
 
@@ -116,10 +154,26 @@ Behavior=BHV_AvoidObstacleV21
   use_refinery = true
 
   allowable_ttc = 10
-  // buffer_dist = 3
   pwt_outer_dist = 20
   pwt_inner_dist = 10
   min_util_cpa_dist = 8
   max_util_cpa_dist = 16
   completed_dist = 25
+
+  visual_hints = obstacle_edge_color = white
+  visual_hints = obstacle_vertex_color = gray60
+  visual_hints = obstacle_fill_color = gray60
+  visual_hints = obstacle_fill_transparency = 0.5
+  
+  visual_hints = buffer_min_edge_color = gray60
+  visual_hints = buffer_min_vertex_color = dodger_blue
+  visual_hints = buffer_min_vertex_size = 1
+  visual_hints = buffer_min_fill_color = gray70
+  visual_hints = buffer_min_fill_transparency = 0.25
+
+  visual_hints = buffer_max_edge_color = gray60
+  visual_hints = buffer_max_vertex_color = dodger_blue
+  visual_hints = buffer_max_vertex_size = 0
+  visual_hints = buffer_max_fill_color = gray80
+  visual_hints = buffer_max_fill_transparency = 0.1
 }
