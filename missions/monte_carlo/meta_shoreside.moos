@@ -34,7 +34,9 @@ Processconfig = ANTLER
   Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_CONSTANT
   Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_KNOWN
   // Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_UNKNOWN
-  // Run = uFldCollObDetect @ NewConsole = false
+
+  Run = uFldCollObDetect @ NewConsole = false
+  Run = uFldPathCheck    @ NewConsole = false
 }
 
 
@@ -98,8 +100,6 @@ ProcessConfig = pMarineViewer
   button_one = DEPLOY # DEPLOY_ALL=true
   button_one = MOOS_MANUAL_OVERRIDE_ALL=false # RETURN_ALL=false
   button_two = RETURN # RETURN_ALL=true
-  // button_three = SLOWER # WPT_UPDATE=speed=1.5
-  // button_four = FASTER # WPT_UPDATE=speed=3.5
 
   // action  = MENU_KEY=deploy # DEPLOY_ALL = true # RETURN_ALL = false
   // action+ = MENU_KEY=deploy # MOOS_MANUAL_OVERRIDE_ALL=false
@@ -118,8 +118,8 @@ ProcessConfig = uFldShoreBroker
   AppTick       = 4
   CommsTick     = 4
 
-  // Note: [QBRIDGE = FOO]  is shorthand for                    
-  //       [BRIDGE = src=FOO_$V,  alias=FOO] and                
+  // Note: [QBRIDGE = FOO]  is shorthand for
+  //       [BRIDGE = src=FOO_$V,  alias=FOO] and
   //       [BRIDGE = src=FOO_ALL, alias=FOO]
 
   qbridge = DEPLOY, RETURN, RETURN_UPDATES
@@ -257,4 +257,37 @@ ProcessConfig = uFldObstacleSim_UNKNOWN
   reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
   reset_range = 10
   reuse_ids = true
+}
+
+
+//------------------------------------------
+// uFldCollObDetect config block
+ProcessConfig = uFldCollObDetect
+{
+  AppTick   = 4
+  CommsTick = 4
+
+  collision_dist   = 5
+  near_miss_dist   = 10
+  encounter_dist   = 20
+
+  // post encounter info
+  collision_flag   = OB_ENCOUNTER = vehicle=$UP_VNAME, obs=$ID, dist=$DIST
+  near_miss_flag   = OB_NEAR_MISS = vehicle=$UP_VNAME, obs=$ID, dist=$DIST
+  encounter_flag   = OB_COLLISION = vehicle=$UP_VNAME, obs=$ID, dist=$DIST
+
+  // each encounter post total count
+  collision_flag   = COLLISION_COUNT = $COLL_CNT
+  near_miss_flag   = NEAR_MISS_COUNT = $MISS_CNT
+  encounter_flag   = ENCOUNTER_COUNT = $ENC_CNT
+}
+
+
+//------------------------------------------
+// uFldPathCheck config block
+
+ProcessConfig = uFldPathCheck
+{
+  AppTick       = 2
+  CommsTick     = 2
 }
