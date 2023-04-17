@@ -11,16 +11,16 @@ Community  = $(VNAME)
 Processconfig = ANTLER
 {
   MSBetweenLaunches = 50
-   
+
   Run = MOOSDB           @ NewConsole = false
   Run = pRealm           @ NewConsole = false
-//   Run = pLogger          @ NewConsole = false
+  // Run = pLogger          @ NewConsole = false
 //   Run = uProcessWatch    @ NewConsole = false
 //   Run = uLoadWatch       @ NewConsole = false
 
-  Run = uSimMarine       @ NewConsole = false
+  Run = uSimMarineV22    @ NewConsole = false
   Run = pNodeReporter    @ NewConsole = false
-  Run = pMarinePID       @ NewConsole = false
+  Run = pMarinePIDV22    @ NewConsole = false
   Run = pHelmIvP         @ NewConsole = false
 
   Run = pShare           @ NewConsole = false
@@ -34,20 +34,68 @@ Processconfig = ANTLER
 //------------------------------------------
 // uSimMarineV22 config block
 
-ProcessConfig = uSimMarine
+ProcessConfig = uSimMarineV22
 {
   AppTick  	= 4
   CommsTick	= 4
 
-  start_pos = $(START_POS)
-  start_heading = 180
   prefix = NAV
+
+  // start pose
+  start_x = $(START_X)
+  start_y = $(START_Y)
+  start_heading = 35  // depends on map/layout
+  // start_speed = 0
+  // start_depth = 0
+
+  // drift config
+#ifdef DRIFT_DIR x
+  drift_x = $(DRIFT_STRENGTH)
+  drift_y = 0
+#elseifdef DRIFT_DIR y
+  drift_x = 0
+  drift_y = $(DRIFT_STRENGTH)
+#endif
+  rotate_speed = 0  //? maybe in the future
+
+  // keep default turn speed, acceleration parameters
+  // depth and buoyancy rate unused
+  // no wind conditions
 
   turn_rate = 40
   thrust_map = 0:0, 20:1, 40:2, 60:3, 80:4, 100:5
-  thrust_reflect = true
 
-  deprecated_ok = true
+  // post_des_thrust      = DESIRED_THRUSTX
+  // post_des_rudder      = DESIRED_RUDDERX
+
+  // // BELOW are embedded PID controller config params
+  // depth_control = false
+
+  // // Yaw PID controller
+  // yaw_pid_kp             = 1,2
+  // yaw_pid_kd             = 0.0
+  // yaw_pid_ki             = 0.3
+  // yaw_pid_integral_limit = 0.07
+
+  // // Speed PID controller
+  // speed_pid_kp           = 1.0
+  // speed_pid_kd           = 0.0
+  // speed_pid_ki           = 0.0
+  // speed_pid_integral_limit = 0.07
+
+  // // Maximums
+  // maxrudder  = 100
+  // maxthrust  = 100
+
+  // // A non-zero SPEED_FACTOR overrides use of SPEED_PID
+  // // Will set DESIRED_THRUST = DESIRED_SPEED * SPEED_FACTOR
+  // speed_factor = 20
+
+  // addd wormhole from goal back to start
+  wormhole = tag=next_trial, madrid_poly={format=radial, x=$(GOAL_X), y=$(GOAL_Y), radius=8, pts=6}
+  wormhole = tag=next_trial, weber_poly={format=radial, x=$(START_X), y=$(START_Y), radius=8, pts=6}
+  wormhole = tag=next_trial, connection=from_madrid
+
 }
 
 
@@ -67,7 +115,7 @@ ProcessConfig = pNodeReporter
 //------------------------------------------
 // pMarinePIDV22 config block
 
-ProcessConfig = pMarinePID
+ProcessConfig = pMarinePIDV22
 {
   AppTick    = 20
   CommsTick  = 20
@@ -95,8 +143,6 @@ ProcessConfig = pMarinePID
   // A non-zero SPEED_FACTOR overrides use of SPEED_PID
   // Will set DESIRED_THRUST = DESIRED_SPEED * SPEED_FACTOR
   speed_factor = 20
-
-  deprecated_ok = true
 }
 
 
@@ -108,7 +154,7 @@ ProcessConfig = pHelmIvP
   AppTick    = 4
   CommsTick  = 4
 
-  behaviors    = targ_$(VNAME).bhv  
+  behaviors    = targ_$(VNAME).bhv
   verbose      = false
   domain       = course:0:359:360
   domain       = speed:0:4:41

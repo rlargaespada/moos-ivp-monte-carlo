@@ -107,7 +107,6 @@ Behavior=BHV_Waypoint
   slip_radius = 15.0
   efficiency_measure = all
 
-  // include edges of obstacle behavior?
   points = $(START_POS):$(GOAL_POS)
 
   order = normal

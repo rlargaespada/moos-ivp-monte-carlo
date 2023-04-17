@@ -101,9 +101,10 @@ OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
 # V1 configuration
 V1_NAME="artemis"
-V1_START_POS="-100,-220"
-V1_GOAL_POS="210,30"
-# V1_GOAL_POS="0,0"
+V1_START_X="-100"; V1_START_Y="-220"
+V1_START_POS="$V1_START_X,$V1_START_Y"
+V1_GOAL_X="210"; V1_GOAL_Y="30"
+V1_GOAL_POS="$V1_GOAL_X,$V1_GOAL_Y"
 V1_COLOR="red"
 V1_MOOSDB="9100"
 V1_PSHARE="9300"
@@ -134,7 +135,8 @@ nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
        V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
        SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
-       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
+       START_X=$V1_START_X     START_Y=$V1_START_Y                 \
+       GOAL_X=$V1_GOAL_X    GOAL_Y=$V1_GOAL_Y                      \
        VCOLOR=$V1_COLOR    PLANNER=$PLANNER    DRIFT_DIR=$DRIFT_DIR\
        DRIFT_STRENGTH=$DRIFT_STRENGTH
 
