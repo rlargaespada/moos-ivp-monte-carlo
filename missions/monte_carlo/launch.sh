@@ -49,6 +49,8 @@ for ARGI; do
         echo "  --drift_dir=<dir>                                "
         echo "    Direction of drifts disturbing vehicle motion, must be one of "
         echo "    [${DRIFT_DIR_OPTIONS[@]}]. Default is \"$DRIFT_DIR\"."
+        echo "    If random, drifts are produced with a random direction "
+        echo "    and a magnitude between 0.5 and 2."
         exit 0;
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
         TIME_WARP=$ARGI

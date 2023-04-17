@@ -22,6 +22,9 @@ Processconfig = ANTLER
   Run = pNodeReporter    @ NewConsole = false
   Run = pMarinePIDV22    @ NewConsole = false
   Run = pHelmIvP         @ NewConsole = false
+#ifdef DRIFT_DIR random
+  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_DRIFTS
+#endif
 
   Run = pShare           @ NewConsole = false
   Run = pHostInfo        @ NewConsole = false
@@ -158,6 +161,38 @@ ProcessConfig = pHelmIvP
   verbose      = false
   domain       = course:0:359:360
   domain       = speed:0:4:41
+}
+
+
+//------------------------------------------
+// uTimerScript_RANDOM_DRIFTS configuration  block
+// simulates random drift vectors on vehicle
+
+ProcessConfig = uTimerScript_RANDOM_DRIFTS
+{
+  AppTick   = 2
+  CommsTick = 2
+  paused        = false
+  reset_max     = unlimited
+  reset_time    = end
+  delay_reset   = 10
+  time_warp     = 0.25:2.0
+  script_name   = RANDOM_DRIFTS
+  script_atomic = true
+
+  randvar = varname=ANG, min=0,   max=359, key=at_reset
+  randvar = varname=MAG, min=0.5, max=2, key=at_reset
+
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=0
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=2
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=4
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=6
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=8
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=10
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=12
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=14
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=16
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", Time=18
 }
 
 
