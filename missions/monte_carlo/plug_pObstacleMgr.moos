@@ -3,7 +3,6 @@ ProcessConfig = pObstacleMgr
   AppTick   = 4
   CommsTick = 4
 
-
   post_dist_to_polys = close
   alert_range = 30   //? set by OBM_ALERT_REQUEST?
   given_max_duration = 180
@@ -20,7 +19,7 @@ ProcessConfig = pObstacleMgr
 //   lasso_radius = 5
 
   // visualization configuration
-  post_view_polys = true  //handled by obstacle avoidance behaviors
+  post_view_polys = false  //handled by obstacle avoidance behaviors
 
   // To squeeze more viewer efficiency when large # of obstacles:
   poly_label_thresh = 25     // Set label color=off if amt>25

@@ -124,9 +124,9 @@ ProcessConfig = uFldShoreBroker
 
   qbridge = DEPLOY, RETURN, RETURN_UPDATES
   qbridge = MOOS_MANUAL_OVERRIDE, APPCAST_REQ
+  qbridge = TRACKED_FEATURE
 
   bridge   = src=GIVEN_OBSTACLE
-  bridge   = src=TRACKED_FEATURE
 }
 
 
@@ -150,7 +150,6 @@ ProcessConfig = uFldObstacleSim_CONSTANT
 
   poly_vert_color = sandybrown
   poly_edge_color = sandybrown
-  // poly_fill_color = saddlebrowm  //! this is misspelled
   poly_fill_color = chocolate
   poly_label_color = invisible
 
@@ -191,7 +190,8 @@ ProcessConfig = uFldObstacleSim_KNOWN
   poly_vert_color = royalblue
   poly_edge_color = royalblue
   poly_fill_color = cornflowerblue
-  poly_label_color = invisible
+  // poly_label_color = invisible
+  poly_label_color = white
 
   poly_vert_size = 1
   poly_edge_size = 1
@@ -204,6 +204,48 @@ ProcessConfig = uFldObstacleSim_KNOWN
 
   // vehicle knows about known obstacles, so post polygons
   post_points = false
+
+  // obstacle repost configuration
+  min_duration = $(OBS_MIN_DURATION)
+  max_duration = $(OBS_MAX_DURATION)
+  refresh_interval = $(OBS_REFRESH_INTERVAL)
+
+  // obstacle reset configuration
+  // reset_interval = -1  // don't allow timed resets
+  reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
+  reset_range = 10
+  reuse_ids = true
+}
+
+
+ProcessConfig = uFldObstacleSim_UNKNOWN
+{
+  AppTick       = 1
+  CommsTick     = 1
+
+  obstacle_file = $(OBS_UNKNOWN_FILE)
+  post_visuals = $(GUI)
+
+  // parameters to draw known obstacles
+  poly_vert_color = orangered
+  poly_edge_color = orangered
+  poly_fill_color = coral
+  // poly_label_color = invisible
+  poly_label_color = white
+
+  poly_vert_size = 1
+  poly_edge_size = 1
+  poly_transparency = 0.15
+
+  // parameters to draw obstacle region
+  draw_region = false
+  region_vert_color = hotpink
+  region_edge_color = hotpink
+
+  // vehicle doesn't know about unknown obstacles, so post points
+  post_points = true
+  rate_points = 5
+  point_size = 5
 
   // obstacle repost configuration
   min_duration = $(OBS_MIN_DURATION)

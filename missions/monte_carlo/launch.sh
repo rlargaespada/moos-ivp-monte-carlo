@@ -10,12 +10,12 @@ TIME_WARP=1
 JUST_MAKE="false"
 GUI="true"
 
-PLANNER="lpastar"; _PLANNER_OPTIONS=($PLANNER "dstar_lite" "gcs" "gcs_r")
+PLANNER="lpastar"; PLANNER_OPTIONS=($PLANNER "dstar_lite" "gcs" "gcs_r")
 NUM_TRIALS=100
 
 USE_OBS_AVOID="true"
 DRIFT_STRENGTH=0
-DRIFT_DIR="x"; _DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
+DRIFT_DIR="x"; DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
 
 RANDOM_OBS_REGION="-135,-200:-90,-50:45,17:250,17:250,-50:185,-200"
 RANDOM_OBS_MIN_RANGE=10
@@ -27,29 +27,6 @@ RANDOM_OBS_AMT=7
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
 #----------------------------------------------------------
-# make sure argument is valid 
-function validate_arg () {
-    local user_arg=$1  # save first arg to a variable
-    shift  # shift all args to the left (original $1 is lost)
-    local valid_args=("$@")  # build array with remaining args
-
-    local arg_value=${user_arg#*=}  # remove arg name by splitting at "="
-    arg_value=$(echo "$arg_value" | awk '{print tolower($0)}')  # make arg lowercase
-
-    # if arg is not valid, exit with code 1
-    if [[ ! " ${valid_args[*]} " =~ " ${arg_value} " ]]; then
-        echo "launch.sh Bad arg: \"$user_arg\";"
-        echo "Value must be one of [${valid_args[@]}];"
-        echo "Exiting with code: 1"
-        return 1;
-    fi
-
-    # arg is valid, return arg to script
-    echo "$arg_value"
-    return 0
-}
-
-
 for ARGI; do
     if [ "${ARGI}" = "--help" -o "${ARGI}" = "-h" ] ; then
         echo "launch.sh [SWITCHES] [time_warp]                   "
@@ -60,7 +37,7 @@ for ARGI; do
         echo "  --nogui                                          "
     	echo "    Do not launch pMarineViewer GUI with vehicle.  "
         echo "  --planner=<planner>, -p=<planner>                "
-        echo "    Planner to run, must be one of [${_PLANNER_OPTIONS[@]}]."
+        echo "    Planner to run, must be one of [${PLANNER_OPTIONS[@]}]."
         echo "    Default is \"$PLANNER\".                       "
         echo "  --num_trials=<num>, -n=<num>                     "
         echo "    Number of Monte Carlo trials to run, must be an integer."
@@ -71,7 +48,7 @@ for ARGI; do
         echo "    0 for no drifts.                               "
         echo "  --drift_dir=<dir>                                "
         echo "    Direction of drifts disturbing vehicle motion, must be one of "
-        echo "    [${_DRIFT_DIR_OPTIONS[@]}]. Default is \"$DRIFT_DIR\"."
+        echo "    [${DRIFT_DIR_OPTIONS[@]}]. Default is \"$DRIFT_DIR\"."
         exit 0;
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
         TIME_WARP=$ARGI
@@ -81,10 +58,13 @@ for ARGI; do
         GUI="false"
 
     elif [ "${ARGI::10}" = "--planner=" -o "${ARGI::3}" = "-p=" ] ; then
-        PLANNER="$(validate_arg $ARGI ${_PLANNER_OPTIONS[@]})"
-        if [ $? = 1 ] ; then  # check return code of validate_arg
-            echo $PLANNER
-            exit 1
+        PLANNER=${ARGI#*=}  # remove arg name by splitting at "="
+        PLANNER=$(echo $PLANNER | sed "s/[A-Z]/\L&/g")  # make arg lowercase
+        if [[ ! " ${PLANNER_OPTIONS[*]} " =~ " ${PLANNER} " ]]; then
+            echo "launch.sh Bad arg: $ARGI"
+            echo "Value must be one of [${PLANNER_OPTIONS[@]}]"
+            echo "Exiting with code: 1"
+            exit 1;
         fi
     elif [ "${ARGI::13}" = "--num_trials=" -o "${ARGI::3}" = "-n=" ] ; then
         NUM_TRIALS="${ARGI#*=}"
@@ -94,10 +74,13 @@ for ARGI; do
     elif [ "${ARGI::17}" = "--drift_strength=" ] ; then
         DRIFT_STRENGTH="${ARGI#*=}"
     elif [ "${ARGI::12}" = "--drift_dir=" ] ; then
-        DRIFT_DIR="$(validate_arg $ARGI ${_DRIFT_DIR_OPTIONS[@]})"
-        if [ $? = 1 ] ; then  # check return code of validate_arg
-            echo $DRIFT_DIR
-            exit 1
+        DRIFT_DIR=${ARGI#*=}  # remove arg name by splitting at "="
+        DRIFT_DIR=$(echo $DRIFT_DIR | sed "s/[A-Z]/\L&/g")  # make arg lowercase
+        if [[ ! " ${DRIFT_DIR_OPTIONS[*]} " =~ " ${DRIFT_DIR} " ]]; then
+            echo "launch.sh Bad arg: $ARGI"
+            echo "Value must be one of [${DRIFT_DIR_OPTIONS[@]}]"
+            echo "Exiting with code: 1"
+            exit 1;
         fi
     else 
         echo "launch.sh Bad arg:" $ARGI " Exiting with code: 1"
@@ -129,25 +112,31 @@ V1_PSHARE="9300"
 # generate obstacle files
 nsplug meta_obstacles_const.txt $OBS_CONST_FILE -i -f
 gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
-              --min_size=$RANDOM_OBS_MIN_SIZE --max_size=$RANDOM_OBS_MAX_SIZE \
+              --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
               --amt=$RANDOM_OBS_AMT > $OBS_KNOWN_FILE
+# sleep 1  # sleep for a bit so gen_obstacles gets a new random seed (based on sys time)
 # gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
-#               --min_size=$RANDOM_OBS_MIN_SIZE --max_size=$RANDOM_OBS_MAX_SIZE \
+#               --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
 #               --amt=$RANDOM_OBS_AMT > $OBS_UNKNOWN_FILE
+
+# append to labels in obstacle files so that known/unknown obstacles have unique labels
+# sed -i 's/label=ob_[0-9]\+/&_known/' $OBS_KNOWN_FILE
+# sed -i 's/label=ob_[0-9]\+/&_unknown/' $OBS_UNKNOWN_FILE
+
 
 nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
        PSHARE_PORT=$SHORE_PSHARE    VNAMES=$V1_NAME    GUI=$GUI      \
        NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
-       OBS_KNOWN_FILE=$OBS_KNOWN_FILE
+       OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
        V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
        SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
        START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
-       VCOLOR=$V1_COLOR
-# add PLANNER, DRIFT_STRENGTH, DRIFT_DIR
+       VCOLOR=$V1_COLOR    PLANNER=$PLANNER    DRIFT_DIR=$DRIFT_DIR\
+       DRIFT_STRENGTH=$DRIFT_STRENGTH
 
 nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
        START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
