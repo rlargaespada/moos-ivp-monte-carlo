@@ -14,14 +14,15 @@ Processconfig = ANTLER
 
   Run = MOOSDB           @ NewConsole = false
   Run = pRealm           @ NewConsole = false
+  Run = pHelmIvP         @ NewConsole = false
+
   // Run = pLogger          @ NewConsole = false
 //   Run = uProcessWatch    @ NewConsole = false
 //   Run = uLoadWatch       @ NewConsole = false
 
   Run = uSimMarineV22    @ NewConsole = false
-  Run = pNodeReporter    @ NewConsole = false
   Run = pMarinePIDV22    @ NewConsole = false
-  Run = pHelmIvP         @ NewConsole = false
+  Run = pNodeReporter    @ NewConsole = false
 #ifdef DRIFT_DIR random
   Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_DRIFTS
 #endif
@@ -32,6 +33,26 @@ Processconfig = ANTLER
 
   Run = pObstacleMgr     @ NewConsole = false
 }
+
+
+//----------------------------------------------------
+// pHelmIvP Configuration Block
+
+ProcessConfig = pHelmIvP
+{
+  AppTick    = 4
+  CommsTick  = 4
+
+  behaviors    = targ_$(VNAME).bhv
+  verbose      = false
+  domain       = course:0:359:360
+  domain       = speed:0:4:41
+}
+
+
+// todo: determine which variables to log for pLogger
+// todo uProcessWatch: determine which vehicle apps to watch, where to write failures. add to NodeBroker
+// todo: determine thresholds for uLoadWatch
 
 
 //------------------------------------------
@@ -103,21 +124,7 @@ ProcessConfig = uSimMarineV22
 
 
 //------------------------------------------
-// pNodeReporter config block
-
-ProcessConfig = pNodeReporter
-{
-  AppTick    = 2
-  CommsTick	 = 2
-
-  platform_type = kayak
-  platform_color = $(VCOLOR)
-}
-
-
-//------------------------------------------
 // pMarinePIDV22 config block
-
 ProcessConfig = pMarinePIDV22
 {
   AppTick    = 20
@@ -149,18 +156,16 @@ ProcessConfig = pMarinePIDV22
 }
 
 
-//----------------------------------------------------
-// pHelmIvP Configuration Block
+//------------------------------------------
+// pNodeReporter config block
 
-ProcessConfig = pHelmIvP
+ProcessConfig = pNodeReporter
 {
-  AppTick    = 4
-  CommsTick  = 4
+  AppTick    = 2
+  CommsTick	 = 2
 
-  behaviors    = targ_$(VNAME).bhv
-  verbose      = false
-  domain       = course:0:359:360
-  domain       = speed:0:4:41
+  platform_type = kayak
+  platform_color = $(VCOLOR)
 }
 
 

@@ -23,9 +23,10 @@ Processconfig = ANTLER
 #ifdef GUI true
   Run = pMarineViewer    @ NewConsole = false
 #endif
+
   // Run = pLogger          @ NewConsole = false
   // Run = uXMS             @ NewConsole = false
-  // Run = uProcessWatch    @ NewConsole = false  need this incase sim fails midway thru
+  // Run = pDeadManPost     @ NewConsole = false
 
   Run = pShare           @ NewConsole = false
   Run = pHostInfo        @ NewConsole = false
@@ -48,26 +49,26 @@ ProcessConfig = pMarineViewer
   AppTick = 4
   CommsTick = 4
 
+  // BackView Options
   // tiff_file            = MIT_SP.tif
   tiff_file            = forrest19.tif
-
   set_pan_x            = -90
   set_pan_y            = -280
   zoom                 = 0.65
   vehicle_shape_scale  = 1.5
-  vehicles_name_mode   = names+shortmode
+
+  // BackView Pull-Down Menu
   hash_delta           = 50
   hash_shade           = 0.22
   hash_viewable        = true
 
-  trails_point_size   = 1
+  // GeoAttributes Pull-Down Menu
+  // use all defaults
 
-  //op_vertex = x=-83, y=-47,    lwidth=1,lcolor=yellow,looped=true,group=moa
-  //op_vertex = x=-46.4, y=-129.2, lwidth=1,lcolor=yellow,looped=true,group=moa
-  //op_vertex = x=94.6, y=-62.2,   lwidth=1,lcolor=yellow,looped=true,group=moa
-  //op_vertex = x=58,   y=20,    lwidth=1,lcolor=yellow,looped=true,group=moa
+  // Vehicles Pull-Down Menu
+  // use all defaults
 
-  // Appcast configuration
+  // InfoCasting Pull-Down Menu
   appcast_height       = 75
   appcast_width        = 30
   appcast_viewable     = true
@@ -76,18 +77,14 @@ ProcessConfig = pMarineViewer
   procs_font_size      = xlarge
   appcast_font_size    = large
 
-  // datum_viewable = true
-  // datum_size     = 18
-  // gui_size = small
+  // Context Pull-Down Menu
+  // todo: add context to update start and goal positions
 
-  // left_context[survey-point] = DEPLOY=true
-  // left_context[survey-point] = MOOS_MANUAL_OVERRIDE=false
-  // left_context[survey-point] = RETURN=false
+  // Exclusion Filter
+  // leave empty
 
-  right_context[return] = DEPLOY_ALL=true
-  right_context[return] = MOOS_MANUAL_OVERRIDE_ALL=false
-  right_context[return] = RETURN_ALL=false
-
+  // MOOS-Scope Pull-Down Menu
+  // todo: choose which variables to scope on
   scope = PHI_HOST_INFO
   scope = RETURN_ALL
   scope = WPT_STAT
@@ -97,15 +94,21 @@ ProcessConfig = pMarineViewer
   scope = MVIEWER_LCLICK
   scope = MVIEWER_RCLICK
 
+  // Action Pull-Down Menu
+  // todo: determine what actions might be useful
+
+  // Button Configuration
+  // todo: add buttons: RESET_TRIAL, SKIP_TRIAL, RESET_ALL_TRIALS,
+  // todo: START_TRIALS, END_TRIALS, PAUSE/UNPAUSE_TRIAL
   button_one = DEPLOY # DEPLOY_ALL=true
   button_one = MOOS_MANUAL_OVERRIDE_ALL=false # RETURN_ALL=false
   button_two = RETURN # RETURN_ALL=true
-
-  // action  = MENU_KEY=deploy # DEPLOY_ALL = true # RETURN_ALL = false
-  // action+ = MENU_KEY=deploy # MOOS_MANUAL_OVERRIDE_ALL=false
-  // action = RETURN_ALL=true
-  // action = UPDATES_RETURN_ALL=speed=1.4
 }
+
+
+// todo: determine which variables to log for pLogger
+// todo: determine which variables to scope for uXMS
+// todo: determine which variables to monitor for pDeadManPost
 
 
 #include plug_pShare.moos
@@ -127,6 +130,7 @@ ProcessConfig = uFldShoreBroker
   qbridge = TRACKED_FEATURE
 
   bridge   = src=GIVEN_OBSTACLE
+  //todo: determine if any more variables need to be shared
 }
 
 
@@ -139,15 +143,6 @@ ProcessConfig = uFldObstacleSim_CONSTANT
   post_visuals = $(GUI)
 
   // parameters to draw constant obstacles
-  // poly_vert_color = gray50
-  // poly_edge_color = gray50
-  // poly_fill_color = white
-  // poly_label_color = invisible
-
-  // poly_vert_size = 1
-  // poly_edge_size = 1
-  // poly_transparency = 0.15
-
   poly_vert_color = sandybrown
   poly_edge_color = sandybrown
   poly_fill_color = chocolate
@@ -173,7 +168,6 @@ ProcessConfig = uFldObstacleSim_CONSTANT
   // obstacle region is entire map
   // vehicles will never exit obstacle region, so obstacles
   // will never reset
-  // reset_interval = -1  // don't allow timed resets
   reset_range = 1000  // add a buffer to map limits for safety
 }
 
@@ -211,7 +205,8 @@ ProcessConfig = uFldObstacleSim_KNOWN
   refresh_interval = $(OBS_REFRESH_INTERVAL)
 
   // obstacle reset configuration
-  // reset_interval = -1  // don't allow timed resets
+  // don't allow timed resets
+  // todo: disallow timed resets
   reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
   reset_range = 10
   reuse_ids = true
@@ -253,10 +248,13 @@ ProcessConfig = uFldObstacleSim_UNKNOWN
   refresh_interval = $(OBS_REFRESH_INTERVAL)
 
   // obstacle reset configuration
-  // reset_interval = -1  // don't allow timed resets
+  // don't allow timed resets
+  // todo: disallow timed resets
   reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
   reset_range = 10
   reuse_ids = true
+
+  sensor_range = 50
 }
 
 
