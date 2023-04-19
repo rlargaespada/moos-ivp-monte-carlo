@@ -1,42 +1,92 @@
 //*******************************************************
 // Vehicle behavior configuration file
 
-initialize   DEPLOY = false
-initialize   RETURN = false
-
+// turn off obstacle avoidance if user requests
 #ifdef USE_OBS_AVOID true
 initialize USE_OBS_AVOID = true
 #else
 initialize USE_OBS_AVOID = false
 #endif
 
+// if there's no gui, start running trials without user input
+#ifdef GUI
+initialize DEPLOY = true
+#else
+initialize DEPLOY = false
+#endif
 
-// ----------------------------------------------
-Behavior=BHV_Waypoint
-{
-  name       = waypt_return
-  pwt        = 100
-  condition  = RETURN = true
-  condition  = DEPLOY = true
-  perpetual  = true
-  endflag    = RETURN = false
-  endflag    = DEPLOY = false
-  endflag    = MISSION = complete
 
-  speed = 2.0
-  capture_radius = 2.0
-  slip_radius = 8.0
-  points = $(START_POS)
+// define vehicle modes for simulation
+initialize PATH_FOUND = true  // todo: this should be false to start, set by planner
+initialize PATH_COMPLETE = false
+
+Set MODE = ACTIVE {
+  DEPLOY = true
+} INACTIVE
+
+Set MODE = PLAN_PATH {
+  MODE = ACTIVE
+  PATH_FOUND != true
+  PATH_COMPLETE != true
 }
 
+Set MODE = TRAVERSE_PATH {
+  MODE = ACTIVE
+  PATH_FOUND = true
+  PATH_COMPLETE != true
+}
+
+Set MODE = TRIAL_COMPLETE {
+  MODE = ACTIVE
+  PATH_COMPLETE = true
+}
+
+
+//----------------------------------------------
+Behavior = BHV_StationKeep
+{
+  // General Behavior Parameters
+  // ---------------------------
+  name         = station-keep
+  pwt          = 100
+  condition    = (MODE == INACTIVE) or ((MODE == PLAN_PATH) or (MODE == TRIAL_COMPLETE))
+  perpetual  = true
+  updates = STATION_UPDATES
+  inactiveflag = STATIONING = false
+  activeflag   = STATIONING = true
+
+
+  // Parameters specific to this behavior
+  // ------------------------------------
+  center_activate = false   // default
+  hibernation_radius = -1      // default
+  inner_radius = 8       // default
+  outer_radius = 15      // default
+  outer_speed  = 1.2     // default
+  transit_speed  = 2.5     // default
+  station_pt = $(START_POS)
+  swing_time = 2
+
+  visual_hints = vertex_size  = 1           // default
+  visual_hints = edge_color   = light_blue  // default
+  visual_hints = edge_size    = 1           // default
+  visual_hints = label_color  = white       // default
+  visual_hints = vertex_color = red         // default
+}
+
+
+//----------------------------------------------
 Behavior=BHV_Waypoint
 { 
   name      = waypt_monte_carlo
   pwt       = 100
-  condition = RETURN = false
-  condition = DEPLOY = true
-  endflag   = RETURN = true
-  UPDATES   = WPT_UPDATE
+  // condition = RETURN = false
+  // condition = DEPLOY = true
+  condition = MODE == TRAVERSE_PATH
+  // endflag = PATH_COMPLETE = true  // todo: this should be added
+  endflag = DEPLOY = false  // todo: this should be set by performance analyzer
+  // endflag   = RETURN = true
+  UPDATES   = PATH_UPDATE
   perpetual = true
 
 
@@ -54,8 +104,8 @@ Behavior=BHV_Waypoint
   points = $(START_POS):$(GOAL_POS)
 
   order = normal
+  // todo: instead of repeating, performance analyzer should control this behavior
   repeat = 3
-  //! in final sim, performance analyzer will stop this behavior
   // repeat = forever
   cycleflag = REACHED_GOAL=true
 
@@ -68,28 +118,11 @@ Behavior=BHV_Waypoint
 
 
 //----------------------------------------------
-Behavior=BHV_ConstantSpeed
-{
-  name       = const_speed
-  pwt        = 200
-  condition  = SPD=true
-  condition  = DEPLOY = true
-  perpetual  = true
-  updates    = SPEED_UPDATE
-  endflag    = SPD = false
-
-  speed = 0.5
-  duration = 10
-  duration_reset = CONST_SPD_RESET=true
-}
-
-
- //----------------------------------------------
 Behavior=BHV_AvoidObstacleV21
 {
   name       = avd_obstacles_
   pwt        = 500
-  condition  = DEPLOY = true
+  condition  = MODE == ACTIVE  //? should this also be on when INACTIVE?
   condition  = USE_OBS_AVOID = true
   templating = spawn
   updates    = OBSTACLE_ALERT
@@ -120,3 +153,6 @@ Behavior=BHV_AvoidObstacleV21
   visual_hints = buffer_max_fill_color = gray80
   visual_hints = buffer_max_fill_transparency = 0.1
 }
+
+
+// todo: consider using an OpRegion behavior to stay inside the map

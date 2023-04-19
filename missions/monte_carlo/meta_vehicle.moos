@@ -115,7 +115,8 @@ ProcessConfig = uSimMarineV22
   // // Will set DESIRED_THRUST = DESIRED_SPEED * SPEED_FACTOR
   // speed_factor = 20
 
-  // addd wormhole from goal back to start
+  // todo: maybe remove these and use USM_RESET instead
+  // add wormhole from goal back to start
   wormhole = tag=next_trial, madrid_poly={format=radial, x=$(GOAL_X), y=$(GOAL_Y), radius=8, pts=6}
   wormhole = tag=next_trial, weber_poly={format=radial, x=$(START_X), y=$(START_Y), radius=8, pts=6}
   wormhole = tag=next_trial, connection=from_madrid

@@ -144,7 +144,7 @@ nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
 
 nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
        START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
-       USE_OBS_AVOID=$USE_OBS_AVOID
+       USE_OBS_AVOID=$USE_OBS_AVOID    GUI=$GUI
 
 
 if [ ${JUST_MAKE} = "true" ] ; then
