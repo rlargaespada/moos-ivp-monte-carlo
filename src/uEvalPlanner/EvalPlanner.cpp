@@ -1,11 +1,12 @@
 /************************************************************/
-/*    NAME: Raul Largaespada                                              */
+/*    NAME: Raul Largaespada                                */
 /*    ORGN: MIT, Cambridge MA                               */
-/*    FILE: EvalPlanner.cpp                                        */
-/*    DATE: December 29th, 1963                             */
+/*    FILE: EvalPlanner.cpp                                 */
+/*    DATE: April 19th, 2023                                */
 /************************************************************/
 
 #include <iterator>
+#include <string>
 #include "MBUtils.h"
 #include "ACTable.h"
 #include "EvalPlanner.h"
@@ -34,28 +35,28 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
   AppCastingMOOSApp::OnNewMail(NewMail);
 
   MOOSMSG_LIST::iterator p;
-  for(p=NewMail.begin(); p!=NewMail.end(); p++) {
+  for (p=NewMail.begin(); p != NewMail.end(); p++) {
     CMOOSMsg &msg = *p;
     string key    = msg.GetKey();
 
-#if 0 // Keep these around just for template
+#if 0  // Keep these around just for template
     string comm  = msg.GetCommunity();
     double dval  = msg.GetDouble();
-    string sval  = msg.GetString(); 
+    string sval  = msg.GetString();
     string msrc  = msg.GetSource();
     double mtime = msg.GetTime();
     bool   mdbl  = msg.IsDouble();
     bool   mstr  = msg.IsString();
 #endif
 
-     if(key == "FOO") 
-       cout << "great!";
+    if (key == "FOO")
+      cout << "great!";
 
-     else if(key != "APPCAST_REQ") // handled by AppCastingMOOSApp
-       reportRunWarning("Unhandled Mail: " + key);
-   }
-	
-   return(true);
+    else if (key != "APPCAST_REQ")  // handled by AppCastingMOOSApp
+      reportRunWarning("Unhandled Mail: " + key);
+  }
+
+  return(true);
 }
 
 //---------------------------------------------------------
@@ -63,8 +64,8 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 
 bool EvalPlanner::OnConnectToServer()
 {
-   registerVariables();
-   return(true);
+  registerVariables();
+  return(true);
 }
 
 //---------------------------------------------------------
@@ -89,30 +90,28 @@ bool EvalPlanner::OnStartUp()
 
   STRING_LIST sParams;
   m_MissionReader.EnableVerbatimQuoting(false);
-  if(!m_MissionReader.GetConfiguration(GetAppName(), sParams))
+  if (!m_MissionReader.GetConfiguration(GetAppName(), sParams))
     reportConfigWarning("No config block found for " + GetAppName());
 
   STRING_LIST::iterator p;
-  for(p=sParams.begin(); p!=sParams.end(); p++) {
+  for (p=sParams.begin(); p != sParams.end(); p++) {
     string orig  = *p;
     string line  = *p;
     string param = tolower(biteStringX(line, '='));
     string value = line;
 
     bool handled = false;
-    if(param == "foo") {
+    if (param == "foo") {
       handled = true;
-    }
-    else if(param == "bar") {
+    } else if (param == "bar") {
       handled = true;
     }
 
-    if(!handled)
+    if (!handled)
       reportUnhandledConfigWarning(orig);
-
   }
-  
-  registerVariables();	
+
+  registerVariables();
   return(true);
 }
 
@@ -129,7 +128,7 @@ void EvalPlanner::registerVariables()
 //------------------------------------------------------------
 // Procedure: buildReport()
 
-bool EvalPlanner::buildReport() 
+bool EvalPlanner::buildReport()
 {
   m_msgs << "============================================" << endl;
   m_msgs << "File:                                       " << endl;
