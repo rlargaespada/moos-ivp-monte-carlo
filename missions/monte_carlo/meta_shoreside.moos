@@ -86,7 +86,6 @@ ProcessConfig = pMarineViewer
   // MOOS-Scope Pull-Down Menu
   // todo: choose which variables to scope on
   scope = PHI_HOST_INFO
-  scope = RETURN_ALL
   scope = WPT_STAT
   scope = VIEW_SEGLIST
   scope = VIEW_POINT
@@ -98,11 +97,17 @@ ProcessConfig = pMarineViewer
   // todo: determine what actions might be useful
 
   // Button Configuration
-  // todo: add buttons: RESET_TRIAL, SKIP_TRIAL, RESET_ALL_TRIALS,
-  // todo: START_TRIALS, END_TRIALS, PAUSE/UNPAUSE_TRIAL
-  button_one = DEPLOY # DEPLOY_ALL=true
-  button_one = MOOS_MANUAL_OVERRIDE_ALL=false # RETURN_ALL=false
-  button_two = RETURN # RETURN_ALL=true
+  button_one = LAUNCH_SIM # DEPLOY_ALL=true # MOOS_MANUAL_OVERRIDE_ALL=false
+  button_one = RESET_SIM_REQUESTED=true
+  button_two = END_SIM # DEPLOY_ALL=false # END_SIM_REQUESTED=true
+
+  button_three = PAUSE_SIM # USM_SIM_PAUSED_ALL=true
+  button_four = UNPAUSE_SIM # USM_SIM_PAUSED_ALL=false
+
+  button_five = RESET_TRIAL # RESET_TRIAL_REQUESTED=true
+  button_six = RESET_SIM # RESET_SIM_REQUESTED=true
+  button_seven = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=true
+  
 }
 
 
@@ -125,8 +130,9 @@ ProcessConfig = uFldShoreBroker
   //       [BRIDGE = src=FOO_$V,  alias=FOO] and
   //       [BRIDGE = src=FOO_ALL, alias=FOO]
 
-  qbridge = DEPLOY, RETURN, RETURN_UPDATES
+  qbridge = DEPLOY
   qbridge = MOOS_MANUAL_OVERRIDE, APPCAST_REQ
+  qbridge = USM_SIM_PAUSED, USM_RESET
   qbridge = TRACKED_FEATURE
 
   bridge   = src=GIVEN_OBSTACLE
