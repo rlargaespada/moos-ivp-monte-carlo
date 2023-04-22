@@ -52,7 +52,8 @@ void EvalPlanner::clearTotalCounts() {
 }
 
 
-void EvalPlanner::clearTrialCounts() {
+void EvalPlanner::clearTrialData() {
+  // todo: also need to clear metrics
   m_encounter_count_trial = 0;
   m_near_miss_count_trial = 0;
   m_collision_count_trial = 0;
@@ -63,7 +64,7 @@ void EvalPlanner::initialize() {
   clearPendingRequests();
   clearMetrics();
   clearTotalCounts();
-  clearTrialCounts();
+  clearTrialData();
 }
 
 //---------------------------------------------------------
@@ -181,24 +182,28 @@ bool EvalPlanner::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
+  bool return_val;
+
   // todo: think more on when to clear requests, handle multiple conflicting requests
   if (m_end_sim_pending) {
-    handleEndSim();
+    return_val = handleEndSim();
     clearPendingRequests();
   } else if (m_reset_sim_pending) {
-    handleResetSim();
+    return_val = handleResetSim();
     clearPendingRequests();
-  // } else if (m_reset_trial_pending) {
-  //   handleResetTrial();
-  // } else if (m_skip_trial_pending) {
-  //   handleSkipTrial();
+  } else if (m_reset_trial_pending) {
+    return_val = handleResetTrial();
+    clearPendingRequests();
+  } else if (m_skip_trial_pending) {
+    return_val = handleSkipTrial();
+    clearPendingRequests();
   } else if (m_next_trial_pending) {
-    handleNextTrial();
+    return_val = handleNextTrial();
     clearPendingRequests();
   }
 
   AppCastingMOOSApp::PostReport();
-  return(true);
+  return (return_val);
 }
 
 
@@ -221,10 +226,35 @@ bool EvalPlanner::handleResetSim() {
 }
 
 
+bool EvalPlanner::handleResetTrial() {
+  reportEvent("Trial " + intToString(m_completed_trials) + " reset");
+  clearTrialData();
+  bool return_val{true};
+  return_val = resetVehicles() && return_val;
+  return_val = requestNewPath() && return_val;
+
+  return (return_val);
+}
+
+
+bool EvalPlanner::handleSkipTrial() {
+  reportEvent("Trial " + intToString(m_completed_trials) + " skipped");
+  clearTrialData();
+
+  bool return_val{true};
+  return_val = resetVehicles() && return_val;
+  return_val = resetObstacles() && return_val;
+  return_val = requestNewPath() && return_val;
+
+  return (return_val);
+}
+
+
+
 bool EvalPlanner::handleNextTrial() {
   reportEvent("Trial " + intToString(m_completed_trials) + " complete!");
   // calcMetrics();
-  clearTrialCounts();
+  clearTrialData();
 
   m_completed_trials += 1;
   if (m_completed_trials >= m_desired_trials) {  // we're done

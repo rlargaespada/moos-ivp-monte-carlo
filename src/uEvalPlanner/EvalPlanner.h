@@ -33,7 +33,7 @@ class EvalPlanner : public AppCastingMOOSApp
   void clearPendingRequests();
   void clearMetrics();
   void clearTotalCounts();
-  void clearTrialCounts();
+  void clearTrialData();
   void initialize();
 
   bool handleResetSim();
