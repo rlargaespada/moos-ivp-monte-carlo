@@ -32,6 +32,8 @@ Processconfig = ANTLER
   Run = uFldNodeBroker   @ NewConsole = false
 
   Run = pObstacleMgr     @ NewConsole = false
+
+  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER
 }
 
 
@@ -115,11 +117,11 @@ ProcessConfig = uSimMarineV22
   // // Will set DESIRED_THRUST = DESIRED_SPEED * SPEED_FACTOR
   // speed_factor = 20
 
-  // todo: maybe remove these and use USM_RESET instead
+  // NOTE: using sim resets instead of wormholes
   // add wormhole from goal back to start
-  wormhole = tag=next_trial, madrid_poly={format=radial, x=$(GOAL_X), y=$(GOAL_Y), radius=8, pts=6}
-  wormhole = tag=next_trial, weber_poly={format=radial, x=$(START_X), y=$(START_Y), radius=8, pts=6}
-  wormhole = tag=next_trial, connection=from_madrid
+  // wormhole = tag=next_trial, madrid_poly={format=radial, x=$(GOAL_X), y=$(GOAL_Y), radius=8, pts=6}
+  // wormhole = tag=next_trial, weber_poly={format=radial, x=$(START_X), y=$(START_Y), radius=8, pts=6}
+  // wormhole = tag=next_trial, connection=from_madrid
 
 }
 
@@ -206,3 +208,26 @@ ProcessConfig = uTimerScript_RANDOM_DRIFTS
 #include plug_pHostInfo.moos
 #include plug_uFldNodeBroker.moos
 #include plug_pObstacleMgr.moos
+
+//------------------------------------------
+// uTimerScript_PLANNER_PLACEHOLDER configuration  block
+// While planner isn't written, emulate planner postings through a timerscript
+ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER
+{
+  AppTick   = 2
+  CommsTick = 2
+  paused        = false
+  reset_max     = unlimited
+  reset_time    = end
+  delay_reset   = 0
+  script_name   = PLANNER_PLACEHOLDER
+  script_atomic = true
+  condition = PLAN_PATH_REQUESTED != none
+
+
+  event = var=PLAN_PATH_REQUESTED, val=none
+  event = var=PATH_COMPLETE, val=false
+  event = var=PATH_FOUND, val=false
+
+  event = var=PATH_FOUND, val=true, time=3
+}

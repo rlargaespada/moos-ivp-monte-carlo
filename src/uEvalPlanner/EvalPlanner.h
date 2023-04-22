@@ -8,7 +8,9 @@
 #ifndef EvalPlanner_HEADER
 #define EvalPlanner_HEADER
 
+#include <string>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
+#include "XYPoint.h"
 
 class EvalPlanner : public AppCastingMOOSApp
 {
@@ -28,8 +30,52 @@ class EvalPlanner : public AppCastingMOOSApp
  protected:
   void registerVariables();
 
+  void clearPendingRequests();
+  void clearMetrics();
+  void clearTotalCounts();
+  void clearTrialCounts();
+  void initialize();
+
+  bool handleResetSim();
+  bool handleEndSim();
+
+  bool handleResetTrial();
+  bool handleSkipTrial();
+  bool handleNextTrial();
+
+  void calcMetrics();
+  bool resetObstacles();
+  bool resetVehicles();
+  bool requestNewPath();
+
  private:  // Configuration variables
+  XYPoint m_start_point;
+  XYPoint m_goal_point;
+
+  std::string m_planner_start_var;
+  std::string m_planner_done_var;
+
+  std::string m_reset_sim_var;  // not set by config param
+  std::string m_reset_obs_var;  // todo: needs to be a vector for each obs sim
+
+  int m_desired_trials;
+
  private:  // State variables
+  bool m_reset_sim_pending;
+  bool m_end_sim_pending;
+
+  bool m_reset_trial_pending;
+  bool m_skip_trial_pending;
+  bool m_next_trial_pending;
+
+  int m_encounter_count;
+  int m_near_miss_count;
+  int m_collision_count;
+  int m_encounter_count_trial;
+  int m_near_miss_count_trial;
+  int m_collision_count_trial;
+
+  int m_completed_trials;
 };
 
 #endif

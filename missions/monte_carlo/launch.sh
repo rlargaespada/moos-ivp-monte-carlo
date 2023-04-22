@@ -11,7 +11,7 @@ JUST_MAKE="false"
 GUI="true"
 
 PLANNER="lpastar"; PLANNER_OPTIONS=($PLANNER "dstar_lite" "gcs" "gcs_r")
-NUM_TRIALS=100
+NUM_TRIALS=3
 
 USE_OBS_AVOID="true"
 DRIFT_STRENGTH=0
@@ -131,7 +131,9 @@ nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
        PSHARE_PORT=$SHORE_PSHARE    VNAMES=$V1_NAME    GUI=$GUI      \
        NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
-       OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE
+       OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE\
+       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
+# todo: work with multiple vehicles
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \

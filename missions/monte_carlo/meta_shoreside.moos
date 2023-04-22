@@ -38,6 +38,8 @@ Processconfig = ANTLER
 
   Run = uFldCollObDetect @ NewConsole = false
   Run = uFldPathCheck    @ NewConsole = false
+
+  Run = uEvalPlanner     @ NewConsole = false
 }
 
 
@@ -107,7 +109,6 @@ ProcessConfig = pMarineViewer
   button_five = RESET_TRIAL # RESET_TRIAL_REQUESTED=true
   button_six = RESET_SIM # RESET_SIM_REQUESTED=true
   button_seven = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=true
-  
 }
 
 
@@ -132,10 +133,13 @@ ProcessConfig = uFldShoreBroker
 
   qbridge = DEPLOY
   qbridge = MOOS_MANUAL_OVERRIDE, APPCAST_REQ
-  qbridge = USM_SIM_PAUSED, USM_RESET
+  qbridge = USM_SIM_PAUSED
   qbridge = TRACKED_FEATURE
 
-  bridge   = src=GIVEN_OBSTACLE
+  bridge = src=USM_RESET
+  bridge = src=PLAN_PATH_REQUESTED
+  bridge = src=GIVEN_OBSTACLE
+  //todo: work with multiple vehicles
   //todo: determine if any more variables need to be shared
 }
 
@@ -212,8 +216,6 @@ ProcessConfig = uFldObstacleSim_KNOWN
 
   // obstacle reset configuration
   // don't allow timed resets
-  // todo: disallow timed resets
-  reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
   reset_range = 10
   reuse_ids = true
 }
@@ -255,8 +257,6 @@ ProcessConfig = uFldObstacleSim_UNKNOWN
 
   // obstacle reset configuration
   // don't allow timed resets
-  // todo: disallow timed resets
-  reset_interval = 20  //! temporary measure while testing, command should come from perf analyzer
   reset_range = 10
   reuse_ids = true
 
@@ -294,4 +294,23 @@ ProcessConfig = uFldPathCheck
 {
   AppTick       = 2
   CommsTick     = 2
+}
+
+
+//------------------------------------------
+// uEvalPlanner config block
+
+ProcessConfig = uEvalPlanner
+{
+  AppTick       = 2
+  CommsTick     = 2
+
+  start_pos = $(START_POS)
+  goal_pos = $(GOAL_POS)
+
+  // todo: these variables should be parametrized in launch file
+  planner_start_var = PLAN_PATH_REQUESTED
+  planner_done_var = PATH_COMPLETE
+
+  num_trials = $(NUM_TRIALS)
 }

@@ -16,4 +16,7 @@ ProcessConfig = uFldNodeBroker
   bridge = src=NODE_PSHARE_VARS
   bridge = src=NODE_REPORT_LOCAL,  alias=NODE_REPORT
   bridge = src=NODE_MESSAGE_LOCAL, alias=NODE_MESSAGE
+  bridge = src=PATH_COMPLETE
+  bridge = src=PATH_FOUND
+  bridge = src=PLANNING_TIME
 }

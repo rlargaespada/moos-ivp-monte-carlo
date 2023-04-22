@@ -17,26 +17,27 @@ initialize DEPLOY = false
 
 
 // define vehicle modes for simulation
-initialize PATH_FOUND = true  // todo: this should be false to start, set by planner
+initialize PLAN_PATH_REQUESTED = none  // todo: temporary while planner isn't written
+initialize PATH_FOUND = false
 initialize PATH_COMPLETE = false
 
 Set MODE = ACTIVE {
   DEPLOY = true
 } INACTIVE
 
-Set MODE = PLAN_PATH {
+Set MODE = PLAN {
   MODE = ACTIVE
   PATH_FOUND != true
   PATH_COMPLETE != true
 }
 
-Set MODE = TRAVERSE_PATH {
+Set MODE = TRAVERSE {
   MODE = ACTIVE
   PATH_FOUND = true
   PATH_COMPLETE != true
 }
 
-Set MODE = TRIAL_COMPLETE {
+Set MODE = IDLE {
   MODE = ACTIVE
   PATH_COMPLETE = true
 }
@@ -49,7 +50,7 @@ Behavior = BHV_StationKeep
   // ---------------------------
   name         = station-keep
   pwt          = 100
-  condition    = (MODE == INACTIVE) or ((MODE == PLAN_PATH) or (MODE == TRIAL_COMPLETE))
+  condition    = (MODE == INACTIVE) or ((MODE == PLAN) or (MODE == IDLE))
   perpetual  = true
   updates = STATION_UPDATES
   inactiveflag = STATIONING = false
@@ -64,7 +65,7 @@ Behavior = BHV_StationKeep
   outer_radius = 15      // default
   outer_speed  = 1.2     // default
   transit_speed  = 2.5     // default
-  station_pt = $(START_POS)
+  station_pt = $(START_POS)  // todo: planner updates this as needed
   swing_time = 2
 
   visual_hints = vertex_size  = 1           // default
@@ -82,10 +83,8 @@ Behavior=BHV_Waypoint
   pwt       = 100
   // condition = RETURN = false
   // condition = DEPLOY = true
-  condition = MODE == TRAVERSE_PATH
-  // endflag = PATH_COMPLETE = true  // todo: this should be added
-  endflag = DEPLOY = false  // todo: this should be set by performance analyzer
-  // endflag   = RETURN = true
+  condition = MODE == TRAVERSE
+  endflag = PATH_COMPLETE = true  // todo: this should go through planner
   UPDATES   = PATH_UPDATE
   perpetual = true
 
@@ -101,13 +100,9 @@ Behavior=BHV_Waypoint
   slip_radius = 15.0
   efficiency_measure = all
 
-  points = $(START_POS):$(GOAL_POS)
+  points = $(START_POS):$(GOAL_POS)  // todo: these should be set by planner
 
   order = normal
-  // todo: instead of repeating, performance analyzer should control this behavior
-  repeat = 3
-  // repeat = forever
-  cycleflag = REACHED_GOAL=true
 
   visual_hints = nextpt_color=yellow
   visual_hints = nextpt_vertex_size=8
