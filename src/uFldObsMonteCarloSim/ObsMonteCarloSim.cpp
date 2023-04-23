@@ -51,7 +51,8 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_obs_refresh_interval = -1;
 
   m_reset_interval = -1;
-  m_reset_range    = 10;
+  m_reset_range = 10;
+  m_reset_requests_enabled = true;
 
   m_post_visuals = true;
 
@@ -107,18 +108,20 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
 
 
     bool handled = true;
-    if (key == "PMV_CONNECT")
+    if (key == "PMV_CONNECT") {
       m_obs_refresh_needed = true;
-    else if (key == "OBM_CONNECT")
+    } else if (key == "OBM_CONNECT") {
       m_obs_refresh_needed = true;
-    else if (key == "UFOS_RESET")
-      m_reset_request = true;
-    else if (key == "UFOS_POINT_SIZE")
+    } else if (key == m_reset_var) {
+      if (m_reset_requests_enabled)  // ignore if requests disabled
+        m_reset_request = true;
+    } else if (key == "UFOS_POINT_SIZE") {
       handled = handleMailPointSize(sval);
-    else if (key == "NODE_REPORT")
+    } else if (key == "NODE_REPORT") {
       handled = handleMailNodeReport(sval);
-    else if (key != "APPCAST_REQ")  // handled by AppCastingMOOSApp
+    } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       handled = false;
+    }
 
     if (!handled)
       reportRunWarning("Unhandled Mail: " + key + "=" + sval);
@@ -226,6 +229,10 @@ bool ObsMonteCarloSim::OnStartUp()
       handled = setNonNegDoubleOnString(m_reset_interval, value);
     else if (param == "reset_range")
       handled = setNonNegDoubleOnString(m_reset_range, value);
+    else if (param == "reset_var")
+      handled = setNonWhiteVarOnString(m_reset_var, value);
+    else if (param == "reset_requests_enabled")
+      handled = setBooleanOnString(m_reset_requests_enabled, value);
     else if (param == "reuse_ids")
       handled = setBooleanOnString(m_reuse_ids, value);
 
@@ -235,6 +242,13 @@ bool ObsMonteCarloSim::OnStartUp()
     if (!handled)
       reportUnhandledConfigWarning(orig);
   }
+
+
+  // m_reset_var is left unset in constructor because we don't
+  // want to unnecessarily register for a variable that we don't
+  // actually need
+  if (m_reset_var.empty())
+    m_reset_var = "UFOS_RESET";
 
   // Pass 2: Process obstacle file last so all color settings can be
   // configured first, and applied as the obstacles are being created.
@@ -265,7 +279,8 @@ void ObsMonteCarloSim::registerVariables()
   AppCastingMOOSApp::RegisterVariables();
   Register("PMV_CONNECT", 0);
   Register("VEHICLE_CONNECT", 0);
-  Register("UFOS_RESET", 0);
+  if (!m_reset_var.empty())
+    Register(m_reset_var, 0);
   Register("UFOS_POINT_SIZE", 0);
   Register("NODE_REPORT", 0);
 }
@@ -735,6 +750,10 @@ bool ObsMonteCarloSim::buildReport()
   m_msgs << "  Max Duration:  " << max_dur_str << endl;
   m_msgs << "  Refresh Intrv: " << refresh_interval_str << endl;
   m_msgs << "Config (Reset)   " << endl;
+  if (m_reset_requests_enabled)
+    m_msgs << "  Reset Var:     " << m_reset_var << endl;
+  else
+    m_msgs << "  RESET REQUESTS DISABLED" << endl;
   m_msgs << "  Reset Range:   " << doubleToString(m_reset_range, 0) << endl;
   m_msgs << "  Reset_Interv:  " << doubleToString(m_reset_interval, 0) << endl;
   m_msgs << "================================" << endl;

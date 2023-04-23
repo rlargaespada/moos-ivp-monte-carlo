@@ -171,10 +171,12 @@ ProcessConfig = uFldObsMonteCarloSim_CONSTANT
 
   // obstacle reset configuration
   // for constant obstacles, don't want obstacles to reset
+  reset_requests_enabled = false  // disable reset requests
+  // reset_interval = -1  // disable timed resets
   // obstacle region is entire map
   // vehicles will never exit obstacle region, so obstacles
   // will never reset
-  reset_range = 1000  // add a buffer to map limits for safety
+  // reset_range = 1000  // add a buffer to map limits for safety
 }
 
 
@@ -211,7 +213,7 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
   refresh_interval = $(OBS_REFRESH_INTERVAL)
 
   // obstacle reset configuration
-  // don't allow timed resets
+  // reset_interval = -1  // disable timed resets
   reset_range = 10
   reuse_ids = true
 }

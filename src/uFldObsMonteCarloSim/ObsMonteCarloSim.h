@@ -85,6 +85,8 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   // Params for resetting the obs field
   double       m_reset_interval;
   double       m_reset_range;
+  std::string  m_reset_var;
+  bool         m_reset_requests_enabled;
 
   // range of the sensor for generating point updates
   double m_sensor_range;

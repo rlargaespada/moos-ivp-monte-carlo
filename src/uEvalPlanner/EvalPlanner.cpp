@@ -185,6 +185,8 @@ bool EvalPlanner::Iterate()
 
   bool return_val;
 
+  // only 1 action per iteration, in order of priority
+  // executing one action clears all pending actions
   if (m_end_sim_pending) {
     return_val = handleEndSim();
   } else if (m_reset_sim_pending) {
