@@ -8,16 +8,8 @@ initialize USE_OBS_AVOID = true
 initialize USE_OBS_AVOID = false
 #endif
 
-// if there's no gui, start running trials without user input
-#ifdef GUI
-initialize DEPLOY = true
-#else
-initialize DEPLOY = false
-#endif
-
-
 // define vehicle modes for simulation
-initialize PLAN_PATH_REQUESTED = none  // todo: temporary while planner isn't written
+initialize DEPLOY = false
 initialize PATH_FOUND = false
 initialize PATH_COMPLETE = false
 
@@ -59,13 +51,13 @@ Behavior = BHV_StationKeep
 
   // Parameters specific to this behavior
   // ------------------------------------
-  center_activate = false   // default
   hibernation_radius = -1      // default
   inner_radius = 8       // default
   outer_radius = 15      // default
   outer_speed  = 1.2     // default
   transit_speed  = 2.5     // default
-  station_pt = $(START_POS)  // todo: planner updates this as needed
+  station_pt = $(START_POS)
+  center_activate = false
   swing_time = 2
 
   visual_hints = vertex_size  = 1           // default
@@ -81,10 +73,8 @@ Behavior=BHV_Waypoint
 { 
   name      = waypt_monte_carlo
   pwt       = 100
-  // condition = RETURN = false
-  // condition = DEPLOY = true
   condition = MODE == TRAVERSE
-  endflag = PATH_COMPLETE = true  // todo: this should go through planner
+  endflag = WAYPOINTS_COMPLETE = true
   UPDATES   = PATH_UPDATE
   perpetual = true
 
@@ -99,10 +89,9 @@ Behavior=BHV_Waypoint
   capture_radius = 5.0
   slip_radius = 15.0
   efficiency_measure = all
-
-  points = $(START_POS):$(GOAL_POS)  // todo: these should be set by planner
-
   order = normal
+
+  // points = $(START_POS):$(GOAL_POS)  // points are set by planner
 
   visual_hints = nextpt_color=yellow
   visual_hints = nextpt_vertex_size=8

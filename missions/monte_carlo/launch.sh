@@ -139,14 +139,13 @@ nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
        V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
        SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
-       START_X=$V1_START_X     START_Y=$V1_START_Y                 \
-       GOAL_X=$V1_GOAL_X    GOAL_Y=$V1_GOAL_Y                      \
+       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
        VCOLOR=$V1_COLOR    PLANNER=$PLANNER    DRIFT_DIR=$DRIFT_DIR\
        DRIFT_STRENGTH=$DRIFT_STRENGTH
 
 nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
-       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
-       USE_OBS_AVOID=$USE_OBS_AVOID    GUI=$GUI
+       START_POS=$V1_START_POS    USE_OBS_AVOID=$USE_OBS_AVOID    \
+       GUI=$GUI
 
 
 if [ ${JUST_MAKE} = "true" ] ; then
@@ -163,6 +162,8 @@ pAntler targ_shoreside.moos >& /dev/null &
 
 echo "Launching $V1_NAME MOOS Community. WARP is" $TIME_WARP
 pAntler targ_$V1_NAME.moos >& /dev/null &
+
+# todo: if no GUI, sleep 10 and poke DEPLOY=true, MOOS_MANUAL_OVERRIDE=false, RESET_SIM_REQUESTED=true
 
 uMAC -t targ_shoreside.moos
 kill -- -$$
