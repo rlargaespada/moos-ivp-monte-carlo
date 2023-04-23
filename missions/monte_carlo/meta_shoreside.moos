@@ -18,28 +18,28 @@ Processconfig = ANTLER
 {
   MSBetweenLaunches = 100
 
-  Run = MOOSDB           @ NewConsole = false
-  Run = pRealm           @ NewConsole = false
+  Run = MOOSDB                @ NewConsole = false
+  Run = pRealm                @ NewConsole = false
 #ifdef GUI true
-  Run = pMarineViewer    @ NewConsole = false
+  Run = pMarineViewer         @ NewConsole = false
 #endif
 
-  // Run = pLogger          @ NewConsole = false
-  // Run = uXMS             @ NewConsole = false
-  // Run = pDeadManPost     @ NewConsole = false
+  // Run = pLogger            @ NewConsole = false
+  // Run = uXMS               @ NewConsole = false
+  // Run = pDeadManPost       @ NewConsole = false
 
-  Run = pShare           @ NewConsole = false
-  Run = pHostInfo        @ NewConsole = false
-  Run = uFldShoreBroker  @ NewConsole = false
+  Run = pShare                @ NewConsole = false
+  Run = pHostInfo             @ NewConsole = false
+  Run = uFldShoreBroker       @ NewConsole = false
 
-  Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_CONSTANT
-  Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_KNOWN
-  // Run = uFldObstacleSim  @ NewConsole = false ~ uFldObstacleSim_UNKNOWN
+  Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_CONSTANT
+  Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_KNOWN
+  // Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_UNKNOWN
 
-  Run = uFldCollObDetect @ NewConsole = false
-  Run = uFldPathCheck    @ NewConsole = false
+  Run = uFldCollObDetect      @ NewConsole = false
+  Run = uFldPathCheck         @ NewConsole = false
 
-  Run = uEvalPlanner     @ NewConsole = false
+  Run = uEvalPlanner          @ NewConsole = false
 }
 
 
@@ -140,7 +140,7 @@ ProcessConfig = uFldShoreBroker
 }
 
 
-ProcessConfig = uFldObstacleSim_CONSTANT
+ProcessConfig = uFldObsMonteCarloSim_CONSTANT
 {
   AppTick       = 1
   CommsTick     = 1
@@ -178,7 +178,7 @@ ProcessConfig = uFldObstacleSim_CONSTANT
 }
 
 
-ProcessConfig = uFldObstacleSim_KNOWN
+ProcessConfig = uFldObsMonteCarloSim_KNOWN
 {
   AppTick       = 1
   CommsTick     = 1
@@ -217,7 +217,7 @@ ProcessConfig = uFldObstacleSim_KNOWN
 }
 
 
-ProcessConfig = uFldObstacleSim_UNKNOWN
+ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
 {
   AppTick       = 1
   CommsTick     = 1

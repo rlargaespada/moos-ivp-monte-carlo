@@ -1,0 +1,9 @@
+//------------------------------------------------
+// uFldObsMonteCarloSim config block
+
+ProcessConfig = uFldObsMonteCarloSim
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+

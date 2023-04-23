@@ -27,7 +27,6 @@ EvalPlanner::EvalPlanner()
   m_reset_obs_var = "UFOS_RESET";
   m_desired_trials = 10;
 
-  // todo: consider resetting vehicles to start
   initialize();
 }
 
