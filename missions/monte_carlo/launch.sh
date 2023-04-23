@@ -97,9 +97,14 @@ done
 # Shoreside config
 SHORE_MOOSDB="9000"
 SHORE_PSHARE="9200"
+
 OBS_CONST_FILE="targ_obstacles_const.txt"
 OBS_KNOWN_FILE="targ_obstacles_known.txt"
 OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
+
+PATH_REQUEST_VAR="PLAN_PATH_REQUESTED"
+PATH_FOUND_VAR="PATH_FOUND"
+PATH_COMPLETE_VAR="PATH_COMPLETE"
 
 # V1 configuration
 V1_NAME="artemis"
@@ -133,19 +138,23 @@ nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
        OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE\
        START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
+       PATH_REQUEST_VAR=$PATH_REQUEST_VAR    PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
 # todo: work with multiple vehicles
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \
        V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
        SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
-       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS           \
+       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
        VCOLOR=$V1_COLOR    PLANNER=$PLANNER    DRIFT_DIR=$DRIFT_DIR\
-       DRIFT_STRENGTH=$DRIFT_STRENGTH
+       DRIFT_STRENGTH=$DRIFT_STRENGTH                              \
+       PATH_REQUEST_VAR=$PATH_REQUEST_VAR    PATH_FOUND_VAR=$PATH_FOUND_VAR\
+       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
 
 nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
        START_POS=$V1_START_POS    USE_OBS_AVOID=$USE_OBS_AVOID    \
-       GUI=$GUI
+       GUI=$GUI    PATH_FOUND_VAR=$PATH_FOUND_VAR                 \
+       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
 
 
 if [ ${JUST_MAKE} = "true" ] ; then

@@ -20,7 +20,7 @@ EvalPlanner::EvalPlanner()
 {
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
   // set up config defaults
-  m_planner_start_var = "PLAN_PATH_REQUESTED";
+  m_path_request_var = "PLAN_PATH_REQUESTED";
   m_reset_sim_var = "USM_RESET";
   m_reset_obs_var = "UFOS_RESET";
   m_desired_trials = 10;
@@ -104,7 +104,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       m_reset_trial_pending = true;
     } else if (key == "SKIP_TRIAL_REQUESTED") {
       m_skip_trial_pending = true;
-    } else if (key == m_planner_done_var) {
+    } else if (key == m_path_complete_var) {
       if (msg.GetString() == "true")
         m_next_trial_pending = true;
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
@@ -164,11 +164,11 @@ bool EvalPlanner::requestNewPath() {
   msg += doubleToString(m_goal_point.get_vx());
   msg += ',' + doubleToString(m_goal_point.get_vy());
 
-  return_val = Notify(m_planner_start_var, msg);
+  return_val = Notify(m_path_request_var, msg);
   // todo: multiple vehicles
 
   std::string event;
-  event += m_planner_start_var + ": " + msg;
+  event += m_path_request_var + ": " + msg;
   reportEvent(event);
 
   return (return_val);
@@ -300,10 +300,10 @@ bool EvalPlanner::OnStartUp()
       m_goal_point.set_vx(std::stod(biteStringX(value, ',')));
       m_goal_point.set_vy(std::stod(value));
       handled = true;
-    } else if (param == "planner_start_var") {
-      handled = setNonWhiteVarOnString(m_planner_start_var, value);
-    } else if (param == "planner_done_var") {
-      handled = setNonWhiteVarOnString(m_planner_done_var, value);
+    } else if (param == "path_request_var") {
+      handled = setNonWhiteVarOnString(m_path_request_var, value);
+    } else if (param == "path_complete_var") {
+      handled = setNonWhiteVarOnString(m_path_complete_var, value);
     } else if (param == "num_trials") {
       m_desired_trials = std::stoi(value);
       handled = true;
@@ -313,11 +313,11 @@ bool EvalPlanner::OnStartUp()
       reportUnhandledConfigWarning(orig);
   }
 
-  // We left m_planner_done_var unset in the constructor because we don't
+  // m_path_complete_var is left unset in constructor because we don't
   // want to unnecessarily register for a variable that we don't
   // actually need
-  if (m_planner_done_var.empty())
-    m_planner_done_var = "PATH_COMPLETE";
+  if (m_path_complete_var.empty())
+    m_path_complete_var = "PATH_COMPLETE";
 
   registerVariables();
   return(true);
@@ -335,8 +335,8 @@ void EvalPlanner::registerVariables()
   Register("END_SIM_REQUESTED", 0);
   Register("RESET_TRIAL_REQUESTED", 0);
   Register("SKIP_TRIAL_REQUESTED", 0);
-  if (!m_planner_done_var.empty())
-    Register(m_planner_done_var, 0);
+  if (!m_path_complete_var.empty())
+    Register(m_path_complete_var, 0);
 
   // variables used to calculate metrics
   // todo: handle these subscriptions
@@ -365,8 +365,8 @@ bool EvalPlanner::buildReport()
   std::string header = "================================";
   m_msgs << header << endl;
   m_msgs << "Config (Interface to Planner)" << endl;
-  m_msgs << "  planner_start_var:   "  << m_planner_start_var << endl;
-  m_msgs << "  planner_done_var:   "  << m_planner_done_var << endl;
+  m_msgs << "  path_request_var:   "  << m_path_request_var << endl;
+  m_msgs << "  path_complete_var:   "  << m_path_complete_var << endl;
   m_msgs << "Config (Start and Goal)" << endl;
   m_msgs << "  start_pos:   " << m_start_point.get_spec() << endl;
   m_msgs << "  goal_pos:   " << m_goal_point.get_spec() << endl;

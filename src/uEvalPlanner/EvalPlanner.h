@@ -52,8 +52,8 @@ class EvalPlanner : public AppCastingMOOSApp
   XYPoint m_start_point;
   XYPoint m_goal_point;
 
-  std::string m_planner_start_var;
-  std::string m_planner_done_var;
+  std::string m_path_request_var;
+  std::string m_path_complete_var;
 
   std::string m_reset_sim_var;  // not set by config param
   std::string m_reset_obs_var;  // todo: needs to be a vector for each obs sim

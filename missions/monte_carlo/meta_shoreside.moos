@@ -88,10 +88,6 @@ ProcessConfig = pMarineViewer
   // MOOS-Scope Pull-Down Menu
   // todo: choose which variables to scope on
   scope = PHI_HOST_INFO
-  scope = WPT_STAT
-  scope = VIEW_SEGLIST
-  scope = VIEW_POINT
-  scope = VIEW_POLYGON
   scope = MVIEWER_LCLICK
   scope = MVIEWER_RCLICK
 
@@ -137,7 +133,7 @@ ProcessConfig = uFldShoreBroker
   qbridge = TRACKED_FEATURE
 
   bridge = src=USM_RESET
-  bridge = src=PLAN_PATH_REQUESTED
+  bridge = src=$(PATH_REQUEST_VAR)
   bridge = src=GIVEN_OBSTACLE
   //todo: work with multiple vehicles
   //todo: determine if any more variables need to be shared
@@ -308,9 +304,8 @@ ProcessConfig = uEvalPlanner
   start_pos = $(START_POS)
   goal_pos = $(GOAL_POS)
 
-  // todo: these variables should be parametrized in launch file
-  planner_start_var = PLAN_PATH_REQUESTED
-  planner_done_var = PATH_COMPLETE
+  path_request_var = $(PATH_REQUEST_VAR)
+  path_complete_var = $(PATH_COMPLETE_VAR)
 
   num_trials = $(NUM_TRIALS)
 }
