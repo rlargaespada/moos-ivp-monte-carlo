@@ -18,6 +18,8 @@
 
 EvalPlanner::EvalPlanner()
 {
+  m_sim_active = false;
+
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
   // set up config defaults
   m_path_request_var = "PLAN_PATH_REQUESTED";
@@ -184,23 +186,19 @@ bool EvalPlanner::Iterate()
 
   bool return_val;
 
-  // todo: think more on when to clear requests, handle multiple conflicting requests
   if (m_end_sim_pending) {
     return_val = handleEndSim();
-    clearPendingRequests();
   } else if (m_reset_sim_pending) {
     return_val = handleResetSim();
-    clearPendingRequests();
   } else if (m_reset_trial_pending) {
     return_val = handleResetTrial();
-    clearPendingRequests();
   } else if (m_skip_trial_pending) {
     return_val = handleSkipTrial();
-    clearPendingRequests();
   } else if (m_next_trial_pending) {
     return_val = handleNextTrial();
-    clearPendingRequests();
   }
+
+  clearPendingRequests();
 
   AppCastingMOOSApp::PostReport();
   return (return_val);
@@ -209,7 +207,7 @@ bool EvalPlanner::Iterate()
 
 bool EvalPlanner::handleEndSim() {
   bool return_val{true};
-
+  m_sim_active = false;
   return (return_val);
 }
 
@@ -219,14 +217,19 @@ bool EvalPlanner::handleResetSim() {
 
   bool return_val{true};
   return_val = resetVehicles() && return_val;
-  return_val = resetObstacles() && return_val;  // todo: don't need this the first time
+  if (m_sim_active)
+    return_val = resetObstacles() && return_val;  // only reset if already active
   return_val = requestNewPath() && return_val;
 
+  m_sim_active = true;
   return (return_val);
 }
 
 
 bool EvalPlanner::handleResetTrial() {
+  if (!m_sim_active)
+    return (true);
+
   reportEvent("Trial " + intToString(m_completed_trials) + " reset");
   clearTrialData();
   bool return_val{true};
@@ -238,6 +241,9 @@ bool EvalPlanner::handleResetTrial() {
 
 
 bool EvalPlanner::handleSkipTrial() {
+  if (!m_sim_active)
+    return (true);
+
   reportEvent("Trial " + intToString(m_completed_trials) + " skipped");
   clearTrialData();
 
@@ -252,6 +258,9 @@ bool EvalPlanner::handleSkipTrial() {
 
 
 bool EvalPlanner::handleNextTrial() {
+  if (!m_sim_active)
+    return (true);
+
   reportEvent("Trial " + intToString(m_completed_trials) + " complete!");
   // calcMetrics();
   clearTrialData();
@@ -259,7 +268,8 @@ bool EvalPlanner::handleNextTrial() {
   m_completed_trials += 1;
   if (m_completed_trials >= m_desired_trials) {  // we're done
     resetVehicles();
-    return (true);  // todo: anything else to do to end sim?
+    m_sim_active = false;
+    return (true);
   }
 
   bool return_val{true};
@@ -363,6 +373,7 @@ bool EvalPlanner::buildReport()
 {
   using std::endl;
   std::string header = "================================";
+  m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
   m_msgs << header << endl;
   m_msgs << "Config (Interface to Planner)" << endl;
   m_msgs << "  path_request_var:   "  << m_path_request_var << endl;

@@ -61,6 +61,7 @@ class EvalPlanner : public AppCastingMOOSApp
   int m_desired_trials;
 
  private:  // State variables
+  bool m_sim_active;
   bool m_reset_sim_pending;
   bool m_end_sim_pending;
 
