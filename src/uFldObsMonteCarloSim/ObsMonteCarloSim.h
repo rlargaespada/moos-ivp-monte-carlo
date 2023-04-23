@@ -52,11 +52,12 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
 
  private:  // Configuration variables
   // Parameters if we're creating obstacles as we go
-  XYPolygon m_poly_region;
-  double    m_min_range;
-  double    m_min_poly_size;
-  double    m_max_poly_size;
-  bool      m_reuse_ids;
+  XYPolygon   m_poly_region;
+  double      m_min_range;
+  double      m_min_poly_size;
+  double      m_max_poly_size;
+  bool        m_reuse_ids;
+  std::string m_label_prefix;
 
   // Visual params for rendering obstacles
   std::string m_poly_fill_color;

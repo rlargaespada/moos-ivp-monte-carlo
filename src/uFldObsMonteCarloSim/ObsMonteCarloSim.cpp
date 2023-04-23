@@ -28,6 +28,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_min_poly_size = 0;
   m_max_poly_size = 0;
   m_reuse_ids = true;
+  m_label_prefix = "";
 
   m_poly_fill_color  = "white";
   m_poly_edge_color  = "gray50";
@@ -185,6 +186,8 @@ bool ObsMonteCarloSim::OnStartUp()
     bool handled = false;
     if (param == "obstacle_file")
       handled = true;  // process later
+    else if (param == "label_prefix")
+      handled = setNonWhiteVarOnString(m_label_prefix, value + "_");  // add trailing underscore
     else if ((param == "poly_vert_color") && isColor(value))
       handled = setColorOnString(m_poly_vert_color, value);
     else if ((param == "poly_fill_color") && isColor(value))
@@ -388,7 +391,7 @@ bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
         return (false);
       }
       m_poly_region = region;
-      m_poly_region.set_label("obs_region");
+      m_poly_region.set_label(m_label_prefix + "obs_region");
       m_poly_region.set_color("edge", m_region_edge_color);
       m_poly_region.set_vertex_color(m_region_vert_color);
     } else if (left == "min_range") {
@@ -409,6 +412,7 @@ bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
         reportConfigWarning("Poorly specified obstacle: " + right);
         return (false);
       }
+      poly.set_label(m_label_prefix + poly.get_label());  // add prefix to label
       poly.set_color("edge", m_poly_edge_color);
       poly.set_color("vertex", m_poly_vert_color);
       poly.set_color("fill", m_poly_fill_color);
@@ -557,6 +561,7 @@ void ObsMonteCarloSim::updateObstaclesField()
 
   // Apply the local simulator viewing preferences
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    m_obstacles[i].set_label(m_label_prefix + m_obstacles[i].get_label());
     m_obstacles[i].set_color("edge", m_poly_edge_color);
     m_obstacles[i].set_color("vertex", m_poly_vert_color);
     m_obstacles[i].set_color("fill", m_poly_fill_color);

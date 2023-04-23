@@ -152,7 +152,7 @@ ProcessConfig = uFldObsMonteCarloSim_CONSTANT
   poly_vert_color = sandybrown
   poly_edge_color = sandybrown
   poly_fill_color = chocolate
-  poly_label_color = invisible
+  poly_label_color = white
 
   poly_vert_size = 1
   poly_edge_size = 1
@@ -187,6 +187,7 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
 
   obstacle_file = $(OBS_KNOWN_FILE)
   post_visuals = $(GUI)
+  label_prefix = known
 
   // parameters to draw known obstacles
   poly_vert_color = royalblue
@@ -226,6 +227,7 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
 
   obstacle_file = $(OBS_UNKNOWN_FILE)
   post_visuals = $(GUI)
+  label_prefix = unknown
 
   // parameters to draw known obstacles
   poly_vert_color = orangered
