@@ -21,10 +21,14 @@ EvalPlanner::EvalPlanner()
   m_sim_active = false;
 
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
+  // vehicles should be saved using node reports, where to define start and goal? vehicle says so?
+  // USM_RESET could be set on a per vehicle basis (from node reports), use qbridge
+
   // set up config defaults
+  m_reset_obs_default = "UFOS_RESET";
+  m_path_complete_default = "PATH_COMPLETE";
   m_path_request_var = "PLAN_PATH_REQUESTED";
   m_reset_sim_var = "USM_RESET";
-  m_reset_obs_var = "UFOS_RESET";
   m_desired_trials = 10;
 
   initialize();
@@ -111,6 +115,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
+    // todo: new collisions should be immediately counted here, not in calcMetrics
   }
 
   return(true);
@@ -128,13 +133,15 @@ bool EvalPlanner::OnConnectToServer()
 
 //---------------------------------------------------------
 bool EvalPlanner::resetObstacles() {
-  // todo: work with vector of reset obs vars
   // todo: wait for confirmation from each sim before continuing?
   // don't want to request a new path until all obs are finalized
   bool return_val{true};
 
-  return_val = Notify(m_reset_obs_var, "now") && return_val;
-  reportEvent(m_reset_obs_var + ": " + doubleToString(MOOSTime()));
+  for (std::string var_name : m_reset_obs_vars) {
+    return_val = Notify(var_name, "now") && return_val;
+    reportEvent("Sent " + var_name);
+  }
+
 
   return (return_val);
 }
@@ -263,7 +270,6 @@ bool EvalPlanner::handleSkipTrial() {
 }
 
 
-
 bool EvalPlanner::handleNextTrial() {
   if (!m_sim_active)
     return (true);
@@ -309,7 +315,7 @@ bool EvalPlanner::OnStartUp()
     std::string param = tolower(biteStringX(line, '='));
     std::string value = line;
 
-    bool handled = false;
+    bool handled{false};
     if (param == "start_pos") {
       m_start_point.set_vx(std::stod(biteStringX(value, ',')));
       m_start_point.set_vy(std::stod(value));
@@ -325,6 +331,8 @@ bool EvalPlanner::OnStartUp()
     } else if (param == "num_trials") {
       m_desired_trials = std::stoi(value);
       handled = true;
+    } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
+      handled = handleConfigResetVars(value);
     }
 
     if (!handled)
@@ -335,11 +343,33 @@ bool EvalPlanner::OnStartUp()
   // want to unnecessarily register for a variable that we don't
   // actually need
   if (m_path_complete_var.empty())
-    m_path_complete_var = "PATH_COMPLETE";
+    m_path_complete_var = m_path_complete_default;
+
+  // if no reset vars were provided in config, only write to default var
+  if (m_reset_obs_vars.empty())
+    m_reset_obs_vars.push_back(m_reset_obs_default);
 
   registerVariables();
   return(true);
 }
+
+
+bool EvalPlanner::handleConfigResetVars(std::string var_names) {
+  bool no_dupl_found{true};
+
+  var_names = stripBlankEnds(var_names);
+  std::vector<std::string> svector{parseString(var_names, ':')};
+  for (std::string var_name : svector) {
+    var_name = stripBlankEnds(var_name);
+    if (vectorContains(m_reset_obs_vars, var_name))
+      no_dupl_found = false;
+    else
+      m_reset_obs_vars.push_back(var_name);
+  }
+
+  return (no_dupl_found);
+}
+
 
 //---------------------------------------------------------
 // Procedure: registerVariables()
@@ -389,6 +419,10 @@ bool EvalPlanner::buildReport()
   m_msgs << "Config (Start and Goal)" << endl;
   m_msgs << "  start_pos:   " << m_start_point.get_spec() << endl;
   m_msgs << "  goal_pos:   " << m_goal_point.get_spec() << endl;
+  m_msgs << "Config (Interface to Obstacle Sims)" << endl;
+  m_msgs << "  reset_obs_vars:   " << stringVectorToString(m_reset_obs_vars, ':') << endl;
+  m_msgs << "Config (Interface to Vehicle Sims)" << endl;
+  m_msgs << "  reset_sim_var:   " << m_reset_sim_var << endl;
   m_msgs << header << endl;
   m_msgs << "Metrics" << endl;
   m_msgs << "  Completed Trials:   " << intToString(m_completed_trials) <<

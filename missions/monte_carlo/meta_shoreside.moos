@@ -215,6 +215,7 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
 
   // obstacle reset configuration
   // reset_interval = -1  // disable timed resets
+  reset_var = RESET_KNOWN_OBSTACLES
   reset_range = 10
   reuse_ids = true
 }
@@ -256,7 +257,8 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
   refresh_interval = $(OBS_REFRESH_INTERVAL)
 
   // obstacle reset configuration
-  // don't allow timed resets
+  // reset_interval = -1  // disable timed resets
+  reset_var = RESET_UNKNOWN_OBSTACLES
   reset_range = 10
   reuse_ids = true
 
@@ -312,4 +314,6 @@ ProcessConfig = uEvalPlanner
   path_complete_var = $(PATH_COMPLETE_VAR)
 
   num_trials = $(NUM_TRIALS)
+
+  obs_reset_vars = RESET_KNOWN_OBSTACLES:RESET_UNKNOWN_OBSTACLES
 }

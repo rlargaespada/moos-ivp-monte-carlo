@@ -122,14 +122,10 @@ nsplug meta_obstacles_const.txt $OBS_CONST_FILE -i -f
 gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
               --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
               --amt=$RANDOM_OBS_AMT > $OBS_KNOWN_FILE
-# sleep 1  # sleep for a bit so gen_obstacles gets a new random seed (based on sys time)
-# gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
-#               --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
-#               --amt=$RANDOM_OBS_AMT > $OBS_UNKNOWN_FILE
-
-# append to labels in obstacle files so that known/unknown obstacles have unique labels
-# sed -i 's/label=ob_[0-9]\+/&_known/' $OBS_KNOWN_FILE
-# sed -i 's/label=ob_[0-9]\+/&_unknown/' $OBS_UNKNOWN_FILE
+sleep 1  # sleep for a bit so gen_obstacles gets a new random seed (based on sys time)
+gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
+              --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
+              --amt=$RANDOM_OBS_AMT > $OBS_UNKNOWN_FILE
 
 
 nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \

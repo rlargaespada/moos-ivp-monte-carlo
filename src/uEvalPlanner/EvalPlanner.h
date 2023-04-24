@@ -9,6 +9,7 @@
 #define EvalPlanner_HEADER
 
 #include <string>
+#include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPoint.h"
 
@@ -30,15 +31,19 @@ class EvalPlanner : public AppCastingMOOSApp
  protected:
   void registerVariables();
 
+  // state updates
   void clearPendingRequests();
   void clearMetrics();
   void clearTotalCounts();
   void clearTrialData();
   void initialize();
 
+  // config handling
+  bool handleConfigResetVars(std::string var_names);
+
+  // actions during iteration
   bool handleResetSim();
   bool handleEndSim();
-
   bool handleResetTrial();
   bool handleSkipTrial();
   bool handleNextTrial();
@@ -56,9 +61,13 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_path_complete_var;
 
   std::string m_reset_sim_var;  // not set by config param
-  std::string m_reset_obs_var;  // todo: needs to be a vector for each obs sim
+  std::vector<std::string> m_reset_obs_vars;
 
   int m_desired_trials;
+
+  // default variable names
+  std::string m_reset_obs_default;
+  std::string m_path_complete_default;
 
  private:  // State variables
   bool m_sim_active;
