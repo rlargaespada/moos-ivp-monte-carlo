@@ -184,6 +184,16 @@ bool EvalPlanner::requestNewPath() {
   return (return_val);
 }
 
+
+bool EvalPlanner::postEndflags() {
+  bool return_val{true};
+  std::map<std::string, std::string>::iterator v;
+  for (v = m_endflags.begin(); v != m_endflags.end(); v++)
+    return_val = Notify(v->first, v->second) && return_val;
+
+  return (return_val);
+}
+
 //---------------------------------------------------------
 // Procedure: Iterate()
 //            happens AppTick times per second
@@ -216,10 +226,14 @@ bool EvalPlanner::Iterate()
 
 
 bool EvalPlanner::handleEndSim() {
-  if (m_sim_active)
-    reportEvent("Ending sim early!");
+  if (!m_sim_active)
+    return (true);
+
+  reportEvent("Ending sim early!");
   bool return_val{true};
   m_sim_active = false;
+  return_val = resetVehicles() && return_val;
+  return_val = postEndflags() && return_val;
   return (return_val);
 }
 
@@ -283,6 +297,7 @@ bool EvalPlanner::handleNextTrial() {
     reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
     resetVehicles();
     m_sim_active = false;
+    postEndflags();
     return (true);
   }
 
@@ -333,6 +348,8 @@ bool EvalPlanner::OnStartUp()
       handled = true;
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
       handled = handleConfigResetVars(value);
+    } else if (param == "endflag") {
+      handled = handleConfigEndflag(value);
     }
 
     if (!handled)
@@ -366,6 +383,20 @@ bool EvalPlanner::handleConfigResetVars(std::string var_names) {
     else
       m_reset_obs_vars.push_back(var_name);
   }
+
+  return (no_dupl_found);
+}
+
+
+bool EvalPlanner::handleConfigEndflag(std::string flag) {
+  bool no_dupl_found{true};
+
+  std::string var{biteStringX(flag, '=')};
+
+  if (m_endflags.count(var) > 0)
+    no_dupl_found = false;
+
+  m_endflags[var] = flag;
 
   return (no_dupl_found);
 }

@@ -8,6 +8,7 @@
 #ifndef EvalPlanner_HEADER
 #define EvalPlanner_HEADER
 
+#include <map>
 #include <string>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
@@ -40,6 +41,7 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // config handling
   bool handleConfigResetVars(std::string var_names);
+  bool handleConfigEndflag(std::string flag);
 
   // actions during iteration
   bool handleResetSim();
@@ -52,6 +54,7 @@ class EvalPlanner : public AppCastingMOOSApp
   bool resetObstacles();
   bool resetVehicles();
   bool requestNewPath();
+  bool postEndflags();
 
  private:  // Configuration variables
   XYPoint m_start_point;
@@ -68,6 +71,8 @@ class EvalPlanner : public AppCastingMOOSApp
   // default variable names
   std::string m_reset_obs_default;
   std::string m_path_complete_default;
+
+  std::map<std::string, std::string> m_endflags;
 
  private:  // State variables
   bool m_sim_active;
