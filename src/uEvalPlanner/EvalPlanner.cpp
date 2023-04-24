@@ -128,10 +128,12 @@ bool EvalPlanner::OnConnectToServer()
 
 //---------------------------------------------------------
 bool EvalPlanner::resetObstacles() {
+  // todo: work with vector of reset obs vars
+  // todo: wait for confirmation from each sim before continuing?
+  // don't want to request a new path until all obs are finalized
   bool return_val{true};
 
   return_val = Notify(m_reset_obs_var, "now") && return_val;
-  // todo: send one notification per iteration, then call again?
   reportEvent(m_reset_obs_var + ": " + doubleToString(MOOSTime()));
 
   return (return_val);
@@ -207,6 +209,8 @@ bool EvalPlanner::Iterate()
 
 
 bool EvalPlanner::handleEndSim() {
+  if (m_sim_active)
+    reportEvent("Ending sim early!");
   bool return_val{true};
   m_sim_active = false;
   return (return_val);
@@ -214,12 +218,13 @@ bool EvalPlanner::handleEndSim() {
 
 
 bool EvalPlanner::handleResetSim() {
+  reportEvent("Resetting simulation!");
   initialize();
 
   bool return_val{true};
-  return_val = resetVehicles() && return_val;
   if (m_sim_active)
     return_val = resetObstacles() && return_val;  // only reset if already active
+  return_val = resetVehicles() && return_val;
   return_val = requestNewPath() && return_val;
 
   m_sim_active = true;
@@ -233,6 +238,7 @@ bool EvalPlanner::handleResetTrial() {
 
   reportEvent("Trial " + intToString(m_completed_trials) + " reset");
   clearTrialData();
+
   bool return_val{true};
   return_val = resetVehicles() && return_val;
   return_val = requestNewPath() && return_val;
@@ -249,8 +255,8 @@ bool EvalPlanner::handleSkipTrial() {
   clearTrialData();
 
   bool return_val{true};
-  return_val = resetVehicles() && return_val;
   return_val = resetObstacles() && return_val;
+  return_val = resetVehicles() && return_val;
   return_val = requestNewPath() && return_val;
 
   return (return_val);
@@ -268,6 +274,7 @@ bool EvalPlanner::handleNextTrial() {
 
   m_completed_trials += 1;
   if (m_completed_trials >= m_desired_trials) {  // we're done
+    reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
     resetVehicles();
     m_sim_active = false;
     return (true);

@@ -5,7 +5,11 @@
 /*    DATE: December 29th, 1963                             */
 /************************************************************/
 
+#include <cmath>
+#include <cstdlib>
 #include <iterator>
+#include <string>
+#include <vector>
 #include "MBUtils.h"
 #include "GeomUtils.h"
 #include "ACTable.h"
@@ -532,21 +536,21 @@ void ObsMonteCarloSim::updateObstaclesField()
 
   Notify("KNOWN_OBSTACLE_CLEAR", "all");
 
+  // Seed randomness from fractional part of current moos time
+  double tmp;
+  double moos_time_frac{modf(m_curr_time, &tmp)};  // get fraction from current time
+  int seed{static_cast<int>(moos_time_frac * pow(10, 6))};  // scale frac and cast to int
+  srand(seed);
+
   // Do the obstacle regeneration
-  ObstacleFieldGenerator generator;
-  generator.setPolygon(m_poly_region);
-  generator.setAmount(m_obstacles.size());
-  generator.setMinRange(m_min_range);
-  generator.setObstacleMinSize(m_min_poly_size);
-  generator.setObstacleMaxSize(m_max_poly_size);
-  if (!m_reuse_ids)
-    generator.setBeginID(m_obstacles_made);
-  generator.setVerbose(false);
-  generator.generate();
+  vector<XYPolygon> new_obstacles;
+  bool ok = true;
+  for (unsigned int i=0; (ok && (i < m_obstacles.size())); i++) {
+    ok = ok && generateObstacle(&new_obstacles, 1000);
+  }
 
   // Sanity check the results.
-  vector<XYPolygon> obstacles = generator.getObstacles();
-  if (obstacles.size() != m_obstacles.size())
+  if (new_obstacles.size() != m_obstacles.size())
     return;
 
   // If new obstacles will have a new id/label, erase obstacles
@@ -554,14 +558,13 @@ void ObsMonteCarloSim::updateObstaclesField()
   if (!m_reuse_ids)
     postObstaclesErase();
 
-  m_obstacles = obstacles;
-  m_obstacles_made += obstacles.size();
+  m_obstacles = new_obstacles;
+  m_obstacles_made += new_obstacles.size();
   m_reset_total++;
 
 
   // Apply the local simulator viewing preferences
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    m_obstacles[i].set_label(m_label_prefix + m_obstacles[i].get_label());
     m_obstacles[i].set_color("edge", m_poly_edge_color);
     m_obstacles[i].set_color("vertex", m_poly_vert_color);
     m_obstacles[i].set_color("fill", m_poly_fill_color);
@@ -573,6 +576,99 @@ void ObsMonteCarloSim::updateObstaclesField()
 
   m_obs_refresh_needed = true;
   m_reset_pending = false;
+}
+
+// ------------------------------------------------------------
+bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int tries)
+{
+  // todo: look into <random> number generation instead of rand()
+  if (!m_poly_region.is_convex())
+    return (false);
+
+  double minx = m_poly_region.get_min_x();
+  double miny = m_poly_region.get_min_y();
+  double maxx = m_poly_region.get_max_x();
+  double maxy = m_poly_region.get_max_y();
+
+  double xlen = maxx - minx;
+  double ylen = maxy - miny;
+
+  double radius = m_min_poly_size;
+  if (m_max_poly_size > m_min_poly_size) {
+    int rand_int_r = rand() % 1000;
+    double rand_pct_r = static_cast<double>(rand_int_r) / 1000;
+    radius = m_min_poly_size;
+    radius += ((m_max_poly_size - m_min_poly_size) * rand_pct_r);
+  }
+
+  for (unsigned int k=0; k < tries; k++) {
+    int rand_int_x = rand() % 10000;
+    int rand_int_y = rand() % 10000;
+
+    double rand_pct_x = static_cast<double>(rand_int_x) / 10000;
+    double rand_pct_y = static_cast<double>(rand_int_y) / 10000;
+
+    double rand_x = minx + (rand_pct_x * xlen);
+    double rand_y = miny + (rand_pct_y * ylen);
+
+    // Reject if poly center point is not in the overall region
+    if (!m_poly_region.contains(rand_x, rand_y))
+      continue;
+
+    // Reject if poly center point is in an existing obstacle
+    bool pt_in_obstacle = false;
+    for (unsigned int i=0; i < obs_vec->size(); i++) {
+      if ((*obs_vec)[i].contains(rand_x, rand_y)) {
+        pt_in_obstacle = true;
+      }
+    }
+    if (pt_in_obstacle)
+      continue;
+
+    // "radial:: x=val, y=val, radius=val, pts=val, snap=val, label=val"
+    string str = "format=radial, x=" + doubleToString(rand_x, 1);
+    str += ", y=" + doubleToString(rand_y, 1);
+    str += ",radius=" + doubleToString(radius);
+    str += ",snap=0.1";  // + doubleToStringX(0.1, 3);  // 0.1m precision
+    str += ",pts=8";  // + uintToString(m_poly_vertices);  //  make octagons
+    unsigned int begin_id{(m_reuse_ids) ? 0 : m_obstacles_made};
+    str += ",label=" + m_label_prefix + "ob_" + uintToString(begin_id + obs_vec->size());
+
+    XYPolygon try_poly = string2Poly(str);
+    if (!try_poly.is_convex()) {
+      // cout << "     try_poly is not convex." << endl;
+      return (false);
+    }
+
+    // Reject if poly is not in the overall region
+    if (!m_poly_region.contains(try_poly))
+      continue;
+
+    // Reject if poly intersects any existing obstacle
+    bool poly_ints_obstacle = false;
+    for (unsigned int i=0; i < obs_vec->size(); i++) {
+      if ((*obs_vec)[i].intersects(try_poly)) {
+        poly_ints_obstacle = true;
+      }
+    }
+    if (poly_ints_obstacle)
+      continue;
+
+    // Reject if poly is too close to any existing obstacle
+    bool poly_closeto_obstacle = false;
+    for (unsigned int i=0; i < obs_vec->size(); i++) {
+      if ((*obs_vec)[i].dist_to_poly(try_poly) < m_min_range) {
+        poly_closeto_obstacle = true;
+      }
+    }
+    if (poly_closeto_obstacle)
+      continue;
+
+    // Success!!!
+    obs_vec->push_back(try_poly);
+    return (true);
+  }
+  return (false);
 }
 
 
@@ -685,7 +781,7 @@ void ObsMonteCarloSim::postPoints()
             msg += ",key=" + key;
             Notify("TRACKED_FEATURE_"+uvname, msg);
             m_map_pts_published[key]++;
-            int label_index = (int)(m_map_pts_published[key]) % 100;
+            int label_index = static_cast<int>(m_map_pts_published[key]) % 100;
 
             if (m_post_visuals) {
               XYPoint p(x, y);

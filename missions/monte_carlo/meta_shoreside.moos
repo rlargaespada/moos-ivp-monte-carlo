@@ -34,7 +34,7 @@ Processconfig = ANTLER
 
   Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_CONSTANT
   Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_KNOWN
-  // Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_UNKNOWN
+  Run = uFldObsMonteCarloSim  @ NewConsole = false ~ uFldObsMonteCarloSim_UNKNOWN
 
   Run = uFldCollObDetect      @ NewConsole = false
   Run = uFldPathCheck         @ NewConsole = false
