@@ -188,8 +188,10 @@ bool EvalPlanner::requestNewPath() {
 bool EvalPlanner::postEndflags() {
   bool return_val{true};
   std::map<std::string, std::string>::iterator v;
-  for (v = m_endflags.begin(); v != m_endflags.end(); v++)
+  for (v = m_endflags.begin(); v != m_endflags.end(); v++) {
     return_val = Notify(v->first, v->second) && return_val;
+    reportEvent("Posted " + v->first + " = " + v->second);
+  }
 
   return (return_val);
 }

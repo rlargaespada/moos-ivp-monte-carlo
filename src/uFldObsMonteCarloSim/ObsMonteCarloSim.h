@@ -49,6 +49,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   void updateVRanges();
   void updateObstaclesField();
   bool generateObstacle(std::vector<XYPolygon>* obs_vec, unsigned int tries);
+  void updateObstaclesFromFile();
   void updateObstaclesRefresh();
 
  private:  // Configuration variables
@@ -59,6 +60,9 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   double      m_max_poly_size;
   bool        m_reuse_ids;
   std::string m_label_prefix;
+
+  // Parameters for reading obstacles from a file
+  std::string m_obstacle_file_var;
 
   // Visual params for rendering obstacles
   std::string m_poly_fill_color;
@@ -110,6 +114,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   double       m_reset_tstamp;
   bool         m_reset_request;
   bool         m_reset_pending;
+  std::string  m_new_obstacle_file;
   bool         m_newly_exited;
   bool         m_region_entered;
   unsigned int m_reset_total;

@@ -73,6 +73,7 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_path_complete_default;
 
   std::map<std::string, std::string> m_endflags;
+  // todo: add time limit for trials
 
  private:  // State variables
   bool m_sim_active;

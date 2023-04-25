@@ -188,6 +188,7 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
   obstacle_file = $(OBS_KNOWN_FILE)
   post_visuals = $(GUI)
   label_prefix = known
+  obstacle_file_var = NEW_OBSTSACLE_FILE_KNOWN
 
   // parameters to draw known obstacles
   poly_vert_color = royalblue
@@ -229,6 +230,7 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
   obstacle_file = $(OBS_UNKNOWN_FILE)
   post_visuals = $(GUI)
   label_prefix = unknown
+  obstacle_file_var = NEW_OBSTSACLE_FILE_UNKNOWN
 
   // parameters to draw known obstacles
   poly_vert_color = orangered

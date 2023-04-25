@@ -120,6 +120,8 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_reset_var) {
       if (m_reset_requests_enabled)  // ignore if requests disabled
         m_reset_request = true;
+    } else if (key == m_obstacle_file_var) {
+      m_new_obstacle_file = sval;
     } else if (key == "UFOS_POINT_SIZE") {
       handled = handleMailPointSize(sval);
     } else if (key == "NODE_REPORT") {
@@ -154,6 +156,7 @@ bool ObsMonteCarloSim::Iterate()
 
   updateVRanges();
   updateObstaclesField();
+  updateObstaclesFromFile();
   updateObstaclesRefresh();
 
   if (m_post_points)
@@ -190,6 +193,8 @@ bool ObsMonteCarloSim::OnStartUp()
     bool handled = false;
     if (param == "obstacle_file")
       handled = true;  // process later
+    if (param == "obstacle_file_var")
+      handled = setNonWhiteVarOnString(m_obstacle_file_var, value);
     else if (param == "label_prefix")
       handled = setNonWhiteVarOnString(m_label_prefix, value + "_");  // add trailing underscore
     else if ((param == "poly_vert_color") && isColor(value))
@@ -256,6 +261,9 @@ bool ObsMonteCarloSim::OnStartUp()
   // actually need
   if (m_reset_var.empty())
     m_reset_var = "UFOS_RESET";
+  // same reasoning for m_obstacle_file_var
+  if (m_obstacle_file_var.empty())
+    m_obstacle_file_var = "NEW_OBSTACLE_FILE";
 
   // Pass 2: Process obstacle file last so all color settings can be
   // configured first, and applied as the obstacles are being created.
@@ -288,6 +296,8 @@ void ObsMonteCarloSim::registerVariables()
   Register("VEHICLE_CONNECT", 0);
   if (!m_reset_var.empty())
     Register(m_reset_var, 0);
+  if (!m_obstacle_file_var.empty())
+    Register(m_obstacle_file_var, 0);
   Register("UFOS_POINT_SIZE", 0);
   Register("NODE_REPORT", 0);
 }
@@ -670,6 +680,29 @@ bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int
   }
   return (false);
 }
+
+
+//------------------------------------------------------------
+// Procedure: updateObstaclesFromFile()
+void ObsMonteCarloSim::updateObstaclesFromFile()
+{
+  if (m_new_obstacle_file.empty())
+    return;
+
+  // clear existing obstacles
+  Notify("KNOWN_OBSTACLE_CLEAR", "all");
+  postObstaclesErase();
+  m_obstacles.clear();
+
+  // reuse config handling function to update obstacle field
+  handleConfigObstacleFile(m_new_obstacle_file);
+
+  // set up to post new obstacles
+  m_new_obstacle_file.clear();
+  m_reset_total++;
+  m_obs_refresh_needed = true;
+}
+
 
 
 //------------------------------------------------------------
