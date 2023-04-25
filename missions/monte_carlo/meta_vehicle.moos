@@ -69,7 +69,7 @@ ProcessConfig = uSimMarineV22
   prefix = NAV
 
   // start pose
-  start_pos = $(START_POS)  // x, y
+  start_pos = $(START_POS)  // x=, y=
   start_heading = 35  // depends on map/layout
   // start_speed = 0
   // start_depth = 0

@@ -42,6 +42,7 @@ class EvalPlanner : public AppCastingMOOSApp
   // config handling
   bool handleConfigResetVars(std::string var_names);
   bool handleConfigEndflag(std::string flag);
+  bool setVPoint(XYPoint* point, std::string point_spec);
 
   // actions during iteration
   bool handleResetSim();

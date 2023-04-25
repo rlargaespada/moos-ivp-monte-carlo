@@ -64,6 +64,7 @@ void EvalPlanner::clearTrialData() {
   m_collision_count_trial = 0;
 }
 
+
 /// @brief Initializes state variables for EvalPlanner
 void EvalPlanner::initialize() {
   clearPendingRequests();
@@ -112,6 +113,10 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_path_complete_var) {
       if (msg.GetString() == "true")
         m_next_trial_pending = true;
+    } else if (key == "START_POS") {
+      setVPoint(&m_start_point, msg.GetString());
+    } else if (key == "GOAL_POS") {
+      setVPoint(&m_goal_point, msg.GetString());
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -175,6 +180,16 @@ bool EvalPlanner::requestNewPath() {
   msg += ',' + doubleToString(m_goal_point.get_vy());
 
   return_val = Notify(m_path_request_var, msg);
+
+  // add markers to start and goal
+  std::string marker{"type=diamond,label=start,color=firebrick,"};
+  marker += m_start_point.get_spec();
+  Notify("VIEW_MARKER", marker);
+
+  marker = "type=diamond,label=goal,color=cornflowerblue,";
+  marker += m_goal_point.get_spec();
+  Notify("VIEW_MARKER", marker);
+
   // todo: multiple vehicles
 
   std::string event;
@@ -334,13 +349,9 @@ bool EvalPlanner::OnStartUp()
 
     bool handled{false};
     if (param == "start_pos") {
-      m_start_point.set_vx(std::stod(biteStringX(value, ',')));
-      m_start_point.set_vy(std::stod(value));
-      handled = true;
+      handled = setVPoint(&m_start_point, value);
     } else if (param == "goal_pos") {
-      m_goal_point.set_vx(std::stod(biteStringX(value, ',')));
-      m_goal_point.set_vy(std::stod(value));
-      handled = true;
+      handled = setVPoint(&m_goal_point, value);
     } else if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, value);
     } else if (param == "path_complete_var") {
@@ -370,6 +381,26 @@ bool EvalPlanner::OnStartUp()
 
   registerVariables();
   return(true);
+}
+
+
+bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
+{
+  // parse x and y values from spec
+  bool return_val{true};
+  std::string xval, yval;
+  point_spec = tolower(point_spec);
+  return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
+  return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
+
+  // if spec was invalid, exit early without changing point
+  if (!return_val)
+    return (return_val);
+
+  // spec was good, change point
+  point->set_vx(std::stod(xval));
+  point->set_vy(std::stod(yval));
+  return (return_val);
 }
 
 
@@ -418,6 +449,10 @@ void EvalPlanner::registerVariables()
   Register("SKIP_TRIAL_REQUESTED", 0);
   if (!m_path_complete_var.empty())
     Register(m_path_complete_var, 0);
+
+  // start/goal updates
+  Register("START_POS");  // todo: do this for multiple vehicles
+  Register("GOAL_POS");
 
   // variables used to calculate metrics
   // todo: handle these subscriptions
@@ -469,12 +504,6 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Collisions:   " << intToString(m_collision_count_trial) << endl;
   m_msgs << "  Trial Near Misses:   " << intToString(m_near_miss_count_trial) << endl;
   m_msgs << "  Trial Encounters:   " << intToString(m_encounter_count_trial) << endl;
-
-  // ACTable actab(4);
-  // actab << "Alpha | Bravo | Charlie | Delta";
-  // actab.addHeaderLines();
-  // actab << "one" << "two" << "three" << "four";
-  // m_msgs << actab.getFormattedString();
 
   return(true);
 }

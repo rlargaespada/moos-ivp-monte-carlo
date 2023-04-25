@@ -80,7 +80,9 @@ ProcessConfig = pMarineViewer
   appcast_font_size    = large
 
   // Context Pull-Down Menu
-  // todo: add context to update start and goal positions
+  // todo: multiple vehicles
+  left_context = START_POS = "x=$[XPOS], y=$[YPOS]"
+  right_context = GOAL_POS = "x=$[XPOS], y=$[YPOS]"
 
   // Exclusion Filter
   // leave empty
