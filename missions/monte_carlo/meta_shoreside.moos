@@ -16,17 +16,18 @@ Community  = shoreside
 //--------------------------------------------------------
 Processconfig = ANTLER
 {
-  MSBetweenLaunches = 100
+  MSBetweenLaunches = 200
 
   Run = MOOSDB                @ NewConsole = false
   Run = pRealm                @ NewConsole = false
 #ifdef GUI true
   Run = pMarineViewer         @ NewConsole = false
 #endif
+  // Run = uXMS                  @ NewConsole = false
 
-  Run = pLogger            @ NewConsole = false
-  // Run = uXMS               @ NewConsole = false
-  // Run = pDeadManPost       @ NewConsole = false
+  Run = pLogger               @ NewConsole = false
+  Run = uProcessWatch         @ NewConsole = false
+  Run = uLoadWatch            @ NewConsole = false
 
   Run = pShare                @ NewConsole = false
   Run = pHostInfo             @ NewConsole = false
@@ -128,6 +129,20 @@ ProcessConfig = pLogger
 
   Log = DEPLOY_ALL @ 0 NOSYNC
 
+  // process watch
+  Log = PROC_WATCH_FULL_SUMMARY @ 0 NOSYNC
+  Log = PROC_WATCH_SUMMARY @ 0 NOSYNC
+  Log = PROC_WATCH_EVENT @ 0 NOSYNC
+
+  // load watch
+  Log = LOAD_WARNING @ 0 NOSYNC
+  Log = ULW_BREACH @ 0 NOSYNC
+  Log = ULW_BREACH_COUNT @ 0
+  Log = ULW_BREACH_LIST @ 0 NOSYNC
+  Log = ULW_NEAR_BREACH @ 0 NOSYNC
+  Log = ULW_NEAR_BREACH_COUNT @ 0
+  Log = ULW_NEAR_BREACH_LIST @ 0 NOSYNC
+
   // obstacle sim
   Log = KNOWN_OBSTACLE @ 0 NOSYNC
   Log = RESET_KNOWN_OBSTACLES @ 0 NOSYNC
@@ -167,7 +182,33 @@ ProcessConfig = pLogger
 }
 
 // todo: determine which variables to scope for uXMS
-// todo: determine which variables to monitor for pDeadManPost
+
+
+//------------------------------------------
+// uProcessWatch config block
+ProcessConfig = uProcessWatch
+{
+  AppTick   = 1
+  CommsTick = 1
+
+  watch_all = true
+  summary_wait = 60
+}
+
+
+//------------------------------------------
+// uLoadWatch config block
+ProcessConfig = uLoadWatch
+{
+  AppTick   = 2
+  CommsTick = 2
+
+  thresh = app=any, gapthresh=2.0
+
+  near_breach_thresh = 0.9  // default
+
+  breach_trigger = 1    // default (first offense forgiven)
+}
 
 
 #include plug_pShare.moos

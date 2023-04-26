@@ -10,15 +10,15 @@ Community  = $(VNAME)
 //------------------------------------------------------------
 Processconfig = ANTLER
 {
-  MSBetweenLaunches = 50
+  MSBetweenLaunches = 100
 
   Run = MOOSDB           @ NewConsole = false
   Run = pRealm           @ NewConsole = false
   Run = pHelmIvP         @ NewConsole = false
 
   Run = pLogger          @ NewConsole = false
-//   Run = uProcessWatch    @ NewConsole = false
-//   Run = uLoadWatch       @ NewConsole = false
+  Run = uProcessWatch    @ NewConsole = false
+  Run = uLoadWatch       @ NewConsole = false
 
   Run = uSimMarineV22    @ NewConsole = false
   Run = pMarinePIDV22    @ NewConsole = false
@@ -82,6 +82,20 @@ ProcessConfig = pLogger
   Log = VIEW_POLYGON @ 0 NOSYNC
   Log = VIEW_POINT @ 0 NOSYNC
 
+  // process watch
+  Log = PROC_WATCH_FULL_SUMMARY @ 0 NOSYNC
+  Log = PROC_WATCH_SUMMARY @ 0 NOSYNC
+  Log = PROC_WATCH_EVENT @ 0 NOSYNC
+
+  // load watch
+  Log = LOAD_WARNING @ 0 NOSYNC
+  Log = ULW_BREACH @ 0 NOSYNC
+  Log = ULW_BREACH_COUNT @ 0
+  Log = ULW_BREACH_LIST @ 0 NOSYNC
+  Log = ULW_NEAR_BREACH @ 0 NOSYNC
+  Log = ULW_NEAR_BREACH_COUNT @ 0
+  Log = ULW_NEAR_BREACH_LIST @ 0 NOSYNC
+
   // uSimMarineV22
   Log = NAV_X @ 0
   Log = NAV_Y @ 0
@@ -117,8 +131,33 @@ ProcessConfig = pLogger
   Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
 }
 
-// todo uProcessWatch: determine which vehicle apps to watch, where to write failures. add to NodeBroker
-// todo: determine thresholds for uLoadWatch
+
+//------------------------------------------
+// uProcessWatch config block
+ProcessConfig = uProcessWatch
+{
+  AppTick   = 1
+  CommsTick = 1
+
+  watch_all = true
+  summary_wait = 60
+}
+
+
+//------------------------------------------
+// uLoadWatch config block
+ProcessConfig = uLoadWatch
+{
+  AppTick   = 2
+  CommsTick = 2
+
+  thresh = app=pHelmIvP, gapthresh=1.5
+  thresh = app=any,      gapthresh=2.0
+
+  near_breach_thresh = 0.9  // default
+
+  breach_trigger = 1    // default (first offense forgiven)
+}
 
 
 //------------------------------------------
