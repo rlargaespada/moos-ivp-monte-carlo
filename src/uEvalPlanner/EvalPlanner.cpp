@@ -173,11 +173,11 @@ bool EvalPlanner::requestNewPath() {
   bool return_val{true};
 
   std::string msg{"start="};
-  msg += doubleToString(m_start_point.get_vx());
-  msg += ',' + doubleToString(m_start_point.get_vy());
+  msg += doubleToString(m_start_point.get_vx(), 2);
+  msg += ',' + doubleToString(m_start_point.get_vy(), 2);
   msg += "; goal=";
-  msg += doubleToString(m_goal_point.get_vx());
-  msg += ',' + doubleToString(m_goal_point.get_vy());
+  msg += doubleToString(m_goal_point.get_vx(), 2);
+  msg += ',' + doubleToString(m_goal_point.get_vy(), 2);
 
   return_val = Notify(m_path_request_var, msg);
 
@@ -305,6 +305,7 @@ bool EvalPlanner::handleNextTrial() {
   if (!m_sim_active)
     return (true);
 
+  Notify("TRIAL_COMPLETE", m_completed_trials);
   reportEvent("Trial " + intToString(m_completed_trials) + " complete!");
   // calcMetrics();
   clearTrialData();

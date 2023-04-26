@@ -16,7 +16,7 @@ Processconfig = ANTLER
   Run = pRealm           @ NewConsole = false
   Run = pHelmIvP         @ NewConsole = false
 
-  // Run = pLogger          @ NewConsole = false
+  Run = pLogger          @ NewConsole = false
 //   Run = uProcessWatch    @ NewConsole = false
 //   Run = uLoadWatch       @ NewConsole = false
 
@@ -53,7 +53,70 @@ ProcessConfig = pHelmIvP
 }
 
 
-// todo: determine which variables to log for pLogger
+//------------------------------------------
+// pLogger config block
+
+ProcessConfig = pLogger
+{
+  AppTick       = 5
+  CommsTick     = 5
+
+  SyncLog       = true @ 0.2
+  AsyncLog      = true
+  WildCardLogging = false
+
+  // File = MOOSLog_FORESTLAKE_BASIC_MONTECARLO
+  File = MOOSLog_%(VNAME)
+  FileTimeStamp = false  // false while developing
+
+  Log = DEPLOY @ 0 NOSYNC
+  Log = MOOS_MANUAL_OVERRIDE @ 0 NOSYNC
+
+  // helm
+  Log = IVPHELM_STATE @ 0 NOSYNC
+  Log = MODE @ 0 NOSYNC
+  Log = IVPHELM_SUMMARY @ 0 NOSYNC
+  Log = OBM_ALERT_REQUEST @ 0 NOSYNC
+  Log = USE_OBS_AVOID @ 0 NOSYNC
+  Log = WAYPOINTS_COMPLETE @ 0 NOSYNC
+  Log = VIEW_POLYGON @ 0 NOSYNC
+  Log = VIEW_POINT @ 0 NOSYNC
+
+  // uSimMarineV22
+  Log = NAV_X @ 0
+  Log = NAV_Y @ 0
+  Log = NAV_HEADING @ 0
+  Log = NAV_YAW @ 0
+  Log = NAV_SPEED @ 0
+  Log = USM_RESET @ 0 NOSYNC
+  Log = DRIFT_X @ 0
+  Log = DRIFT_Y @ 0
+  Log = DRIFT_VECTOR @ 0 NOSYNC
+  Log = DRIFT_VECTOR_ADD @ 0 NOSYNC
+  Log = DRIFT_VECTOR_MULT @ 0 NOSYNC
+  Log = NAV_DRIFT_SUMMARY @ 0 NOSYNC
+
+  // pMarinePIDV22
+  Log = DESIRED_HEADING @ 0
+  Log = DESIRED_SPEED @ 0
+  Log = DESIRED_RUDDER @ 0
+  Log = DESIRED_THRUST @ 0
+
+  // node reporter
+  Log = NODE_REPORT_LOCAL @ 0 NOSYNC
+
+  // obstacle manager
+  Log = GIVEN_OBSTACLE @ 0 NOSYNC
+  Log = TRACKED_FEATURE @ 0 NOSYNC
+  Log = OBSTACLE_ALERT @ 0 NOSYNC
+  Log = OBM_RESOLVED @ 0 NOSYNC
+  Log = VIEW_POLYGON @ 0 NOSYNC
+
+  // planner
+  Log = $(PATH_REQUEST_VAR) @ 0 NOSYNC
+  Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
+}
+
 // todo uProcessWatch: determine which vehicle apps to watch, where to write failures. add to NodeBroker
 // todo: determine thresholds for uLoadWatch
 

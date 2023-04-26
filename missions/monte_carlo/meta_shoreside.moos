@@ -24,7 +24,7 @@ Processconfig = ANTLER
   Run = pMarineViewer         @ NewConsole = false
 #endif
 
-  // Run = pLogger            @ NewConsole = false
+  Run = pLogger            @ NewConsole = false
   // Run = uXMS               @ NewConsole = false
   // Run = pDeadManPost       @ NewConsole = false
 
@@ -110,7 +110,62 @@ ProcessConfig = pMarineViewer
 }
 
 
-// todo: determine which variables to log for pLogger
+//------------------------------------------
+// pLogger config block
+
+ProcessConfig = pLogger
+{
+  AppTick       = 5
+  CommsTick     = 5
+
+  SyncLog       = true @ 0.2
+  AsyncLog      = true
+  WildCardLogging = false
+
+  // File = MOOSLog_FORESTLAKE_BASIC_MONTECARLO
+  File = MOOSLog_SHORESIDE
+  FileTimeStamp = false  // false while developing
+
+  Log = DEPLOY_ALL @ 0 NOSYNC
+
+  // obstacle sim
+  Log = KNOWN_OBSTACLE @ 0 NOSYNC
+  Log = RESET_KNOWN_OBSTACLES @ 0 NOSYNC
+  Log = RESET_UNKNOWN_OBSTACLES @ 0 NOSYNC
+  Log = NEW_OBSTSACLE_FILE_KNOWN @ 0 NOSYNC
+  Log = NEW_OBSTSACLE_FILE_UNKNOWN @ 0 NOSYNC
+  Log = KNOWN_OBSTACLE_CLEAR @ 0 NOSYNC
+  Log = VIEW_POLYGON @ 0 NOSYNC
+  Log = VIEW_POINT @ 0 NOSYNC
+
+  // collision detect
+  Log = OB_ENCOUNTER @ 0 NOSYNC
+  Log = OB_NEAR_MISS @ 0 NOSYNC
+  Log = OB_COLLISION @ 0 NOSYNC
+  Log = COLLISION_COUNT @ 0
+  Log = NEAR_MISS_COUNT @ 0
+  Log = ENCOUNTER_COUNT @ 0
+
+  //  path check
+  Log = UPC_TRIP_RESET @ 0 NOSYNC
+  Log = UPC_SPEED_REPORT @ 0 NOSYNC
+  Log = UPC_ODOMETRY_REPORT @ 0 NOSYNC
+
+  // eval planner
+  Log = RESET_SIM_REQUESTED @ 0 NOSYNC
+  Log = END_SIM_REQUESTED @ 0 NOSYNC
+  Log = RESET_TRIAL_REQUESTED @ 0 NOSYNC
+  Log = SKIP_TRIAL_REQUESTED @ 0 NOSYNC
+  Log = START_POS @ 0 NOSYNC
+  Log = GOAL_POS @ 0 NOSYNC
+  Log = $(PATH_REQUEST_VAR) @ 0 NOSYNC
+  Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
+  Log = USM_RESET @ 0 NOSYNC
+  Log = TRIAL_COMPLETE @ 0
+  // todo: add metrics postings
+  Log = VIEW_MARKER @ 0 NOSYNC
+}
+
 // todo: determine which variables to scope for uXMS
 // todo: determine which variables to monitor for pDeadManPost
 
