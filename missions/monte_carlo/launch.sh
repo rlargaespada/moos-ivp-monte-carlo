@@ -132,7 +132,7 @@ gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
 
 nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
-       PSHARE_PORT=$SHORE_PSHARE    VNAMES=$V1_NAME    GUI=$GUI      \
+       PSHARE_PORT=$SHORE_PSHARE    V1_NAME=$V1_NAME    GUI=$GUI      \
        NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
        OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE\
        START_POS=$V1_START_SPEC    GOAL_POS=$V1_GOAL_SPEC            \

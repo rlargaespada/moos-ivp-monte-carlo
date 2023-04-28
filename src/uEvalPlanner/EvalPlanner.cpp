@@ -305,7 +305,7 @@ bool EvalPlanner::handleNextTrial() {
   if (!m_sim_active)
     return (true);
 
-  Notify("TRIAL_COMPLETE", m_completed_trials);
+  Notify("TRIALS_COMPLETED", m_completed_trials + 1);
   reportEvent("Trial " + intToString(m_completed_trials) + " complete!");
   // calcMetrics();
   clearTrialData();

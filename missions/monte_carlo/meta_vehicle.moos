@@ -63,7 +63,6 @@ ProcessConfig = pLogger
 
   SyncLog       = true @ 0.2
   AsyncLog      = true
-  WildCardLogging = false
 
   // File = MOOSLog_FORESTLAKE_BASIC_MONTECARLO
   File = MOOSLog_%(VNAME)
@@ -71,18 +70,56 @@ ProcessConfig = pLogger
 
   Log = DEPLOY @ 0 NOSYNC
   Log = MOOS_MANUAL_OVERRIDE @ 0 NOSYNC
+  Log = DB_CLIENTS @ 0 NOSYNC
+  Log = DB_EVENT @ 0 NOSYNC
+  Log = VIEW_POLYGON @ 0 NOSYNC
+  Log = VIEW_POINT @ 0 NOSYNC
+  Log = VIEW_SEGLIST @ 0 NOSYNC
 
   // helm
-  Log = IVPHELM_STATE @ 0 NOSYNC
+  Log = BHV_IPF @ 0 NOSYNC
+  Log = BHV_WARNING @ 0 NOSYNC
   Log = MODE @ 0 NOSYNC
-  Log = IVPHELM_SUMMARY @ 0 NOSYNC
   Log = OBM_ALERT_REQUEST @ 0 NOSYNC
   Log = USE_OBS_AVOID @ 0 NOSYNC
   Log = WAYPOINTS_COMPLETE @ 0 NOSYNC
-  Log = VIEW_POLYGON @ 0 NOSYNC
-  Log = VIEW_POINT @ 0 NOSYNC
+  Log = DESIRED_HEADING @ 0
+  Log = DESIRED_SPEED @ 0
+  Log = DIST_TO_STATION @ 0
+  Log = IVPHELM_ALLSTOP @ 0 NOSYNC
+  Log = IVPHELM_BHV_ACTIVE @ 0 NOSYNC
+  Log = IVPHELM_BHV_CNT @ 0
+  Log = IVPHELM_BHV_CNT_EVER @ 0
+  Log = IVPHELM_BHV_IDLE @ 0 NOSYNC
+  Log = IVPHELM_BHV_RUNNING @ 0 NOSYNC
+  Log = IVPHELM_COMPLETED_COUNT @ 0
+  Log = IVPHELM_DOMAIN @ 0 NOSYNC
+  Log = IVPHELM_LIFE_EVENT @ 0 NOSYNC
+  Log = IVPHELM_MODESET @ 0 NOSYNC
+  Log = IVPHELM_REGISTER @ 0 NOSYNC
+  Log = IVPHELM_STATE @ 0 NOSYNC
+  Log = IVPHELM_STATEVARS @ 0 NOSYNC
+  Log = IVPHELM_UPDATEVARS @ 0 NOSYNC
+  Log = IVPHELM_UPDATE_RESULT @ 0 NOSYNC
+  Log = MOOS_DEBUG @ 0 NOSYNC
+  Log = NOTED_RESOLVED @ 0 NOSYNC
+  Log = OUT_OF_BOUNDS @ 0 NOSYNC
+  Log = PSKEEP_MODE @ 0 NOSYNC
+  Log = STATIONING @ 0 NOSYNC
+  Log = STATION_UPDATES @ 0 NOSYNC
+  Log = WAYPOINTS_COMPLETE @ 0 NOSYNC
+  Log = WPT_EFF_DIST_ALL @ 0
+  Log = WPT_EFF_DIST_LEG @ 0
+  Log = WPT_EFF_SUMM_ALL @ 0 NOSYNC
+  Log = WPT_EFF_SUMM_LEG @ 0 NOSYNC
+  Log = WPT_EFF_TIME_ALL @
+  Log = WPT_EFF_TIME_LEG @
+  Log = WPT_INDEX @ 0
+  Log = WPT_ODO @ 0
+  Log = WPT_STAT @ 0 NOSYNC
 
   // process watch
+  Log = PROC_WATCH_ALL_OK @ 0 NOSYNC
   Log = PROC_WATCH_FULL_SUMMARY @ 0 NOSYNC
   Log = PROC_WATCH_SUMMARY @ 0 NOSYNC
   Log = PROC_WATCH_EVENT @ 0 NOSYNC
@@ -103,34 +140,51 @@ ProcessConfig = pLogger
   Log = NAV_YAW @ 0
   Log = NAV_SPEED @ 0
   Log = USM_RESET @ 0 NOSYNC
+  Log = USM_RESET_COUNT @ 0
   Log = DRIFT_X @ 0
   Log = DRIFT_Y @ 0
   Log = DRIFT_VECTOR @ 0 NOSYNC
   Log = DRIFT_VECTOR_ADD @ 0 NOSYNC
   Log = DRIFT_VECTOR_MULT @ 0 NOSYNC
-  Log = NAV_DRIFT_SUMMARY @ 0 NOSYNC
+  Log = USM_DRIFT_SUMMARY @ 0 NOSYNC
 
   // pMarinePIDV22
-  Log = DESIRED_HEADING @ 0
-  Log = DESIRED_SPEED @ 0
   Log = DESIRED_RUDDER @ 0
   Log = DESIRED_THRUST @ 0
 
   // node reporter
   Log = NODE_REPORT_LOCAL @ 0 NOSYNC
 
+  // pshare and related
+  Log = PSHARE_CMD @ 0 NOSYNC
+  Log = PSHARE_INPUT_SUMMARY @ 0 NOSYNC
+  Log = PSHARE_OUTPUT_SUMMARY @ 0 NOSYNC
+  Log = PHI_HOST_INFO @ 0 NOSYNC
+  Log = PHI_HOST_IP @ 0 NOSYNC
+  Log = PHI_HOST_IP_ALL @ 0 NOSYNC
+  Log = PHI_HOST_IP_VERBOSE @ 0 NOSYNC
+  Log = PHI_HOST_PORT_DB @ 0 NOSYNC
+
   // obstacle manager
   Log = GIVEN_OBSTACLE @ 0 NOSYNC
   Log = TRACKED_FEATURE @ 0 NOSYNC
   Log = OBSTACLE_ALERT @ 0 NOSYNC
   Log = OBM_RESOLVED @ 0 NOSYNC
-  Log = VIEW_POLYGON @ 0 NOSYNC
+  Log = OBM_DIST_TO_OBJ @ 0 NOSYNC
+  Log = OBM_MIN_DIST_EVER @ 0
 
   // planner
   Log = $(PATH_REQUEST_VAR) @ 0 NOSYNC
   Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
-}
+  Log = PATH_FOUND @ 0 NOSYNC
 
+  // WildCardLogging = true
+
+  // WildCardOmitPattern = *_STATUS
+  // WildCardOmitPattern = APPCAST
+  // WildCardOmitPattern = DB_VARSUMMARY
+  // WildCardOmitPattern = DB_RWSUMMARY
+}
 
 //------------------------------------------
 // uProcessWatch config block
@@ -336,7 +390,7 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
 
   // after "planning" time, go into traversal mode with found points
   event = var=$(PATH_FOUND_VAR), val=true, time=10
-  event = var=PATH_UPDATE, val="points = $(START_POS):$(GOAL_POS)"
+  event = var=PATH_UPDATE, val="points = $(START_POS):50, -100:$(GOAL_POS)"
 
   // encountered an obstacle, go back into planning mode
   event = var=$(PATH_FOUND_VAR), val=false, time=60:70
@@ -344,7 +398,7 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
 
   // found new path, go back into traversal mode
   event = var=$(PATH_FOUND_VAR), val=true, time=80:100
-  event = var=PATH_UPDATE, val="points = $(START_POS):$(GOAL_POS)"
+  event = var=PATH_UPDATE, val="points = $(START_POS):50, -100:$(GOAL_POS)"
 }
 
 ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_B

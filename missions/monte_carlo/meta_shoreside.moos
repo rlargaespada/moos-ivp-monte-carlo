@@ -23,7 +23,7 @@ Processconfig = ANTLER
 #ifdef GUI true
   Run = pMarineViewer         @ NewConsole = false
 #endif
-  // Run = uXMS                  @ NewConsole = false
+  Run = uXMS                  @ NewConsole = true
 
   Run = pLogger               @ NewConsole = false
   Run = uProcessWatch         @ NewConsole = false
@@ -89,25 +89,25 @@ ProcessConfig = pMarineViewer
   // leave empty
 
   // MOOS-Scope Pull-Down Menu
-  // todo: choose which variables to scope on
   scope = PHI_HOST_INFO
   scope = MVIEWER_LCLICK
   scope = MVIEWER_RCLICK
+  scope = START_POS
+  scope = GOAL_POS
+  scope = UPC_ODOMETRY_REPORT
+  scope = UPC_SPEED_REPORT
 
   // Action Pull-Down Menu
-  // todo: determine what actions might be useful
+  // no actions for now, just use buttons
 
   // Button Configuration
   button_one = LAUNCH_SIM # DEPLOY_ALL=true # MOOS_MANUAL_OVERRIDE_ALL=false
   button_one = RESET_SIM_REQUESTED=true
   button_two = END_SIM # DEPLOY_ALL=false # END_SIM_REQUESTED=true
 
-  button_three = PAUSE_SIM # USM_SIM_PAUSED_ALL=true
-  button_four = UNPAUSE_SIM # USM_SIM_PAUSED_ALL=false
-
-  button_five = RESET_TRIAL # RESET_TRIAL_REQUESTED=true
-  button_six = RESET_SIM # RESET_SIM_REQUESTED=true
-  button_seven = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=true
+  button_three = RESET_SIM # RESET_SIM_REQUESTED=true
+  button_four = RESET_TRIAL # RESET_TRIAL_REQUESTED=true
+  button_five = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=true
 }
 
 
@@ -121,15 +121,24 @@ ProcessConfig = pLogger
 
   SyncLog       = true @ 0.2
   AsyncLog      = true
-  WildCardLogging = false
 
   // File = MOOSLog_FORESTLAKE_BASIC_MONTECARLO
   File = MOOSLog_SHORESIDE
   FileTimeStamp = false  // false while developing
 
+  // general
   Log = DEPLOY_ALL @ 0 NOSYNC
+  Log = MOOS_MANUAL_OVERRIDE_ALL @ 0 NOSYNC
+  Log = DB_CLIENTS @ 0 NOSYNC
+  Log = DB_EVENT @ 0 NOSYNC
+  Log = REGION_INFO @ 0 NOSYNC
+  Log = VIEW_MARKER @ 0 NOSYNC
+  Log = VIEW_POLYGON @ 0 NOSYNC
+  Log = VIEW_POINT @ 0 NOSYNC
+  Log = VIEW_SEGLIST @ 0 NOSYNC
 
   // process watch
+  Log = PROC_WATCH_ALL_OK @ 0 NOSYNC
   Log = PROC_WATCH_FULL_SUMMARY @ 0 NOSYNC
   Log = PROC_WATCH_SUMMARY @ 0 NOSYNC
   Log = PROC_WATCH_EVENT @ 0 NOSYNC
@@ -143,6 +152,19 @@ ProcessConfig = pLogger
   Log = ULW_NEAR_BREACH_COUNT @ 0
   Log = ULW_NEAR_BREACH_LIST @ 0 NOSYNC
 
+  // pshare and related
+  Log = PSHARE_CMD @ 0 NOSYNC
+  Log = PSHARE_INPUT_SUMMARY @ 0 NOSYNC
+  Log = PSHARE_OUTPUT_SUMMARY @ 0 NOSYNC
+  Log = PHI_HOST_INFO @ 0 NOSYNC
+  Log = PHI_HOST_IP @ 0 NOSYNC
+  Log = PHI_HOST_IP_ALL @ 0 NOSYNC
+  Log = PHI_HOST_IP_VERBOSE @ 0 NOSYNC
+  Log = PHI_HOST_PORT_DB @ 0 NOSYNC
+  Log = UFSB_BRIDGE_VARS @ 0 NOSYNC
+  Log = UFSB_NODE_COUNT @ 0
+  Log = UFSB_QBRIDGE_VARS @ 0 NOSYNC
+
   // obstacle sim
   Log = KNOWN_OBSTACLE @ 0 NOSYNC
   Log = RESET_KNOWN_OBSTACLES @ 0 NOSYNC
@@ -150,8 +172,6 @@ ProcessConfig = pLogger
   Log = NEW_OBSTSACLE_FILE_KNOWN @ 0 NOSYNC
   Log = NEW_OBSTSACLE_FILE_UNKNOWN @ 0 NOSYNC
   Log = KNOWN_OBSTACLE_CLEAR @ 0 NOSYNC
-  Log = VIEW_POLYGON @ 0 NOSYNC
-  Log = VIEW_POINT @ 0 NOSYNC
 
   // collision detect
   Log = OB_ENCOUNTER @ 0 NOSYNC
@@ -176,12 +196,74 @@ ProcessConfig = pLogger
   Log = $(PATH_REQUEST_VAR) @ 0 NOSYNC
   Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
   Log = USM_RESET @ 0 NOSYNC
-  Log = TRIAL_COMPLETE @ 0
+  Log = TRIALS_COMPLETED @ 0
   // todo: add metrics postings
-  Log = VIEW_MARKER @ 0 NOSYNC
+
+  // WildCardLogging = true
+
+  // WildCardOmitPattern = *_STATUS
+  // WildCardOmitPattern = APPCAST
+  // WildCardOmitPattern = DB_VARSUMMARY
+  // WildCardOmitPattern = DB_RWSUMMARY
 }
 
-// todo: determine which variables to scope for uXMS
+
+//------------------------------------------
+// uXMS config block
+ProcessConfig = uXMS
+{
+  AppTick       = 1
+  CommsTick     = 1
+
+  display_source = true
+  display_time = true
+  display_community = true
+
+  var = DEPLOY_ALL, MOOS_MANUAL_OVERRIDE_ALL
+
+  // process watch
+  var = PROC_WATCH_SUMMARY
+
+  //load watch
+  var = LOAD_WARNING
+  var = ULW_BREACH, ULW_BREACH_COUNT, ULW_BREACH_LIST
+  var = ULW_NEAR_BREACH, ULW_NEAR_BREACH_COUNT, ULW_NEAR_BREACH_LIST
+
+  // obstacle sims
+  var = RESET_KNOWN_OBSTACLES, RESET_UNKNOWN_OBSTACLES
+  // var = NEW_OBSTSACLE_FILE_KNOWN, NEW_OBSTSACLE_FILE_UNKNOWN
+
+  //collision detection
+  var = COLLISION_COUNT, NEAR_MISS_COUNT, ENCOUNTER_COUNT
+  var = OB_COLLISION, OB_NEAR_MISS, OB_ENCOUNTER
+
+  // path check
+  var = UPC_ODOMETRY_REPORT
+
+  // eval planner
+  var = TRIALS_COMPLETED
+  var = RESET_SIM_REQUESTED, END_SIM_REQUESTED
+  var = RESET_TRIAL_REQUESTED, SKIP_TRIAL_REQUESTED
+  var = $(PATH_REQUEST_VAR), $(PATH_COMPLETE_VAR), PATH_FOUND
+  var = START_POS, GOAL_POS
+  // todo: add metrics postings
+
+  // vehicle updates
+  // todo: multiple vehicles
+  // var = BHV_WARNING_%(V1_NAME)
+  // var = DESIRED_HEADING_%(V1_NAME), DESIRED_SPEED_%(V1_NAME)
+  // var = DIST_TO_STATION_%(V1_NAME)
+  // var = IVPHELM_ALLSTOP_%(V1_NAME), IVPHELM_STATE_%(V1_NAME)
+  // var = IVPHELM_BHV_ACTIVE_%(V1_NAME), IVPHELM_BHV_IDLE_%(V1_NAME), IVPHELM_BHV_RUNNING_%(V1_NAME)
+  // var = LOAD_WARNING_%(V1_NAME)
+  // var = MODE_%(V1_NAME)
+  // var = MOOS_DEBUG_%(V1_NAME)
+  // var = NAV_X_%(V1_NAME), NAV_Y_%(V1_NAME), NAV_SPEED_%(V1_NAME), NAV_HEADING_%(V1_NAME)
+  // var = OBM_MIN_DIST_EVER_%(V1_NAME)
+  // var = OUT_OF_BOUNDS_%(V1_NAME)
+  // var = PROC_WATCH_ALL_OK_%(V1_NAME), PROC_WATCH_SUMMARY_%(V1_NAME)
+
+}
 
 
 //------------------------------------------
@@ -193,6 +275,7 @@ ProcessConfig = uProcessWatch
 
   watch_all = true
   summary_wait = 60
+  nowatch = uXMS*
 }
 
 

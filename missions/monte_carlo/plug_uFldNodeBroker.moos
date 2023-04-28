@@ -8,6 +8,26 @@ ProcessConfig = uFldNodeBroker
 
   try_shore_host = pshare_route=$(SHORE_IP):$(SHORE_PSHARE)
 
+  // bridge = src=BHV_WARNING, alias=BHV_WARNING_%(VNAME)
+  // bridge = src=DESIRED_HEADING, alias=DESIRED_HEADING_%(VNAME)
+  // bridge = src=DESIRED_SPEED, alias=DESIRED_SPEED_%(VNAME)
+  // bridge = src=DIST_TO_STATION, alias=DIST_TO_STATION_%(VNAME)
+  // bridge = src=IVPHELM_ALLSTOP, alias=IVPHELM_ALLSTOP_%(VNAME)
+  // bridge = src=IVPHELM_STATE, alias=IVPHELM_STATE_%(VNAME)
+  // bridge = src=IVPHELM_BHV_ACTIVE, alias=IVPHELM_BHV_ACTIVE_%(VNAME)
+  // bridge = src=IVPHELM_BHV_IDLE, alias=IVPHELM_BHV_IDLE_%(VNAME)
+  // bridge = src=IVPHELM_BHV_RUNNING, alias=IVPHELM_BHV_RUNNING_%(VNAME)
+  // bridge = src=LOAD_WARNING, alias=LOAD_WARNING_%(VNAME)
+  // bridge = src=MODE, alias=MODE_%(VNAME)
+  // bridge = src=MOOS_DEBUG, alias=MOOS_DEBUG_%(VNAME)
+  // bridge = src=NAV_X, alias=NAV_X_%(VNAME)
+  // bridge = src=NAV_Y, alias=NAV_Y_%(VNAME)
+  // bridge = src=NAV_SPEED, alias=NAV_SPEED_%(VNAME)
+  // bridge = src=NAV_HEADING, alias=NAV_HEADING_%(VNAME)
+  // bridge = src=OBM_MIN_DIST_EVER, alias=OBM_MIN_DIST_EVER_%(VNAME)
+  // bridge = src=OUT_OF_BOUNDS, alias=OUT_OF_BOUNDS_%(VNAME)
+  // bridge = src=PROC_WATCH_ALL_OK, alias=PROC_WATCH_ALL_OK_%(VNAME)
+  // bridge = src=PROC_WATCH_SUMMARY, alias=PROC_WATCH_SUMMARY_%(VNAME)
   bridge = src=VIEW_POLYGON
   bridge = src=VIEW_POINT
   bridge = src=VIEW_SEGLIST
