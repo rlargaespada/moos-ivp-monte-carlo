@@ -38,6 +38,7 @@ class EvalPlanner : public AppCastingMOOSApp
   void clearTotalCounts();
   void clearTrialData();
   void initialize();
+  void handleSimRequest(CMOOSMsg request, bool* pending_flag);
 
   // config handling
   bool handleConfigResetVars(std::string var_names);
@@ -58,6 +59,7 @@ class EvalPlanner : public AppCastingMOOSApp
   bool postEndflags();
 
  private:  // Configuration variables
+  std::string m_vehicle_name;
   XYPoint m_start_point;
   XYPoint m_goal_point;
 

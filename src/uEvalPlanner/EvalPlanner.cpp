@@ -103,13 +103,13 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 #endif
 
     if (key == "RESET_SIM_REQUESTED") {
-      m_reset_sim_pending = true;
+      handleSimRequest(msg, &m_reset_sim_pending);
     } else if (key == "END_SIM_REQUESTED") {
-      m_end_sim_pending = true;
+      handleSimRequest(msg, &m_end_sim_pending);
     } else if (key == "RESET_TRIAL_REQUESTED") {
-      m_reset_trial_pending = true;
+      handleSimRequest(msg, &m_reset_trial_pending);
     } else if (key == "SKIP_TRIAL_REQUESTED") {
-      m_skip_trial_pending = true;
+      handleSimRequest(msg, &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
       if (msg.GetString() == "true")
         m_next_trial_pending = true;
@@ -125,6 +125,15 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 
   return(true);
 }
+
+
+void EvalPlanner::handleSimRequest(CMOOSMsg request, bool* pending_flag)
+{
+  std::string sval{tolower(request.GetString())};
+  if ((sval == "all") || (sval == m_vehicle_name))
+    *pending_flag = true;
+}
+
 
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()
@@ -158,11 +167,12 @@ bool EvalPlanner::resetVehicles() {
   std::string reset_pose{m_start_point.get_spec()};
   reset_pose.append(", speed=0, heading=0, depth=0");
 
-  return_val = Notify(m_reset_sim_var, reset_pose) && return_val;
+  std::string reset_var{m_reset_sim_var + "_" + toupper(m_vehicle_name)};
+  return_val = Notify(reset_var, reset_pose) && return_val;
   // todo: multiple vehicles
 
   std::string event;
-  event += m_reset_sim_var + ": " + reset_pose;
+  event += reset_var + ": " + reset_pose;
   reportEvent(event);
 
   return (return_val);
@@ -179,21 +189,24 @@ bool EvalPlanner::requestNewPath() {
   msg += doubleToString(m_goal_point.get_vx(), 2);
   msg += ',' + doubleToString(m_goal_point.get_vy(), 2);
 
-  return_val = Notify(m_path_request_var, msg);
+  std::string request_var{m_path_request_var + "_" + toupper(m_vehicle_name)};
+  return_val = Notify(request_var, msg);
 
   // add markers to start and goal
-  std::string marker{"type=diamond,label=start,color=firebrick,"};
+  std::string marker{"type=diamond,color=firebrick,"};
+  marker += "label=" + m_vehicle_name + "_start,";
   marker += m_start_point.get_spec();
   Notify("VIEW_MARKER", marker);
 
-  marker = "type=diamond,label=goal,color=cornflowerblue,";
+  marker = "type=diamond,color=cornflowerblue,";
+  marker += "label=" + m_vehicle_name + "_goal,";
   marker += m_goal_point.get_spec();
   Notify("VIEW_MARKER", marker);
 
   // todo: multiple vehicles
 
   std::string event;
-  event += m_path_request_var + ": " + msg;
+  event += request_var + ": " + msg;
   reportEvent(event);
 
   return (return_val);
@@ -349,7 +362,9 @@ bool EvalPlanner::OnStartUp()
     std::string value = line;
 
     bool handled{false};
-    if (param == "start_pos") {
+    if (param == "vehicle_name") {
+      handled = setNonWhiteVarOnString(m_vehicle_name, value);
+    } else if (param == "start_pos") {
       handled = setVPoint(&m_start_point, value);
     } else if (param == "goal_pos") {
       handled = setVPoint(&m_goal_point, value);
@@ -370,6 +385,9 @@ bool EvalPlanner::OnStartUp()
       reportUnhandledConfigWarning(orig);
   }
 
+  if (m_vehicle_name.empty())  // need a vehicle name
+    reportConfigWarning("Vehicle name has not been set!");
+
   // m_path_complete_var is left unset in constructor because we don't
   // want to unnecessarily register for a variable that we don't
   // actually need
@@ -387,6 +405,8 @@ bool EvalPlanner::OnStartUp()
 
 bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
 {
+  // todo: only change ppint when sim is inactive, otherwise run warning
+
   // parse x and y values from spec
   bool return_val{true};
   std::string xval, yval;
@@ -396,6 +416,11 @@ bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
 
   // if spec was invalid, exit early without changing point
   if (!return_val)
+    return (return_val);
+
+  // if vname doesn't match, ignore request
+  std::string vname{tokStringParse(point_spec, "vname", ',', '=')};
+  if ((!vname.empty()) && (tolower(vname) != m_vehicle_name))
     return (return_val);
 
   // spec was good, change point
@@ -409,7 +434,7 @@ bool EvalPlanner::handleConfigResetVars(std::string var_names) {
   bool no_dupl_found{true};
 
   var_names = stripBlankEnds(var_names);
-  std::vector<std::string> svector{parseString(var_names, ':')};
+  std::vector<std::string> svector{parseString(var_names, ',')};
   for (std::string var_name : svector) {
     var_name = stripBlankEnds(var_name);
     if (vectorContains(m_reset_obs_vars, var_name))
@@ -480,31 +505,33 @@ bool EvalPlanner::buildReport()
 {
   using std::endl;
   std::string header = "================================";
+  std::string upvname{toupper(m_vehicle_name)};
+  m_msgs << "Vehicle Name: " << upvname << endl;
   m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
   m_msgs << header << endl;
   m_msgs << "Config (Interface to Planner)" << endl;
-  m_msgs << "  path_request_var:   "  << m_path_request_var << endl;
-  m_msgs << "  path_complete_var:   "  << m_path_complete_var << endl;
+  m_msgs << "  path_request_var: "  << m_path_request_var + "_" + upvname << endl;
+  m_msgs << "  path_complete_var: "  << m_path_complete_var << endl;
   m_msgs << "Config (Start and Goal)" << endl;
-  m_msgs << "  start_pos:   " << m_start_point.get_spec() << endl;
-  m_msgs << "  goal_pos:   " << m_goal_point.get_spec() << endl;
+  m_msgs << "  start_pos: " << m_start_point.get_spec() << endl;
+  m_msgs << "  goal_pos: " << m_goal_point.get_spec() << endl;
   m_msgs << "Config (Interface to Obstacle Sims)" << endl;
-  m_msgs << "  reset_obs_vars:   " << stringVectorToString(m_reset_obs_vars, ':') << endl;
+  m_msgs << "  reset_obs_vars: " << stringVectorToString(m_reset_obs_vars, ':') << endl;
   m_msgs << "Config (Interface to Vehicle Sims)" << endl;
-  m_msgs << "  reset_sim_var:   " << m_reset_sim_var << endl;
+  m_msgs << "  reset_sim_var: " << m_reset_sim_var + "_" + upvname << endl;
   m_msgs << header << endl;
   m_msgs << "Metrics" << endl;
   m_msgs << "  Completed Trials:   " << intToString(m_completed_trials) <<
     "/" << intToString(m_desired_trials) << endl;
   m_msgs << header << endl;
   m_msgs << "State (Total Stats)" << endl;
-  m_msgs << "  Total Collisions:   " << intToString(m_collision_count) << endl;
-  m_msgs << "  Total Near Misses:   " << intToString(m_near_miss_count) << endl;
-  m_msgs << "  Total Encounters:   " << intToString(m_encounter_count) << endl;
+  m_msgs << "  Total Collisions: " << intToString(m_collision_count) << endl;
+  m_msgs << "  Total Near Misses: " << intToString(m_near_miss_count) << endl;
+  m_msgs << "  Total Encounters: " << intToString(m_encounter_count) << endl;
   m_msgs << "State (Trial Stats)" << endl;
-  m_msgs << "  Trial Collisions:   " << intToString(m_collision_count_trial) << endl;
-  m_msgs << "  Trial Near Misses:   " << intToString(m_near_miss_count_trial) << endl;
-  m_msgs << "  Trial Encounters:   " << intToString(m_encounter_count_trial) << endl;
+  m_msgs << "  Trial Collisions: " << intToString(m_collision_count_trial) << endl;
+  m_msgs << "  Trial Near Misses: " << intToString(m_near_miss_count_trial) << endl;
+  m_msgs << "  Trial Encounters: " << intToString(m_encounter_count_trial) << endl;
 
   return(true);
 }

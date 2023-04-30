@@ -23,7 +23,7 @@ Processconfig = ANTLER
 #ifdef GUI true
   Run = pMarineViewer         @ NewConsole = false
 #endif
-  Run = uXMS                  @ NewConsole = true
+  // Run = uXMS                  @ NewConsole = true
 
   Run = pLogger               @ NewConsole = false
   Run = uProcessWatch         @ NewConsole = false
@@ -81,9 +81,8 @@ ProcessConfig = pMarineViewer
   appcast_font_size    = large
 
   // Context Pull-Down Menu
-  // todo: multiple vehicles
-  left_context = START_POS = "x=$[XPOS], y=$[YPOS]"
-  right_context = GOAL_POS = "x=$[XPOS], y=$[YPOS]"
+  left_context[$(V1_NAME)] = START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+  right_context[$(V1_NAME)] = GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
 
   // Exclusion Filter
   // leave empty
@@ -102,12 +101,12 @@ ProcessConfig = pMarineViewer
 
   // Button Configuration
   button_one = LAUNCH_SIM # DEPLOY_ALL=true # MOOS_MANUAL_OVERRIDE_ALL=false
-  button_one = RESET_SIM_REQUESTED=true
-  button_two = END_SIM # DEPLOY_ALL=false # END_SIM_REQUESTED=true
+  button_one = RESET_SIM_REQUESTED=all
+  button_two = END_SIM # DEPLOY_ALL=false # END_SIM_REQUESTED=all
 
-  button_three = RESET_SIM # RESET_SIM_REQUESTED=true
-  button_four = RESET_TRIAL # RESET_TRIAL_REQUESTED=true
-  button_five = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=true
+  button_three = RESET_SIM # RESET_SIM_REQUESTED=all
+  button_four = RESET_TRIAL # RESET_TRIAL_REQUESTED=all
+  button_five = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=all
 }
 
 
@@ -313,11 +312,10 @@ ProcessConfig = uFldShoreBroker
   qbridge = USM_SIM_PAUSED
   qbridge = TRACKED_FEATURE
 
-  bridge = src=USM_RESET
-  bridge = src=$(PATH_REQUEST_VAR)
+  qbridge = USM_RESET
+  qbridge = $(PATH_REQUEST_VAR)
   bridge = src=GIVEN_OBSTACLE
   //todo: work with multiple vehicles
-  //todo: determine if any more variables need to be shared
 }
 
 
@@ -461,14 +459,9 @@ ProcessConfig = uFldCollObDetect
   encounter_dist   = 20
 
   // post encounter info
-  collision_flag   = OB_ENCOUNTER = vehicle=$UP_VNAME, obs=$ID, dist=$DIST
-  near_miss_flag   = OB_NEAR_MISS = vehicle=$UP_VNAME, obs=$ID, dist=$DIST
-  encounter_flag   = OB_COLLISION = vehicle=$UP_VNAME, obs=$ID, dist=$DIST
-
-  // each encounter post total count
-  collision_flag   = COLLISION_COUNT = $COLL_CNT
-  near_miss_flag   = NEAR_MISS_COUNT = $MISS_CNT
-  encounter_flag   = ENCOUNTER_COUNT = $ENC_CNT
+  collision_flag   = COLLISON_ALERT = vehicle=$VNAME, obs=$ID, cpa=$DIST, total_count=$COLL_CNT
+  near_miss_flag   = NEAR_MISS_ALERT = vehicle=$VNAME, obs=$ID, dist=$DIST, total_count=$MISS_CNT
+  encounter_flag   = ENCOUNTER_ALERT = vehicle=$VNAME, obs=$ID, dist=$DIST, total_count=$ENC_CNT
 }
 
 
@@ -490,6 +483,7 @@ ProcessConfig = uEvalPlanner
   AppTick       = 2
   CommsTick     = 2
 
+  vehicle_name = $(V1_NAME)
   start_pos = $(START_POS)
   goal_pos = $(GOAL_POS)
 
@@ -498,6 +492,6 @@ ProcessConfig = uEvalPlanner
 
   num_trials = $(NUM_TRIALS)
 
-  obs_reset_vars = RESET_KNOWN_OBSTACLES:RESET_UNKNOWN_OBSTACLES
-  endflag = DEPLOY_ALL=false
+  obs_reset_vars = RESET_KNOWN_OBSTACLES,RESET_UNKNOWN_OBSTACLES
+  endflag = DEPLOY_%(V1_NAME)=false
 }
