@@ -45,32 +45,22 @@ void EvalPlanner::clearPendingRequests() {
 }
 
 
-void EvalPlanner::clearMetrics() {}  // todo: add metrics
 
-
-void EvalPlanner::clearTotalCounts() {
-  m_encounter_count = 0;
-  m_near_miss_count = 0;
-  m_collision_count = 0;
-
-  m_completed_trials = 0;
+void EvalPlanner::clearCurrentTrialData() {
+m_current_trial = TrialData{m_current_trial.trial_num};
 }
 
 
-void EvalPlanner::clearTrialData() {
-  // todo: also need to clear metrics
-  m_encounter_count_trial = 0;
-  m_near_miss_count_trial = 0;
-  m_collision_count_trial = 0;
+void EvalPlanner::clearCurrentTrialData(int trial_num) {
+  m_current_trial = TrialData{trial_num};
 }
 
 
 /// @brief Initializes state variables for EvalPlanner
 void EvalPlanner::initialize() {
   clearPendingRequests();
-  clearMetrics();
-  clearTotalCounts();
-  clearTrialData();
+  clearCurrentTrialData(0);
+  m_trial_data.clear();
 }
 
 //---------------------------------------------------------
@@ -117,10 +107,26 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       setVPoint(&m_start_point, msg.GetString());
     } else if (key == "GOAL_POS") {
       setVPoint(&m_goal_point, msg.GetString());
+    } else if (key == "ENCOUNTER_ALERT") {
+        std::string flag{tolower(msg.GetString())};
+        std::string vname{tokStringParse(flag, "vname", ',', '=')};
+        if ((m_sim_active) && (vname == m_vehicle_name))
+          m_current_trial.encounter_count++;
+    } else if (key == "NEAR_MISS_ALERT") {
+        std::string flag{tolower(msg.GetString())};
+        std::string vname{tokStringParse(flag, "vname", ',', '=')};
+        if ((m_sim_active) && (vname == m_vehicle_name))
+          m_current_trial.near_miss_count++;
+    } else if (key == "COLLISION_ALERT") {
+        std::string flag{tolower(msg.GetString())};
+        std::string vname{tokStringParse(flag, "vname", ',', '=')};
+        if ((m_sim_active) && (vname == m_vehicle_name)) {
+          m_current_trial.collision_count++;
+          m_current_trial.trial_successful = false;
+        }
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
-    // todo: new collisions should be immediately counted here, not in calcMetrics
   }
 
   return(true);
@@ -297,8 +303,8 @@ bool EvalPlanner::handleResetTrial() {
   if (!m_sim_active)
     return (true);
 
-  reportEvent("Trial " + intToString(m_completed_trials) + " reset");
-  clearTrialData();
+  reportEvent("Trial " + intToString(m_trial_data.size()) + " reset");
+  clearCurrentTrialData();
 
   bool return_val{true};
   return_val = resetVehicles() && return_val;
@@ -313,8 +319,8 @@ bool EvalPlanner::handleSkipTrial() {
   if (!m_sim_active)
     return (true);
 
-  reportEvent("Trial " + intToString(m_completed_trials) + " skipped");
-  clearTrialData();
+  reportEvent("Trial " + intToString(m_trial_data.size()) + " skipped");
+  clearCurrentTrialData();
 
   bool return_val{true};
   return_val = resetObstacles() && return_val;
@@ -330,21 +336,22 @@ bool EvalPlanner::handleNextTrial() {
   if (!m_sim_active)
     return (true);
 
-  Notify("TRIALS_COMPLETED", m_completed_trials + 1);
-  reportEvent("Trial " + intToString(m_completed_trials) + " complete!");
+  Notify("TRIALS_COMPLETED", m_trial_data.size() + 1);
+  reportEvent("Trial " + intToString(m_trial_data.size()) + " complete!");
   // calcMetrics();
 
-  m_completed_trials += 1;
-  if (m_completed_trials >= m_desired_trials) {  // we're done
+  m_trial_data.push_back(m_current_trial);
+  if (m_trial_data.size() >= m_desired_trials) {  // we're done
     reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
     resetVehicles();
-    // export metrics
+    // todo: export metrics
     postEndflags();
     m_sim_active = false;
     return (true);
   }
 
-  clearTrialData();
+  // more trials left to go, get ready for the next one
+  clearCurrentTrialData(static_cast<int>(m_trial_data.size()));
   bool return_val{true};
   return_val = resetObstacles() && return_val;
   return_val = resetVehicles() && return_val;
@@ -526,12 +533,9 @@ void EvalPlanner::registerVariables()
   // variables used to calculate metrics
   // todo: handle these subscriptions
   // success rate
-  // Register("OB_ENCOUNTER", 0);
-  // Register("OB_NEAR_MISS", 0);
-  // Register("OB_COLLISION", 0);
-  // Register("ENCOUNTER_COUNT", 0);
-  // Register("NEAR_MISS_COUNT", 0);
-  // Register("COLLISION_COUNT", 0);
+  Register("ENCOUNTER_ALERT", 0);
+  Register("NEAR_MISS_ALERT", 0);
+  Register("COLLISION_ALERT", 0);
 
   // // trajectory tracking
   // Register("UPC_ODOMETRY_REPORT", 0);
@@ -564,17 +568,20 @@ bool EvalPlanner::buildReport()
   m_msgs << "  reset_sim_var: " << m_reset_sim_var + "_" + upvname << endl;
   m_msgs << header << endl;
   m_msgs << "Metrics" << endl;
-  m_msgs << "  Completed Trials:   " << intToString(m_completed_trials) <<
+  m_msgs << "  Completed Trials: " << intToString(m_trial_data.size()) <<
     "/" << intToString(m_desired_trials) << endl;
   m_msgs << header << endl;
   m_msgs << "State (Total Stats)" << endl;
-  m_msgs << "  Total Collisions: " << intToString(m_collision_count) << endl;
-  m_msgs << "  Total Near Misses: " << intToString(m_near_miss_count) << endl;
-  m_msgs << "  Total Encounters: " << intToString(m_encounter_count) << endl;
+  // m_msgs << "  Total Collisions: " << intToString(m_collision_count) << endl;
+  // m_msgs << "  Total Near Misses: " << intToString(m_near_miss_count) << endl;
+  // m_msgs << "  Total Encounters: " << intToString(m_encounter_count) << endl;
   m_msgs << "State (Trial Stats)" << endl;
-  m_msgs << "  Trial Collisions: " << intToString(m_collision_count_trial) << endl;
-  m_msgs << "  Trial Near Misses: " << intToString(m_near_miss_count_trial) << endl;
-  m_msgs << "  Trial Encounters: " << intToString(m_encounter_count_trial) << endl;
+  m_msgs << "  Trial Number: " << intToString(m_current_trial.trial_num) << endl;
+  m_msgs << "  Trial Successful: " << toupper(boolToString(m_current_trial.trial_successful))
+    << endl;
+  m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
+  m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
+  m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;
 
   return(true);
 }

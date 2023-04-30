@@ -14,6 +14,23 @@
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPoint.h"
 
+
+struct TrialData
+{
+  int trial_num{0};
+  bool trial_successful{true};
+
+  int encounter_count{0};
+  int near_miss_count{0};
+  int collision_count{0};
+
+  // in C++11, using default member initializers prevents brace initialization
+  // so add constructors to spawn these structs
+  TrialData() {}  // empty constructor uses all defaults
+  explicit TrialData(int num) : trial_num{num} {};  // specify trial number
+};
+
+
 class EvalPlanner : public AppCastingMOOSApp
 {
  public:
@@ -34,9 +51,8 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // initialization routines
   void clearPendingRequests();
-  void clearMetrics();
-  void clearTotalCounts();
-  void clearTrialData();
+  void clearCurrentTrialData();
+  void clearCurrentTrialData(int trial_num);
   void initialize();
 
   // config handling
@@ -45,58 +61,59 @@ class EvalPlanner : public AppCastingMOOSApp
   bool setVPoint(XYPoint* point, std::string point_spec);
   bool setVPointConfig(XYPoint* point, std::string point_spec);
 
-  // actions during iteration
+  // mail handling
   void handleSimRequest(std::string request, bool* pending_flag);
+
+  // actions during iteration
   bool handleResetSim();
   bool handleEndSim();
   bool handleResetTrial();
   bool handleSkipTrial();
   bool handleNextTrial();
 
-  void calcMetrics();
   bool resetObstacles();
   bool resetVehicles();
   bool resetOdometry();
   bool requestNewPath();
+  void calcMetrics();
   bool postEndflags();
 
  private:  // Configuration variables
+  // vehicle data
   std::string m_vehicle_name;
   XYPoint m_start_point;
   XYPoint m_goal_point;
 
+  // interface to vehicle
   std::string m_path_request_var;
   std::string m_path_complete_var;
-
   std::string m_reset_sim_var;  // not set by config param
+
+  // interface to obstacle sims
   std::vector<std::string> m_reset_obs_vars;
 
+  // sim parameters
   int m_desired_trials;
+  double m_trial_timeout;
+  std::map<std::string, std::string> m_endflags;
 
   // default variable names
   std::string m_reset_obs_default;
   std::string m_path_complete_default;
 
-  std::map<std::string, std::string> m_endflags;
-  // todo: add time limit for trials
-
  private:  // State variables
   bool m_sim_active;
+
+  // sim requests
   bool m_reset_sim_pending;
   bool m_end_sim_pending;
-
   bool m_reset_trial_pending;
   bool m_skip_trial_pending;
   bool m_next_trial_pending;
 
-  int m_encounter_count;
-  int m_near_miss_count;
-  int m_collision_count;
-  int m_encounter_count_trial;
-  int m_near_miss_count_trial;
-  int m_collision_count_trial;
-
-  int m_completed_trials;
+  // trial data
+  TrialData m_current_trial;
+  std::vector<TrialData> m_trial_data;
 };
 
 #endif
