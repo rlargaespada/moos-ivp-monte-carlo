@@ -103,13 +103,13 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 #endif
 
     if (key == "RESET_SIM_REQUESTED") {
-      handleSimRequest(msg, &m_reset_sim_pending);
+      handleSimRequest(msg.GetString(), &m_reset_sim_pending);
     } else if (key == "END_SIM_REQUESTED") {
-      handleSimRequest(msg, &m_end_sim_pending);
+      handleSimRequest(msg.GetString(), &m_end_sim_pending);
     } else if (key == "RESET_TRIAL_REQUESTED") {
-      handleSimRequest(msg, &m_reset_trial_pending);
+      handleSimRequest(msg.GetString(), &m_reset_trial_pending);
     } else if (key == "SKIP_TRIAL_REQUESTED") {
-      handleSimRequest(msg, &m_skip_trial_pending);
+      handleSimRequest(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
       if (msg.GetString() == "true")
         m_next_trial_pending = true;
@@ -127,10 +127,10 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 }
 
 
-void EvalPlanner::handleSimRequest(CMOOSMsg request, bool* pending_flag)
+void EvalPlanner::handleSimRequest(std::string request, bool* pending_flag)
 {
-  std::string sval{tolower(request.GetString())};
-  if ((sval == "all") || (sval == m_vehicle_name))
+  request = tolower(request);
+  if ((request == "all") || (request == m_vehicle_name))
     *pending_flag = true;
 }
 
@@ -176,6 +176,13 @@ bool EvalPlanner::resetVehicles() {
   reportEvent(event);
 
   return (return_val);
+}
+
+
+bool EvalPlanner::resetOdometry()
+{
+  reportEvent("Resetting trip odometry for " + m_vehicle_name);
+  return (Notify("UPC_TRIP_RESET", tolower(m_vehicle_name)));
 }
 
 
@@ -261,9 +268,11 @@ bool EvalPlanner::handleEndSim() {
 
   reportEvent("Ending sim early!");
   bool return_val{true};
-  m_sim_active = false;
+  // export metrics
   return_val = resetVehicles() && return_val;
   return_val = postEndflags() && return_val;
+
+  m_sim_active = false;
   return (return_val);
 }
 
@@ -276,6 +285,7 @@ bool EvalPlanner::handleResetSim() {
   if (m_sim_active)
     return_val = resetObstacles() && return_val;  // only reset if already active
   return_val = resetVehicles() && return_val;
+  return_val = resetOdometry() && return_val;
   return_val = requestNewPath() && return_val;
 
   m_sim_active = true;
@@ -292,6 +302,7 @@ bool EvalPlanner::handleResetTrial() {
 
   bool return_val{true};
   return_val = resetVehicles() && return_val;
+  return_val = resetOdometry() && return_val;
   return_val = requestNewPath() && return_val;
 
   return (return_val);
@@ -308,6 +319,7 @@ bool EvalPlanner::handleSkipTrial() {
   bool return_val{true};
   return_val = resetObstacles() && return_val;
   return_val = resetVehicles() && return_val;
+  return_val = resetOdometry() && return_val;
   return_val = requestNewPath() && return_val;
 
   return (return_val);
@@ -321,20 +333,22 @@ bool EvalPlanner::handleNextTrial() {
   Notify("TRIALS_COMPLETED", m_completed_trials + 1);
   reportEvent("Trial " + intToString(m_completed_trials) + " complete!");
   // calcMetrics();
-  clearTrialData();
 
   m_completed_trials += 1;
   if (m_completed_trials >= m_desired_trials) {  // we're done
     reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
     resetVehicles();
-    m_sim_active = false;
+    // export metrics
     postEndflags();
+    m_sim_active = false;
     return (true);
   }
 
+  clearTrialData();
   bool return_val{true};
-  return_val = resetVehicles() && return_val;
   return_val = resetObstacles() && return_val;
+  return_val = resetVehicles() && return_val;
+  return_val = resetOdometry() && return_val;
   return_val = requestNewPath() && return_val;
 
   return (return_val);
@@ -365,9 +379,9 @@ bool EvalPlanner::OnStartUp()
     if (param == "vehicle_name") {
       handled = setNonWhiteVarOnString(m_vehicle_name, value);
     } else if (param == "start_pos") {
-      handled = setVPoint(&m_start_point, value);
+      handled = setVPointConfig(&m_start_point, value);
     } else if (param == "goal_pos") {
-      handled = setVPoint(&m_goal_point, value);
+      handled = setVPointConfig(&m_goal_point, value);
     } else if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, value);
     } else if (param == "path_complete_var") {
@@ -405,12 +419,21 @@ bool EvalPlanner::OnStartUp()
 
 bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
 {
-  // todo: only change ppint when sim is inactive, otherwise run warning
+  // only change start/goal points when sim is inactive
+  if (m_sim_active) {
+    std::string warning{"Received request to change vehicle start/goal "
+                        "point while sim was active: "};
+    warning += point_spec + ". ";
+    warning += "Can only change start/goal point when sim is inactive.";
+    reportRunWarning(warning);
+    return (false);
+  }
 
-  // parse x and y values from spec
+  // parse vname, x, and y values from spec
   bool return_val{true};
-  std::string xval, yval;
+  std::string vname, xval, yval;
   point_spec = tolower(point_spec);
+  return_val = tokParse(point_spec, "vname", ',', '=', vname) && return_val;
   return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
   return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
 
@@ -419,8 +442,28 @@ bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
     return (return_val);
 
   // if vname doesn't match, ignore request
-  std::string vname{tokStringParse(point_spec, "vname", ',', '=')};
-  if ((!vname.empty()) && (tolower(vname) != m_vehicle_name))
+  if (tolower(vname) != m_vehicle_name)
+    return (return_val);
+
+  // spec was good, change point
+  point->set_vx(std::stod(xval));
+  point->set_vy(std::stod(yval));
+  return (return_val);
+}
+
+
+bool EvalPlanner::setVPointConfig(XYPoint* point, std::string point_spec)
+{
+  // same as setVPoint but doesn't check sim inactive, vehicle name in spec
+  // parse x and y values from spec
+  bool return_val{true};
+  std::string vname, xval, yval;
+  point_spec = tolower(point_spec);
+  return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
+  return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
+
+  // if spec was invalid, exit early without changing point
+  if (!return_val)
     return (return_val);
 
   // spec was good, change point

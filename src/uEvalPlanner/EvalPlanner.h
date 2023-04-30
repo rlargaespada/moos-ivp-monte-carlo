@@ -32,20 +32,21 @@ class EvalPlanner : public AppCastingMOOSApp
  protected:
   void registerVariables();
 
-  // state updates
+  // initialization routines
   void clearPendingRequests();
   void clearMetrics();
   void clearTotalCounts();
   void clearTrialData();
   void initialize();
-  void handleSimRequest(CMOOSMsg request, bool* pending_flag);
 
   // config handling
   bool handleConfigResetVars(std::string var_names);
   bool handleConfigEndflag(std::string flag);
   bool setVPoint(XYPoint* point, std::string point_spec);
+  bool setVPointConfig(XYPoint* point, std::string point_spec);
 
   // actions during iteration
+  void handleSimRequest(std::string request, bool* pending_flag);
   bool handleResetSim();
   bool handleEndSim();
   bool handleResetTrial();
@@ -55,6 +56,7 @@ class EvalPlanner : public AppCastingMOOSApp
   void calcMetrics();
   bool resetObstacles();
   bool resetVehicles();
+  bool resetOdometry();
   bool requestNewPath();
   bool postEndflags();
 
