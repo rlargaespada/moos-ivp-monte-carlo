@@ -20,6 +20,9 @@ struct TrialData
   int trial_num{0};
   bool trial_successful{true};
 
+  double start_time{0};
+  double end_time{0};
+
   int encounter_count{0};
   int near_miss_count{0};
   int collision_count{0};
@@ -94,7 +97,7 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // sim parameters
   int m_desired_trials;
-  double m_trial_timeout;
+  double m_trial_timeout; // seconds
   std::map<std::string, std::string> m_endflags;
 
   // default variable names

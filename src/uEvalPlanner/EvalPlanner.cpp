@@ -18,27 +18,27 @@
 
 EvalPlanner::EvalPlanner()
 {
+  // config variable defaults
+  m_desired_trials = 10;
+  m_trial_timeout = 300;  // seconds
+  m_path_request_var = "PLAN_PATH_REQUESTED";
+  m_reset_sim_var = "USM_RESET";
+  m_reset_obs_default = "UFOS_RESET";
+  m_path_complete_default = "PATH_COMPLETE";
+
+  // state variables
   m_sim_active = false;
+  initialize();
 
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
   // vehicles should be saved using node reports, where to define start and goal? vehicle says so?
   // USM_RESET could be set on a per vehicle basis (from node reports), use qbridge
-
-  // set up config defaults
-  m_reset_obs_default = "UFOS_RESET";
-  m_path_complete_default = "PATH_COMPLETE";
-  m_path_request_var = "PLAN_PATH_REQUESTED";
-  m_reset_sim_var = "USM_RESET";
-  m_desired_trials = 10;
-
-  initialize();
 }
 
 
 void EvalPlanner::clearPendingRequests() {
   m_reset_sim_pending = false;
   m_end_sim_pending = false;
-
   m_reset_trial_pending = false;
   m_skip_trial_pending = false;
   m_next_trial_pending = false;
@@ -107,6 +107,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       setVPoint(&m_start_point, msg.GetString());
     } else if (key == "GOAL_POS") {
       setVPoint(&m_goal_point, msg.GetString());
+      // todo: add cpa to trial stats?
     } else if (key == "ENCOUNTER_ALERT") {
         std::string flag{tolower(msg.GetString())};
         std::string vname{tokStringParse(flag, "vname", ',', '=')};
@@ -195,6 +196,8 @@ bool EvalPlanner::resetOdometry()
 bool EvalPlanner::requestNewPath() {
   bool return_val{true};
 
+  // define variable posting and message
+  std::string request_var{m_path_request_var + "_" + toupper(m_vehicle_name)};
   std::string msg{"start="};
   msg += doubleToString(m_start_point.get_vx(), 2);
   msg += ',' + doubleToString(m_start_point.get_vy(), 2);
@@ -202,10 +205,7 @@ bool EvalPlanner::requestNewPath() {
   msg += doubleToString(m_goal_point.get_vx(), 2);
   msg += ',' + doubleToString(m_goal_point.get_vy(), 2);
 
-  std::string request_var{m_path_request_var + "_" + toupper(m_vehicle_name)};
-  return_val = Notify(request_var, msg);
-
-  // add markers to start and goal
+  // post markers to start and goal
   std::string marker{"type=diamond,color=firebrick,"};
   marker += "label=" + m_vehicle_name + "_start,";
   marker += m_start_point.get_spec();
@@ -218,10 +218,14 @@ bool EvalPlanner::requestNewPath() {
 
   // todo: multiple vehicles
 
+  // report event that new trial was requested
   std::string event;
   event += request_var + ": " + msg;
   reportEvent(event);
 
+  // post new path request and save time of request
+  return_val = Notify(request_var, msg);
+  m_current_trial.start_time = MOOSTime();
   return (return_val);
 }
 
@@ -259,6 +263,18 @@ bool EvalPlanner::Iterate()
     return_val = handleSkipTrial();
   } else if (m_next_trial_pending) {
     return_val = handleNextTrial();
+  }
+
+  // if active trial has timed out, mark it a failure and start next trial
+  if (m_sim_active) {
+    double elapsed_time{MOOSTime() - m_current_trial.start_time};
+    if (elapsed_time > m_trial_timeout) {
+      reportEvent("Trial " + intToString(m_current_trial.trial_num) +
+                  " has timed out after " + doubleToString(elapsed_time, 2) +
+                  " seconds! Marking trial as failed.");
+      m_current_trial.trial_successful = false;
+      handleNextTrial();
+    }
   }
 
   clearPendingRequests();
@@ -338,6 +354,7 @@ bool EvalPlanner::handleNextTrial() {
 
   Notify("TRIALS_COMPLETED", m_trial_data.size() + 1);
   reportEvent("Trial " + intToString(m_trial_data.size()) + " complete!");
+  m_current_trial.end_time = MOOSTime();
   // calcMetrics();
 
   m_trial_data.push_back(m_current_trial);
@@ -385,6 +402,8 @@ bool EvalPlanner::OnStartUp()
     bool handled{false};
     if (param == "vehicle_name") {
       handled = setNonWhiteVarOnString(m_vehicle_name, value);
+    } else if (param == "timeout") {
+      handled = setPosDoubleOnString(m_trial_timeout, value);
     } else if (param == "start_pos") {
       handled = setVPointConfig(&m_start_point, value);
     } else if (param == "goal_pos") {
@@ -394,8 +413,7 @@ bool EvalPlanner::OnStartUp()
     } else if (param == "path_complete_var") {
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
     } else if (param == "num_trials") {
-      m_desired_trials = std::stoi(value);
-      handled = true;
+      handled = setIntOnString(m_desired_trials, value);
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
       handled = handleConfigResetVars(value);
     } else if (param == "endflag") {
@@ -555,6 +573,7 @@ bool EvalPlanner::buildReport()
   std::string upvname{toupper(m_vehicle_name)};
   m_msgs << "Vehicle Name: " << upvname << endl;
   m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
+  m_msgs << "Trial Timeout Cutoff: " << doubleToString(m_trial_timeout, 2) << " sec" << endl;
   m_msgs << header << endl;
   m_msgs << "Config (Interface to Planner)" << endl;
   m_msgs << "  path_request_var: "  << m_path_request_var + "_" + upvname << endl;
@@ -579,6 +598,8 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Number: " << intToString(m_current_trial.trial_num) << endl;
   m_msgs << "  Trial Successful: " << toupper(boolToString(m_current_trial.trial_successful))
     << endl;
+  double elapsed_time{m_sim_active ? MOOSTime() - m_current_trial.start_time : 0};  // 0 if inactive
+  m_msgs << " Elapsed Time: " << doubleToString(elapsed_time, 2) << " sec" << endl;
   m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
   m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
   m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;

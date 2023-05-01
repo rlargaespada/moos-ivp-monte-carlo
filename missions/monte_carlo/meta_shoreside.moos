@@ -484,6 +484,7 @@ ProcessConfig = uEvalPlanner
   CommsTick     = 2
 
   vehicle_name = $(V1_NAME)
+  timeout = 300
   start_pos = $(START_POS)
   goal_pos = $(GOAL_POS)
 
