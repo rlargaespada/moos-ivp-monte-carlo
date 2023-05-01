@@ -107,23 +107,42 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       setVPoint(&m_start_point, msg.GetString());
     } else if (key == "GOAL_POS") {
       setVPoint(&m_goal_point, msg.GetString());
-      // todo: add cpa to trial stats?
     } else if (key == "ENCOUNTER_ALERT") {
-        std::string flag{tolower(msg.GetString())};
-        std::string vname{tokStringParse(flag, "vname", ',', '=')};
-        if ((m_sim_active) && (vname == m_vehicle_name))
+        std::string alert{tolower(msg.GetString())};
+        std::string vname{tokStringParse(alert, "vname", ',', '=')};
+        if ((m_sim_active) && (vname == m_vehicle_name)) {
           m_current_trial.encounter_count++;
+
+          double dist;
+          if (tokParse(alert, "dist", ',', '=', dist)) {
+            if (dist < m_current_trial.min_dist_to_obj)
+              m_current_trial.min_dist_to_obj = dist;
+          }
+        }
     } else if (key == "NEAR_MISS_ALERT") {
-        std::string flag{tolower(msg.GetString())};
-        std::string vname{tokStringParse(flag, "vname", ',', '=')};
-        if ((m_sim_active) && (vname == m_vehicle_name))
+        std::string alert{tolower(msg.GetString())};
+        std::string vname{tokStringParse(alert, "vname", ',', '=')};
+        if ((m_sim_active) && (vname == m_vehicle_name)) {
           m_current_trial.near_miss_count++;
+
+          double dist;
+          if (tokParse(alert, "dist", ',', '=', dist)) {
+            if (dist < m_current_trial.min_dist_to_obj)
+              m_current_trial.min_dist_to_obj = dist;
+          }
+        }
     } else if (key == "COLLISION_ALERT") {
-        std::string flag{tolower(msg.GetString())};
-        std::string vname{tokStringParse(flag, "vname", ',', '=')};
+        std::string alert{tolower(msg.GetString())};
+        std::string vname{tokStringParse(alert, "vname", ',', '=')};
         if ((m_sim_active) && (vname == m_vehicle_name)) {
           m_current_trial.collision_count++;
-          m_current_trial.trial_successful = false;
+          m_current_trial.trial_successful = false;  // fail on collision
+
+          double dist;
+          if (tokParse(alert, "dist", ',', '=', dist)) {
+            if (dist < m_current_trial.min_dist_to_obj)
+              m_current_trial.min_dist_to_obj = dist;
+          }
         }
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
@@ -603,6 +622,8 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
   m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
   m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;
+  m_msgs << "  Closest Distance to Obstacle: "
+    << doubleToString(m_current_trial.min_dist_to_obj, 3) << " m" << endl;
 
   return(true);
 }

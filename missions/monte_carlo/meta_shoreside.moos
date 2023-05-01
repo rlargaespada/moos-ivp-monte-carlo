@@ -459,7 +459,7 @@ ProcessConfig = uFldCollObDetect
   encounter_dist   = 20
 
   // post encounter info
-  collision_flag   = COLLISION_ALERT = vname=$VNAME, obs=$ID, cpa=$DIST, total_count=$COLL_CNT
+  collision_flag   = COLLISION_ALERT = vname=$VNAME, obs=$ID, dist=$DIST, total_count=$COLL_CNT
   near_miss_flag   = NEAR_MISS_ALERT = vname=$VNAME, obs=$ID, dist=$DIST, total_count=$MISS_CNT
   encounter_flag   = ENCOUNTER_ALERT = vname=$VNAME, obs=$ID, dist=$DIST, total_count=$ENC_CNT
 }

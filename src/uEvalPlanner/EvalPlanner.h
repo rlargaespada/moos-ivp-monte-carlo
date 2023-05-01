@@ -8,6 +8,7 @@
 #ifndef EvalPlanner_HEADER
 #define EvalPlanner_HEADER
 
+#include <cmath>
 #include <map>
 #include <string>
 #include <vector>
@@ -26,6 +27,8 @@ struct TrialData
   int encounter_count{0};
   int near_miss_count{0};
   int collision_count{0};
+
+  double min_dist_to_obj{INFINITY};
 
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
@@ -97,7 +100,7 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // sim parameters
   int m_desired_trials;
-  double m_trial_timeout; // seconds
+  double m_trial_timeout;  // seconds
   std::map<std::string, std::string> m_endflags;
 
   // default variable names
