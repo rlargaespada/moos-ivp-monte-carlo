@@ -23,6 +23,7 @@ struct TrialData
 
   double start_time{0};
   double end_time{0};
+  double planning_time{0};
 
   int encounter_count{0};
   int near_miss_count{0};

@@ -380,6 +380,7 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
   script_atomic = true
   condition = $(PATH_REQUEST_VAR) != none
   upon_awake = restart
+  randvar = varname=PTIME, min=10, max=30, key=at_post
 
   event = var=$(PATH_REQUEST_VAR), val=none  // clear request
 
@@ -391,6 +392,7 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
   // after "planning" time, go into traversal mode with found points
   event = var=$(PATH_FOUND_VAR), val=true, time=10
   event = var=PATH_UPDATE, val="points = $(START_POS):50, -100:$(GOAL_POS)"
+  event = var=PLANNING_TIME, val=$[PTIME], time=10
 
   // encountered an obstacle, go back into planning mode
   event = var=$(PATH_FOUND_VAR), val=false, time=60:70
@@ -399,6 +401,7 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
   // found new path, go back into traversal mode
   event = var=$(PATH_FOUND_VAR), val=true, time=80:100
   event = var=PATH_UPDATE, val="points = $(START_POS):50, -100:$(GOAL_POS)"
+  event = var=PLANNING_TIME, val=$[PTIME], time=80
 }
 
 ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_B

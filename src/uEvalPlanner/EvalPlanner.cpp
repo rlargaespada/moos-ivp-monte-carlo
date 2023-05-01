@@ -47,7 +47,7 @@ void EvalPlanner::clearPendingRequests() {
 
 
 void EvalPlanner::clearCurrentTrialData() {
-m_current_trial = TrialData{m_current_trial.trial_num};
+m_current_trial = TrialData{m_current_trial.trial_num};  // reuse current trial num
 }
 
 
@@ -144,6 +144,9 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
               m_current_trial.min_dist_to_obj = dist;
           }
         }
+    } else if (key == "PLANNING_TIME") {
+      if (tolower(msg.GetCommunity()) == m_vehicle_name)
+        m_current_trial.planning_time += msg.GetDouble();
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -375,6 +378,7 @@ bool EvalPlanner::handleNextTrial() {
   reportEvent("Trial " + intToString(m_trial_data.size()) + " complete!");
   m_current_trial.end_time = MOOSTime();
   // calcMetrics();
+  // todo: post stats, add in event?
 
   m_trial_data.push_back(m_current_trial);
   if (m_trial_data.size() >= m_desired_trials) {  // we're done
@@ -578,8 +582,8 @@ void EvalPlanner::registerVariables()
   // Register("UPC_ODOMETRY_REPORT", 0);
   // Register("WPT_EFF_SUM_ALL");
 
-  // // plannint time
-  // Register("PLANNING_TIME", 0);
+  // planning time
+  Register("PLANNING_TIME", 0);
 }
 
 //------------------------------------------------------------
@@ -618,7 +622,9 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Successful: " << toupper(boolToString(m_current_trial.trial_successful))
     << endl;
   double elapsed_time{m_sim_active ? MOOSTime() - m_current_trial.start_time : 0};  // 0 if inactive
-  m_msgs << " Elapsed Time: " << doubleToString(elapsed_time, 2) << " sec" << endl;
+  m_msgs << "  Elapsed Time: " << doubleToString(elapsed_time, 2) << " sec" << endl;
+  m_msgs << "  Time Spent Planning: " <<
+    doubleToString(m_current_trial.planning_time, 2) << " sec" << endl;
   m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
   m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
   m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;

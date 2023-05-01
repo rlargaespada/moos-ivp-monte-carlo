@@ -178,3 +178,8 @@ fi
 
 uMAC -t targ_shoreside.moos
 kill -- -$$
+
+if [ $GUI = "false" ] ; then
+    sleep 5
+    ktm  # kill any stragglers, seems to happen without the gui
+fi
