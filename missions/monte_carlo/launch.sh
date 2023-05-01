@@ -152,8 +152,7 @@ nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
 
 nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
        START_POS=$V1_START_POS    USE_OBS_AVOID=$USE_OBS_AVOID    \
-       GUI=$GUI    PATH_FOUND_VAR=$PATH_FOUND_VAR                 \
-       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
+       PATH_FOUND_VAR=$PATH_FOUND_VAR    PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
 
 
 if [ ${JUST_MAKE} = "true" ] ; then
@@ -171,7 +170,11 @@ pAntler targ_shoreside.moos >& /dev/null &
 echo "Launching $V1_NAME MOOS Community. WARP is" $TIME_WARP
 pAntler targ_$V1_NAME.moos >& /dev/null &
 
-# todo: if no GUI, sleep 10 and poke DEPLOY=true, MOOS_MANUAL_OVERRIDE=false, RESET_SIM_REQUESTED=true
+
+if [ $GUI = "false" ] ; then
+    sleep 5  # give everything time to boot up
+    uPokeDB targ_shoreside.moos DEPLOY_ALL=true MOOS_MANUAL_OVERRIDE_ALL=false RESET_SIM_REQUESTED=all
+fi
 
 uMAC -t targ_shoreside.moos
 kill -- -$$
