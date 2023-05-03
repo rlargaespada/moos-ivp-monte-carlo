@@ -28,8 +28,9 @@ struct TrialData
   int encounter_count{0};
   int near_miss_count{0};
   int collision_count{0};
-
   double min_dist_to_obj{INFINITY};
+
+  double dist_traveled{0};
 
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
@@ -83,6 +84,8 @@ class EvalPlanner : public AppCastingMOOSApp
   bool resetOdometry();
   bool requestNewPath();
   void calcMetrics();
+  std::string getMetricsSpc();
+  bool exportMetrics();
   bool postEndflags();
 
  private:  // Configuration variables
@@ -111,11 +114,13 @@ class EvalPlanner : public AppCastingMOOSApp
  private:  // State variables
   bool m_sim_active;
 
-  // sim requests
+  // requests from user
   bool m_reset_sim_pending;
   bool m_end_sim_pending;
   bool m_reset_trial_pending;
   bool m_skip_trial_pending;
+
+  // updates from vehicle
   bool m_next_trial_pending;
 
   // trial data

@@ -75,7 +75,7 @@ Behavior=BHV_Waypoint
   pwt       = 100
   condition = MODE == TRAVERSE
   endflag = WAYPOINTS_COMPLETE = true
-  UPDATES   = PATH_UPDATE
+  updates   = PATH_UPDATE
   perpetual = true
 
 

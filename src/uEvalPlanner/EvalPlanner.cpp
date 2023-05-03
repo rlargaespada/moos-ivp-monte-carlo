@@ -45,7 +45,6 @@ void EvalPlanner::clearPendingRequests() {
 }
 
 
-
 void EvalPlanner::clearCurrentTrialData() {
 m_current_trial = TrialData{m_current_trial.trial_num};  // reuse current trial num
 }
@@ -221,11 +220,11 @@ bool EvalPlanner::requestNewPath() {
   // define variable posting and message
   std::string request_var{m_path_request_var + "_" + toupper(m_vehicle_name)};
   std::string msg{"start="};
-  msg += doubleToString(m_start_point.get_vx(), 2);
-  msg += ',' + doubleToString(m_start_point.get_vy(), 2);
+  msg += doubleToStringX(m_start_point.get_vx(), 2);
+  msg += ',' + doubleToStringX(m_start_point.get_vy(), 2);
   msg += "; goal=";
-  msg += doubleToString(m_goal_point.get_vx(), 2);
-  msg += ',' + doubleToString(m_goal_point.get_vy(), 2);
+  msg += doubleToStringX(m_goal_point.get_vx(), 2);
+  msg += ',' + doubleToStringX(m_goal_point.get_vy(), 2);
 
   // post markers to start and goal
   std::string marker{"type=diamond,color=firebrick,"};
@@ -292,7 +291,7 @@ bool EvalPlanner::Iterate()
     double elapsed_time{MOOSTime() - m_current_trial.start_time};
     if (elapsed_time > m_trial_timeout) {
       reportEvent("Trial " + intToString(m_current_trial.trial_num) +
-                  " has timed out after " + doubleToString(elapsed_time, 2) +
+                  " has timed out after " + doubleToStringX(elapsed_time, 2) +
                   " seconds! Marking trial as failed.");
       m_current_trial.trial_successful = false;
       handleNextTrial();
@@ -578,7 +577,7 @@ void EvalPlanner::registerVariables()
   Register("NEAR_MISS_ALERT", 0);
   Register("COLLISION_ALERT", 0);
 
-  // // trajectory tracking
+  // trajectory tracking
   // Register("UPC_ODOMETRY_REPORT", 0);
   // Register("WPT_EFF_SUM_ALL");
 
@@ -596,7 +595,7 @@ bool EvalPlanner::buildReport()
   std::string upvname{toupper(m_vehicle_name)};
   m_msgs << "Vehicle Name: " << upvname << endl;
   m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
-  m_msgs << "Trial Timeout Cutoff: " << doubleToString(m_trial_timeout, 2) << " sec" << endl;
+  m_msgs << "Trial Timeout Cutoff: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
   m_msgs << header << endl;
   m_msgs << "Config (Interface to Planner)" << endl;
   m_msgs << "  path_request_var: "  << m_path_request_var + "_" + upvname << endl;
@@ -622,14 +621,14 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Successful: " << toupper(boolToString(m_current_trial.trial_successful))
     << endl;
   double elapsed_time{m_sim_active ? MOOSTime() - m_current_trial.start_time : 0};  // 0 if inactive
-  m_msgs << "  Elapsed Time: " << doubleToString(elapsed_time, 2) << " sec" << endl;
+  m_msgs << "  Elapsed Time: " << doubleToStringX(elapsed_time, 2) << " sec" << endl;
   m_msgs << "  Time Spent Planning: " <<
-    doubleToString(m_current_trial.planning_time, 2) << " sec" << endl;
+    doubleToStringX(m_current_trial.planning_time, 2) << " sec" << endl;
   m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
   m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
   m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;
   m_msgs << "  Closest Distance to Obstacle: "
-    << doubleToString(m_current_trial.min_dist_to_obj, 3) << " m" << endl;
+    << doubleToStringX(m_current_trial.min_dist_to_obj, 3) << " m" << endl;
 
   return(true);
 }
