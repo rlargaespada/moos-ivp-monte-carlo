@@ -16,6 +16,14 @@
 #include "XYPoint.h"
 
 
+enum class SimRequest
+{
+  PENDING,
+  OPEN,
+  CLOSED,
+};
+
+
 struct TrialData
 {
   int trial_num{0};
@@ -58,9 +66,11 @@ class EvalPlanner : public AppCastingMOOSApp
   void registerVariables();
 
   // initialization routines
+  void clearUserCommands();
   void clearPendingRequests();
-  void clearCurrentTrialData();
-  void clearCurrentTrialData(int trial_num);
+  void clearCurrentTrialData() {m_current_trial = TrialData{m_current_trial.trial_num};}
+  void clearCurrentTrialData(int trial_num) {m_current_trial = TrialData{trial_num};}
+  void clearTrialHistory() {m_trial_data.clear();}
   void initialize();
 
   // config handling
@@ -70,7 +80,7 @@ class EvalPlanner : public AppCastingMOOSApp
   bool setVPointConfig(XYPoint* point, std::string point_spec);
 
   // mail handling
-  void handleSimRequest(std::string request, bool* pending_flag);
+  void handleUserCommand(std::string request, bool* pending_flag);
 
   // actions during iteration
   bool handleResetSim();
@@ -107,18 +117,20 @@ class EvalPlanner : public AppCastingMOOSApp
   double m_trial_timeout;  // seconds
   std::map<std::string, std::string> m_endflags;
 
-  // default variable names
-  std::string m_reset_obs_default;
-  std::string m_path_complete_default;
-
  private:  // State variables
   bool m_sim_active;
 
-  // requests from user
+  // commands from user
   bool m_reset_sim_pending;
   bool m_end_sim_pending;
   bool m_reset_trial_pending;
   bool m_skip_trial_pending;
+
+  // sim requests to other moos apps
+  SimRequest m_reset_obstacles;
+  SimRequest m_reset_vehicles;
+  SimRequest m_reset_odometry;
+  SimRequest m_request_new_path;
 
   // updates from vehicle
   bool m_next_trial_pending;

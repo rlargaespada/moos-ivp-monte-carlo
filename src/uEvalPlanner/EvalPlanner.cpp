@@ -23,8 +23,6 @@ EvalPlanner::EvalPlanner()
   m_trial_timeout = 300;  // seconds
   m_path_request_var = "PLAN_PATH_REQUESTED";
   m_reset_sim_var = "USM_RESET";
-  m_reset_obs_default = "UFOS_RESET";
-  m_path_complete_default = "PATH_COMPLETE";
 
   // state variables
   m_sim_active = false;
@@ -36,7 +34,8 @@ EvalPlanner::EvalPlanner()
 }
 
 
-void EvalPlanner::clearPendingRequests() {
+void EvalPlanner::clearUserCommands()
+{
   m_reset_sim_pending = false;
   m_end_sim_pending = false;
   m_reset_trial_pending = false;
@@ -45,21 +44,22 @@ void EvalPlanner::clearPendingRequests() {
 }
 
 
-void EvalPlanner::clearCurrentTrialData() {
-m_current_trial = TrialData{m_current_trial.trial_num};  // reuse current trial num
-}
-
-
-void EvalPlanner::clearCurrentTrialData(int trial_num) {
-  m_current_trial = TrialData{trial_num};
+void EvalPlanner::clearPendingRequests()
+{
+  m_reset_obstacles = SimRequest::CLOSED;
+  m_reset_vehicles = SimRequest::CLOSED;
+  m_reset_odometry = SimRequest::CLOSED;
+  m_request_new_path = SimRequest::CLOSED;
 }
 
 
 /// @brief Initializes state variables for EvalPlanner
-void EvalPlanner::initialize() {
+void EvalPlanner::initialize()
+{
+  clearUserCommands();
   clearPendingRequests();
   clearCurrentTrialData(0);
-  m_trial_data.clear();
+  clearTrialHistory();
 }
 
 //---------------------------------------------------------
@@ -91,61 +91,62 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     bool   mstr  = msg.IsString();
 #endif
 
+    // handle user commands
     if (key == "RESET_SIM_REQUESTED") {
-      handleSimRequest(msg.GetString(), &m_reset_sim_pending);
-    } else if (key == "END_SIM_REQUESTED") {
-      handleSimRequest(msg.GetString(), &m_end_sim_pending);
-    } else if (key == "RESET_TRIAL_REQUESTED") {
-      handleSimRequest(msg.GetString(), &m_reset_trial_pending);
-    } else if (key == "SKIP_TRIAL_REQUESTED") {
-      handleSimRequest(msg.GetString(), &m_skip_trial_pending);
+      handleUserCommand(msg.GetString(), &m_reset_sim_pending);
+    // } else if (key == "END_SIM_REQUESTED") {
+    //   handleUserCommand(msg.GetString(), &m_end_sim_pending);
+    // } else if (key == "RESET_TRIAL_REQUESTED") {
+    //   handleUserCommand(msg.GetString(), &m_reset_trial_pending);
+    // } else if (key == "SKIP_TRIAL_REQUESTED") {
+    //   handleUserCommand(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
-      if (msg.GetString() == "true")
+      if (msg.GetString() == "true")  // don't check message, only handle if ppr open?
         m_next_trial_pending = true;
-    } else if (key == "START_POS") {
-      setVPoint(&m_start_point, msg.GetString());
-    } else if (key == "GOAL_POS") {
-      setVPoint(&m_goal_point, msg.GetString());
-    } else if (key == "ENCOUNTER_ALERT") {
-        std::string alert{tolower(msg.GetString())};
-        std::string vname{tokStringParse(alert, "vname", ',', '=')};
-        if ((m_sim_active) && (vname == m_vehicle_name)) {
-          m_current_trial.encounter_count++;
+    // } else if (key == "START_POS") {
+    //   setVPoint(&m_start_point, msg.GetString());
+    // } else if (key == "GOAL_POS") {
+    //   setVPoint(&m_goal_point, msg.GetString());
+    // } else if (key == "ENCOUNTER_ALERT") {
+    //     std::string alert{tolower(msg.GetString())};
+    //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
+    //     if ((m_sim_active) && (vname == m_vehicle_name)) {
+    //       m_current_trial.encounter_count++;
 
-          double dist;
-          if (tokParse(alert, "dist", ',', '=', dist)) {
-            if (dist < m_current_trial.min_dist_to_obj)
-              m_current_trial.min_dist_to_obj = dist;
-          }
-        }
-    } else if (key == "NEAR_MISS_ALERT") {
-        std::string alert{tolower(msg.GetString())};
-        std::string vname{tokStringParse(alert, "vname", ',', '=')};
-        if ((m_sim_active) && (vname == m_vehicle_name)) {
-          m_current_trial.near_miss_count++;
+    //       double dist;
+    //       if (tokParse(alert, "dist", ',', '=', dist)) {
+    //         if (dist < m_current_trial.min_dist_to_obj)
+    //           m_current_trial.min_dist_to_obj = dist;
+    //       }
+    //     }
+    // } else if (key == "NEAR_MISS_ALERT") {
+    //     std::string alert{tolower(msg.GetString())};
+    //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
+    //     if ((m_sim_active) && (vname == m_vehicle_name)) {
+    //       m_current_trial.near_miss_count++;
 
-          double dist;
-          if (tokParse(alert, "dist", ',', '=', dist)) {
-            if (dist < m_current_trial.min_dist_to_obj)
-              m_current_trial.min_dist_to_obj = dist;
-          }
-        }
-    } else if (key == "COLLISION_ALERT") {
-        std::string alert{tolower(msg.GetString())};
-        std::string vname{tokStringParse(alert, "vname", ',', '=')};
-        if ((m_sim_active) && (vname == m_vehicle_name)) {
-          m_current_trial.collision_count++;
-          m_current_trial.trial_successful = false;  // fail on collision
+    //       double dist;
+    //       if (tokParse(alert, "dist", ',', '=', dist)) {
+    //         if (dist < m_current_trial.min_dist_to_obj)
+    //           m_current_trial.min_dist_to_obj = dist;
+    //       }
+    //     }
+    // } else if (key == "COLLISION_ALERT") {
+    //     std::string alert{tolower(msg.GetString())};
+    //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
+    //     if ((m_sim_active) && (vname == m_vehicle_name)) {
+    //       m_current_trial.collision_count++;
+    //       m_current_trial.trial_successful = false;  // fail on collision
 
-          double dist;
-          if (tokParse(alert, "dist", ',', '=', dist)) {
-            if (dist < m_current_trial.min_dist_to_obj)
-              m_current_trial.min_dist_to_obj = dist;
-          }
-        }
-    } else if (key == "PLANNING_TIME") {
-      if (tolower(msg.GetCommunity()) == m_vehicle_name)
-        m_current_trial.planning_time += msg.GetDouble();
+    //       double dist;
+    //       if (tokParse(alert, "dist", ',', '=', dist)) {
+    //         if (dist < m_current_trial.min_dist_to_obj)
+    //           m_current_trial.min_dist_to_obj = dist;
+    //       }
+    //     }
+    // } else if (key == "PLANNING_TIME") {
+    //   if (tolower(msg.GetCommunity()) == m_vehicle_name)
+    //     m_current_trial.planning_time += msg.GetDouble();
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -155,7 +156,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 }
 
 
-void EvalPlanner::handleSimRequest(std::string request, bool* pending_flag)
+void EvalPlanner::handleUserCommand(std::string request, bool* pending_flag)
 {
   request = tolower(request);
   if ((request == "all") || (request == m_vehicle_name))
@@ -298,7 +299,7 @@ bool EvalPlanner::Iterate()
     }
   }
 
-  clearPendingRequests();
+  clearUserCommands();
 
   AppCastingMOOSApp::PostReport();
   return (return_val);
@@ -453,11 +454,11 @@ bool EvalPlanner::OnStartUp()
   // want to unnecessarily register for a variable that we don't
   // actually need
   if (m_path_complete_var.empty())
-    m_path_complete_var = m_path_complete_default;
+    m_path_complete_var = "PATH_COMPLETE";
 
   // if no reset vars were provided in config, only write to default var
   if (m_reset_obs_vars.empty())
-    m_reset_obs_vars.push_back(m_reset_obs_default);
+    m_reset_obs_vars.push_back("UFOS_RESET");
 
   registerVariables();
   return(true);

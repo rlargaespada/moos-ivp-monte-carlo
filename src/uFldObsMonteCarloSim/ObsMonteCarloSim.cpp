@@ -243,6 +243,7 @@ bool ObsMonteCarloSim::OnStartUp()
       handled = setNonNegDoubleOnString(m_reset_range, value);
     else if (param == "reset_var")
       handled = setNonWhiteVarOnString(m_reset_var, value);
+    // todo: replace this config var with setting reset_var to "silent", sets reset_var = "";
     else if (param == "reset_requests_enabled")
       handled = setBooleanOnString(m_reset_requests_enabled, value);
     else if (param == "reuse_ids")
