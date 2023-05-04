@@ -66,7 +66,7 @@ class EvalPlanner : public AppCastingMOOSApp
   void registerVariables();
 
   // initialization routines
-  void clearUserCommands();
+  void clearPendingCommands();
   void clearPendingRequests();
   void clearCurrentTrialData() {m_current_trial = TrialData{m_current_trial.trial_num};}
   void clearCurrentTrialData(int trial_num) {m_current_trial = TrialData{trial_num};}
@@ -80,7 +80,8 @@ class EvalPlanner : public AppCastingMOOSApp
   bool setVPointConfig(XYPoint* point, std::string point_spec);
 
   // mail handling
-  void handleUserCommand(std::string request, bool* pending_flag);
+  void handleUserCommand(std::string command, bool* pending_flag);
+  bool vehicleResetComplete(std::string node_report);
 
   // actions during iteration
   bool handleResetSim();

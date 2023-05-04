@@ -5,6 +5,7 @@
 /*    DATE: April 19th, 2023                                */
 /************************************************************/
 
+#include <cmath>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -34,7 +35,7 @@ EvalPlanner::EvalPlanner()
 }
 
 
-void EvalPlanner::clearUserCommands()
+void EvalPlanner::clearPendingCommands()
 {
   m_reset_sim_pending = false;
   m_end_sim_pending = false;
@@ -56,7 +57,7 @@ void EvalPlanner::clearPendingRequests()
 /// @brief Initializes state variables for EvalPlanner
 void EvalPlanner::initialize()
 {
-  clearUserCommands();
+  clearPendingCommands();
   clearPendingRequests();
   clearCurrentTrialData(0);
   clearTrialHistory();
@@ -94,19 +95,38 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     // handle user commands
     if (key == "RESET_SIM_REQUESTED") {
       handleUserCommand(msg.GetString(), &m_reset_sim_pending);
-    // } else if (key == "END_SIM_REQUESTED") {
-    //   handleUserCommand(msg.GetString(), &m_end_sim_pending);
-    // } else if (key == "RESET_TRIAL_REQUESTED") {
-    //   handleUserCommand(msg.GetString(), &m_reset_trial_pending);
-    // } else if (key == "SKIP_TRIAL_REQUESTED") {
-    //   handleUserCommand(msg.GetString(), &m_skip_trial_pending);
+    } else if (key == "END_SIM_REQUESTED") {
+      handleUserCommand(msg.GetString(), &m_end_sim_pending);
+    } else if (key == "RESET_TRIAL_REQUESTED") {
+      handleUserCommand(msg.GetString(), &m_reset_trial_pending);
+    } else if (key == "SKIP_TRIAL_REQUESTED") {
+      handleUserCommand(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
-      if (msg.GetString() == "true")  // don't check message, only handle if ppr open?
+      if ((m_request_new_path == SimRequest::OPEN)  && (msg.GetString() =="true")) {
+        m_request_new_path = SimRequest::CLOSED;
         m_next_trial_pending = true;
-    // } else if (key == "START_POS") {
-    //   setVPoint(&m_start_point, msg.GetString());
-    // } else if (key == "GOAL_POS") {
-    //   setVPoint(&m_goal_point, msg.GetString());
+      }
+    } else if (key == "START_POS") {
+      setVPoint(&m_start_point, msg.GetString());
+    } else if (key == "GOAL_POS") {
+      setVPoint(&m_goal_point, msg.GetString());
+    // handle responses to sim requests
+    } else if (key == "KNOWN_OBSTACLE_CLEAR") {
+      if (m_reset_obstacles == SimRequest::OPEN)
+        // todo: only close after getting this mail m_reset_obs_vars.size() times
+        m_reset_obstacles = SimRequest::CLOSED;
+    } else if (key == "NODE_REPORT") {
+      if (m_reset_vehicles == SimRequest::OPEN) {
+        if (vehicleResetComplete(msg.GetString()))
+          m_reset_vehicles = SimRequest::CLOSED;
+      }
+    } else if (key == "UPC_ODOMETRY_REPORT") {
+      if (m_reset_odometry == SimRequest::OPEN) {
+        std::string odo_report{tolower(msg.GetString())};
+        double trip_dist{tokDoubleParse(odo_report, "trip_dist", ',', '=')};
+        if (trip_dist <= 100)  // todo: fix to only reset when speed is 0
+          m_reset_odometry = SimRequest::CLOSED;
+      }
     // } else if (key == "ENCOUNTER_ALERT") {
     //     std::string alert{tolower(msg.GetString())};
     //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
@@ -156,11 +176,34 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 }
 
 
-void EvalPlanner::handleUserCommand(std::string request, bool* pending_flag)
+void EvalPlanner::handleUserCommand(std::string command, bool* pending_flag)
 {
-  request = tolower(request);
-  if ((request == "all") || (request == m_vehicle_name))
+  command = tolower(command);
+  if ((command == "all") || (command == m_vehicle_name))
     *pending_flag = true;
+}
+
+
+bool EvalPlanner::vehicleResetComplete(std::string node_report)
+{
+  node_report = tolower(node_report);
+  std::string vname{tokStringParse(node_report, "name", ',', '=')};
+  if (vname != m_vehicle_name)
+    return (false);
+
+  double xval{tokDoubleParse(node_report, "x", ',', '=')};
+  double yval{tokDoubleParse(node_report, "y", ',', '=')};
+
+  // todo: fix, should be exact
+  if (std::abs(xval - m_start_point.get_vx()) > 10)
+    return (false);
+  if (std::abs(yval - m_start_point.get_vy()) > 10)
+    return (false);
+  return (true);
+
+  // if ((xval == m_start_point.get_vx()) && (yval == m_start_point.get_vy()))
+  //   return (true);
+  // return (false);
 }
 
 
@@ -175,9 +218,9 @@ bool EvalPlanner::OnConnectToServer()
 
 
 //---------------------------------------------------------
-bool EvalPlanner::resetObstacles() {
-  // todo: wait for confirmation from each sim before continuing?
-  // don't want to request a new path until all obs are finalized
+bool EvalPlanner::resetObstacles()
+{
+  // no preconditions for this request
   bool return_val{true};
 
   for (std::string var_name : m_reset_obs_vars) {
@@ -185,12 +228,14 @@ bool EvalPlanner::resetObstacles() {
     reportEvent("Sent " + var_name);
   }
 
-
+  m_reset_obstacles = SimRequest::OPEN;
   return (return_val);
 }
 
 
-bool EvalPlanner::resetVehicles() {
+bool EvalPlanner::resetVehicles()
+{
+  // no preconditions for this request
   bool return_val{true};
 
   std::string reset_pose{m_start_point.get_spec()};
@@ -204,18 +249,32 @@ bool EvalPlanner::resetVehicles() {
   event += reset_var + ": " + reset_pose;
   reportEvent(event);
 
+  m_reset_vehicles = SimRequest::OPEN;
   return (return_val);
 }
 
 
 bool EvalPlanner::resetOdometry()
 {
+  // only reset odometry after vehicles have been reset to get accurate measurements
+  if (m_reset_vehicles != SimRequest::CLOSED)
+    return (false);
+
   reportEvent("Resetting trip odometry for " + m_vehicle_name);
-  return (Notify("UPC_TRIP_RESET", tolower(m_vehicle_name)));
+  Notify("UPC_TRIP_RESET", tolower(m_vehicle_name));
+  m_reset_odometry = SimRequest::OPEN;
+  return (true);
 }
 
 
-bool EvalPlanner::requestNewPath() {
+bool EvalPlanner::requestNewPath()
+{
+  // all other requests must be handled before requesting a new path
+  if ((m_reset_obstacles != SimRequest::CLOSED) ||
+      (m_reset_vehicles != SimRequest::CLOSED) ||
+      (m_reset_odometry != SimRequest::CLOSED)
+    ) {return (false);}
+
   bool return_val{true};
 
   // define variable posting and message
@@ -228,15 +287,17 @@ bool EvalPlanner::requestNewPath() {
   msg += ',' + doubleToStringX(m_goal_point.get_vy(), 2);
 
   // post markers to start and goal
+  // todo: these posts should be made on startup, updated whenever start points change
+  // todo: sepearate function to post start/goal?
   std::string marker{"type=diamond,color=firebrick,"};
   marker += "label=" + m_vehicle_name + "_start,";
   marker += m_start_point.get_spec();
-  Notify("VIEW_MARKER", marker);
+  return_val = Notify("VIEW_MARKER", marker) && return_val;
 
   marker = "type=diamond,color=cornflowerblue,";
   marker += "label=" + m_vehicle_name + "_goal,";
   marker += m_goal_point.get_spec();
-  Notify("VIEW_MARKER", marker);
+  return_val = Notify("VIEW_MARKER", marker) && return_val;
 
   // todo: multiple vehicles
 
@@ -246,8 +307,9 @@ bool EvalPlanner::requestNewPath() {
   reportEvent(event);
 
   // post new path request and save time of request
-  return_val = Notify(request_var, msg);
+  return_val = Notify(request_var, msg) && return_val;
   m_current_trial.start_time = MOOSTime();
+  m_request_new_path = SimRequest::OPEN;
   return (return_val);
 }
 
@@ -273,7 +335,7 @@ bool EvalPlanner::Iterate()
 
   bool return_val;
 
-  // only 1 action per iteration, in order of priority
+  // only handle 1 action per iteration, in order of priority
   // executing one action clears all pending actions
   if (m_end_sim_pending) {
     return_val = handleEndSim();
@@ -288,18 +350,28 @@ bool EvalPlanner::Iterate()
   }
 
   // if active trial has timed out, mark it a failure and start next trial
-  if (m_sim_active) {
-    double elapsed_time{MOOSTime() - m_current_trial.start_time};
-    if (elapsed_time > m_trial_timeout) {
-      reportEvent("Trial " + intToString(m_current_trial.trial_num) +
-                  " has timed out after " + doubleToStringX(elapsed_time, 2) +
-                  " seconds! Marking trial as failed.");
-      m_current_trial.trial_successful = false;
-      handleNextTrial();
-    }
-  }
+  // if (m_sim_active) {
+  //   double elapsed_time{MOOSTime() - m_current_trial.start_time};
+  //   if (elapsed_time > m_trial_timeout) {
+  //     reportEvent("Trial " + intToString(m_current_trial.trial_num) +
+  //                 " has timed out after " + doubleToStringX(elapsed_time, 2) +
+  //                 " seconds! Marking trial as failed.");
+  //     m_current_trial.trial_successful = false;
+  //     handleNextTrial();
+  //   }
+  // }
 
-  clearUserCommands();
+  clearPendingCommands();
+
+  // send requests to other apps as needed
+  if (m_reset_obstacles == SimRequest::PENDING)
+    resetObstacles();
+  if (m_reset_vehicles == SimRequest::PENDING)
+    resetVehicles();
+  if (m_reset_odometry == SimRequest::PENDING)
+    resetOdometry();
+  if (m_request_new_path == SimRequest::PENDING)
+    requestNewPath();
 
   AppCastingMOOSApp::PostReport();
   return (return_val);
@@ -325,15 +397,14 @@ bool EvalPlanner::handleResetSim() {
   reportEvent("Resetting simulation!");
   initialize();
 
-  bool return_val{true};
   if (m_sim_active)
-    return_val = resetObstacles() && return_val;  // only reset if already active
-  return_val = resetVehicles() && return_val;
-  return_val = resetOdometry() && return_val;
-  return_val = requestNewPath() && return_val;
+    m_reset_obstacles = SimRequest::PENDING;  // only reset if already active
+  m_reset_vehicles = SimRequest::PENDING;
+  m_reset_odometry = SimRequest::PENDING;
+  m_request_new_path = SimRequest::PENDING;
 
   m_sim_active = true;
-  return (return_val);
+  return (true);
 }
 
 
@@ -344,12 +415,11 @@ bool EvalPlanner::handleResetTrial() {
   reportEvent("Trial " + intToString(m_trial_data.size()) + " reset");
   clearCurrentTrialData();
 
-  bool return_val{true};
-  return_val = resetVehicles() && return_val;
-  return_val = resetOdometry() && return_val;
-  return_val = requestNewPath() && return_val;
+  m_reset_vehicles = SimRequest::PENDING;
+  m_reset_odometry = SimRequest::PENDING;
+  m_request_new_path = SimRequest::PENDING;
 
-  return (return_val);
+  return (true);
 }
 
 
@@ -360,13 +430,12 @@ bool EvalPlanner::handleSkipTrial() {
   reportEvent("Trial " + intToString(m_trial_data.size()) + " skipped");
   clearCurrentTrialData();
 
-  bool return_val{true};
-  return_val = resetObstacles() && return_val;
-  return_val = resetVehicles() && return_val;
-  return_val = resetOdometry() && return_val;
-  return_val = requestNewPath() && return_val;
+  m_reset_obstacles = SimRequest::PENDING;
+  m_reset_vehicles = SimRequest::PENDING;
+  m_reset_odometry = SimRequest::PENDING;
+  m_request_new_path = SimRequest::PENDING;
 
-  return (return_val);
+  return (true);
 }
 
 
@@ -383,7 +452,8 @@ bool EvalPlanner::handleNextTrial() {
   m_trial_data.push_back(m_current_trial);
   if (m_trial_data.size() >= m_desired_trials) {  // we're done
     reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
-    resetVehicles();
+    // todo: below should be a separate method, also called in handleEndSim()
+    m_reset_vehicles = SimRequest::PENDING;
     // todo: export metrics
     postEndflags();
     m_sim_active = false;
@@ -392,13 +462,12 @@ bool EvalPlanner::handleNextTrial() {
 
   // more trials left to go, get ready for the next one
   clearCurrentTrialData(static_cast<int>(m_trial_data.size()));
-  bool return_val{true};
-  return_val = resetObstacles() && return_val;
-  return_val = resetVehicles() && return_val;
-  return_val = resetOdometry() && return_val;
-  return_val = requestNewPath() && return_val;
+  m_reset_obstacles = SimRequest::PENDING;
+  m_reset_vehicles = SimRequest::PENDING;
+  m_reset_odometry = SimRequest::PENDING;
+  m_request_new_path = SimRequest::PENDING;
 
-  return (return_val);
+  return (true);
 }
 
 
@@ -571,6 +640,10 @@ void EvalPlanner::registerVariables()
   Register("START_POS");  // todo: do this for multiple vehicles
   Register("GOAL_POS");
 
+  // sim request responses
+  Register("KNOWN_OBSTACLE_CLEAR");
+  Register("NODE_REPORT");
+
   // variables used to calculate metrics
   // todo: handle these subscriptions
   // success rate
@@ -579,7 +652,7 @@ void EvalPlanner::registerVariables()
   Register("COLLISION_ALERT", 0);
 
   // trajectory tracking
-  // Register("UPC_ODOMETRY_REPORT", 0);
+  Register("UPC_ODOMETRY_REPORT", 0);
   // Register("WPT_EFF_SUM_ALL");
 
   // planning time
