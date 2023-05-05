@@ -137,6 +137,7 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // sim requests to other moos apps
   SimRequest m_reset_obstacles;
+  int m_obstacle_reset_responses;
   SimRequest m_reset_vehicles;
   SimRequest m_reset_odometry;
   SimRequest m_request_new_path;
