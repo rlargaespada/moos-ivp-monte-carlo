@@ -36,7 +36,7 @@ EvalPlanner::EvalPlanner()
   m_sim_active = false;
   initialize();
 
-  m_wait_for_zero_speed = false;  // workaround for bug with USM_RESET
+  m_wait_for_zero_speed = false;  //^ workaround for bug with USM_RESET
 
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
   // vehicles should be saved using node reports, where to define start and goal? vehicle says so?
@@ -111,10 +111,13 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "SKIP_TRIAL_REQUESTED") {
       handleUserCommand(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
-      if ((isTrialOngoing())  && (msg.GetString() =="true")) {
-        m_request_new_path = SimRequest::CLOSED;
-        m_next_trial_pending = true;
-        m_wait_for_zero_speed = true;  // workaround for bug with USM_RESET
+      std::string vname{tolower(msg.GetCommunity())};
+      if ((isTrialOngoing())  && (vname == m_vehicle_name)) {
+        if (msg.GetString() == "true") {
+          m_request_new_path = SimRequest::CLOSED;
+          m_next_trial_pending = true;
+          m_wait_for_zero_speed = true;  //^ workaround for bug with USM_RESET
+        }
       }
     } else if (key == "START_POS") {
       setVPoint(&m_start_point, msg.GetString());
@@ -131,14 +134,17 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
           m_reset_vehicles = SimRequest::CLOSED;
       }
     } else if (key == "UPC_ODOMETRY_REPORT") {
-      if (m_reset_odometry == SimRequest::OPEN) {
-        std::string odo_report{tolower(msg.GetString())};
-        double trip_dist{tokDoubleParse(odo_report, "trip_dist", ',', '=')};
+      std::string odo_report{tolower(msg.GetString())};
+      std::string vname{tokStringParse(odo_report, "vname", ',', '=')};
+      double trip_dist{tokDoubleParse(odo_report, "trip_dist", ',', '=')};
+      if (m_reset_odometry == SimRequest::OPEN && vname == m_vehicle_name) {
         if (trip_dist <= 10)  // close once odo is close to 0 (allow for small error)
           m_reset_odometry = SimRequest::CLOSED;
       }
+      if (isTrialOngoing() && vname == m_vehicle_name)
+        m_current_trial.dist_traveled = trip_dist;
     } else if (key == "UPC_SPEED_REPORT") {
-      if (m_wait_for_zero_speed) {  // workaround for bug with USM_RESET
+      if (m_wait_for_zero_speed) {  //^ workaround for bug with USM_RESET
         std::string sreport{tolower(msg.GetString())};
         std::string vname{tokStringParse(sreport, "vname", ',', '=')};
         double vspeed{tokDoubleParse(sreport, "avg_spd", ',', '=')};
@@ -250,7 +256,7 @@ bool EvalPlanner::resetObstacles()
 
 bool EvalPlanner::resetVehicles()
 {
-  // workaround for bug with USM_RESET
+  //^ workaround for bug with USM_RESET
   // wait to reset until speed is low to prevent residual speed
   // from persisting after reset and affecting next trial
   // if sim inactive, just go ahead and reset since it won't affect anything
@@ -361,8 +367,8 @@ bool EvalPlanner::Iterate()
 
   bool return_val{true};
 
-  // only handle 1 action per iteration, in order of priority
-  // executing one action clears all pending actions
+  // only handle 1 command per iteration, in order of priority
+  // executing one command clears all pending commands
   if (m_end_sim_pending) {
     return_val = handleEndSim();
   } else if (m_reset_sim_pending) {
@@ -467,9 +473,10 @@ bool EvalPlanner::handleNextTrial() {
   m_current_trial.end_time = MOOSTime();
   // calcMetrics();
   // todo: post stats, add in event?
-
   m_trial_data.push_back(m_current_trial);
-  if (m_trial_data.size() >= m_desired_trials) {  // we're done
+
+  // if we're done, cleanup sim
+  if (m_trial_data.size() >= m_desired_trials) {
     reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
     return (cleanupSim());
   }
@@ -725,45 +732,60 @@ bool EvalPlanner::buildReport()
 {
   using std::endl;
   std::string header = "================================";
+
+  // high level config
   std::string upvname{toupper(m_vehicle_name)};
   m_msgs << "Vehicle Name: " << upvname << endl;
-  m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
-  m_msgs << "Trial Timeout Cutoff: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
+  // todo: add metrics export file
+  std::string start_pose{m_start_point.get_spec()};
+  double heading{m_rel_hdg_on_reset ? relAng(m_start_point, m_goal_point) : m_hdg_on_reset};
+  start_pose += ", heading=" + doubleToStringX(heading, 2);
+  m_msgs << "Start Pose: " << start_pose << endl;
+  m_msgs << "Goal Point: " << m_goal_point.get_spec() << endl;
+
+  // interface to vehicle apps
   m_msgs << header << endl;
-  m_msgs << "Config (Interface to Planner)" << endl;
+  m_msgs << "Config (Interface to Vehicle)" << endl;
   m_msgs << "  path_request_var: "  << m_path_request_var + "_" + upvname << endl;
   m_msgs << "  path_complete_var: "  << m_path_complete_var << endl;
-  m_msgs << "Config (Start and Goal)" << endl;
-  m_msgs << "  start_pos: " << m_start_point.get_spec() << endl;
-  m_msgs << "  goal_pos: " << m_goal_point.get_spec() << endl;
+  m_msgs << "  reset_vehicle_var: " << m_reset_sim_var + "_" + upvname << endl;
+
+  // interface to shoreside apps
   m_msgs << "Config (Interface to Obstacle Sims)" << endl;
-  m_msgs << "  reset_obs_vars: " << stringVectorToString(m_reset_obs_vars, ':') << endl;
-  m_msgs << "Config (Interface to Vehicle Sims)" << endl;
-  m_msgs << "  reset_sim_var: " << m_reset_sim_var + "_" + upvname << endl;
+  m_msgs << "  reset_obs_vars: " << stringVectorToString(m_reset_obs_vars, ',') << endl;
+
+  // high level sim state
   m_msgs << header << endl;
-  m_msgs << "Metrics" << endl;
-  m_msgs << "  Completed Trials: " << intToString(m_trial_data.size()) <<
+  m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
+  m_msgs << "Completed Trials: " << intToString(m_trial_data.size()) <<
     "/" << intToString(m_desired_trials) << endl;
+  m_msgs << "Trial Timeout Cutoff: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
+
+  // global metrics over all trials
   m_msgs << header << endl;
-  m_msgs << "State (Total Stats)" << endl;
+  m_msgs << "Global Metrics" << endl;
+  // todo: add counters for total collisions, near misses, encounters
   // m_msgs << "  Total Collisions: " << intToString(m_collision_count) << endl;
   // m_msgs << "  Total Near Misses: " << intToString(m_near_miss_count) << endl;
   // m_msgs << "  Total Encounters: " << intToString(m_encounter_count) << endl;
-  m_msgs << "State (Trial Stats)" << endl;
+
+  // metrics for current trial
+  m_msgs << header << endl;
+  m_msgs << "Trial Metrics" << endl;
   m_msgs << "  Trial Number: " << intToString(m_current_trial.trial_num) << endl;
   m_msgs << "  Trial Successful: " << toupper(boolToString(m_current_trial.trial_successful))
     << endl;
-  double elapsed_time{0};
-  if (isTrialOngoing())
-    elapsed_time = MOOSTime() - m_current_trial.start_time;
+  double elapsed_time{isTrialOngoing() ? MOOSTime() - m_current_trial.start_time : 0};
   m_msgs << "  Elapsed Time: " << doubleToStringX(elapsed_time, 2) << " sec" << endl;
   m_msgs << "  Time Spent Planning: " <<
     doubleToStringX(m_current_trial.planning_time, 2) << " sec" << endl;
   m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
   m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
   m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;
-  m_msgs << "  Closest Distance to Obstacle: "
+  m_msgs << "  Closest Approach to Any Obstacle: "
     << doubleToStringX(m_current_trial.min_dist_to_obj, 3) << " m" << endl;
+  m_msgs << "  Distance Traveled: " <<
+    doubleToStringX(m_current_trial.dist_traveled, 2) << " m" << endl;
 
   return(true);
 }
