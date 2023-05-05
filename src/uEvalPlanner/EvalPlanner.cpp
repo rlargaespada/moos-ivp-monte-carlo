@@ -25,6 +25,7 @@ EvalPlanner::EvalPlanner()
   m_trial_timeout = 300;  // seconds
   m_path_request_var = "PLAN_PATH_REQUESTED";
   m_reset_sim_var = "USM_RESET";
+  m_obstacle_reset_responses = 0;
   m_rel_hdg_on_reset = false;
   m_hdg_on_reset = 0;
 
@@ -125,9 +126,14 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       setVPoint(&m_goal_point, msg.GetString());
     // handle responses to sim requests
     } else if (key == "KNOWN_OBSTACLE_CLEAR") {
-      if (m_reset_obstacles == SimRequest::OPEN)
-        // todo: only close after getting this mail m_reset_obs_vars.size() times
-        m_reset_obstacles = SimRequest::CLOSED;
+      if (m_reset_obstacles == SimRequest::OPEN) {
+        m_obstacle_reset_responses += 1;
+        // if we got a response from all our obstacle sims, close reset obs request
+        if (m_obstacle_reset_responses == m_reset_obs_vars.size()) {
+          m_reset_obstacles = SimRequest::CLOSED;
+          m_obstacle_reset_responses = 0;
+        }
+      }
     } else if (key == "NODE_REPORT") {
       if (m_reset_vehicles == SimRequest::OPEN) {
         if (vehicleResetComplete(msg.GetString()))
