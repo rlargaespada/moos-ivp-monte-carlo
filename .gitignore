@@ -61,4 +61,5 @@ targ*.bhv
 targ*.txt
 
 # other
+.vscode/
 .scratch/
