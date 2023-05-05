@@ -78,22 +78,28 @@ class EvalPlanner : public AppCastingMOOSApp
   bool handleConfigEndflag(std::string flag);
   bool setVPoint(XYPoint* point, std::string point_spec);
   bool setVPointConfig(XYPoint* point, std::string point_spec);
+  bool postVpointMarkers();
 
   // mail handling
   void handleUserCommand(std::string command, bool* pending_flag);
   bool vehicleResetComplete(std::string node_report);
 
-  // actions during iteration
+  // command handling
   bool handleResetSim();
   bool handleEndSim();
   bool handleResetTrial();
   bool handleSkipTrial();
   bool handleNextTrial();
 
+  // request sending
   bool resetObstacles();
   bool resetVehicles();
   bool resetOdometry();
   bool requestNewPath();
+
+  // internal actions
+  bool isTrialOngoing() {return (m_request_new_path == SimRequest::OPEN);}
+  bool cleanupSim();
   void calcMetrics();
   std::string getMetricsSpc();
   bool exportMetrics();
@@ -104,6 +110,8 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_vehicle_name;
   XYPoint m_start_point;
   XYPoint m_goal_point;
+  double m_hdg_on_reset;
+  bool m_rel_hdg_on_reset;
 
   // interface to vehicle
   std::string m_path_request_var;

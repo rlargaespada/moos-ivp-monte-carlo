@@ -12,6 +12,7 @@
 #include "MBUtils.h"
 #include "ACTable.h"
 #include "EvalPlanner.h"
+#include "AngleUtils.h"
 
 
 //---------------------------------------------------------
@@ -24,6 +25,12 @@ EvalPlanner::EvalPlanner()
   m_trial_timeout = 300;  // seconds
   m_path_request_var = "PLAN_PATH_REQUESTED";
   m_reset_sim_var = "USM_RESET";
+  m_rel_hdg_on_reset = false;
+  m_hdg_on_reset = 0;
+
+  // mark start/goal as invalid to start, must be set in config file
+  m_start_point.invalidate();
+  m_goal_point.invalidate();
 
   // state variables
   m_sim_active = false;
@@ -104,10 +111,10 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "SKIP_TRIAL_REQUESTED") {
       handleUserCommand(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
-      if ((m_request_new_path == SimRequest::OPEN)  && (msg.GetString() =="true")) {
+      if ((isTrialOngoing())  && (msg.GetString() =="true")) {
         m_request_new_path = SimRequest::CLOSED;
         m_next_trial_pending = true;
-        m_wait_for_zero_speed = true;
+        m_wait_for_zero_speed = true;  // workaround for bug with USM_RESET
       }
     } else if (key == "START_POS") {
       setVPoint(&m_start_point, msg.GetString());
@@ -127,57 +134,58 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       if (m_reset_odometry == SimRequest::OPEN) {
         std::string odo_report{tolower(msg.GetString())};
         double trip_dist{tokDoubleParse(odo_report, "trip_dist", ',', '=')};
-        if (trip_dist <= 100)  // todo: fix to only reset when speed is 0
+        if (trip_dist <= 10)  // close once odo is close to 0 (allow for small error)
           m_reset_odometry = SimRequest::CLOSED;
       }
     } else if (key == "UPC_SPEED_REPORT") {
-      if (m_wait_for_zero_speed) {
+      if (m_wait_for_zero_speed) {  // workaround for bug with USM_RESET
         std::string sreport{tolower(msg.GetString())};
         std::string vname{tokStringParse(sreport, "vname", ',', '=')};
         double vspeed{tokDoubleParse(sreport, "avg_spd", ',', '=')};
-        if ((vname == m_vehicle_name)  && (vspeed < 0.2))
+        if ((vname == m_vehicle_name)  && (vspeed < 0.1))
           m_wait_for_zero_speed = false;
       }
-    // } else if (key == "ENCOUNTER_ALERT") {
-    //     std::string alert{tolower(msg.GetString())};
-    //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
-    //     if ((m_sim_active) && (vname == m_vehicle_name)) {
-    //       m_current_trial.encounter_count++;
+    } else if (key == "ENCOUNTER_ALERT") {
+        std::string alert{tolower(msg.GetString())};
+        std::string vname{tokStringParse(alert, "vname", ',', '=')};
+        if ((isTrialOngoing()) && (vname == m_vehicle_name)) {
+          m_current_trial.encounter_count++;
 
-    //       double dist;
-    //       if (tokParse(alert, "dist", ',', '=', dist)) {
-    //         if (dist < m_current_trial.min_dist_to_obj)
-    //           m_current_trial.min_dist_to_obj = dist;
-    //       }
-    //     }
-    // } else if (key == "NEAR_MISS_ALERT") {
-    //     std::string alert{tolower(msg.GetString())};
-    //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
-    //     if ((m_sim_active) && (vname == m_vehicle_name)) {
-    //       m_current_trial.near_miss_count++;
+          double dist;
+          if (tokParse(alert, "dist", ',', '=', dist)) {
+            if (dist < m_current_trial.min_dist_to_obj)
+              m_current_trial.min_dist_to_obj = dist;
+          }
+        }
+    } else if (key == "NEAR_MISS_ALERT") {
+        std::string alert{tolower(msg.GetString())};
+        std::string vname{tokStringParse(alert, "vname", ',', '=')};
+        if ((isTrialOngoing()) && (vname == m_vehicle_name)) {
+          m_current_trial.near_miss_count++;
 
-    //       double dist;
-    //       if (tokParse(alert, "dist", ',', '=', dist)) {
-    //         if (dist < m_current_trial.min_dist_to_obj)
-    //           m_current_trial.min_dist_to_obj = dist;
-    //       }
-    //     }
-    // } else if (key == "COLLISION_ALERT") {
-    //     std::string alert{tolower(msg.GetString())};
-    //     std::string vname{tokStringParse(alert, "vname", ',', '=')};
-    //     if ((m_sim_active) && (vname == m_vehicle_name)) {
-    //       m_current_trial.collision_count++;
-    //       m_current_trial.trial_successful = false;  // fail on collision
+          double dist;
+          if (tokParse(alert, "dist", ',', '=', dist)) {
+            if (dist < m_current_trial.min_dist_to_obj)
+              m_current_trial.min_dist_to_obj = dist;
+          }
+        }
+    } else if (key == "COLLISION_ALERT") {
+        std::string alert{tolower(msg.GetString())};
+        std::string vname{tokStringParse(alert, "vname", ',', '=')};
+        if ((isTrialOngoing()) && (vname == m_vehicle_name)) {
+          m_current_trial.collision_count++;
+          m_current_trial.trial_successful = false;  // fail on collision
 
-    //       double dist;
-    //       if (tokParse(alert, "dist", ',', '=', dist)) {
-    //         if (dist < m_current_trial.min_dist_to_obj)
-    //           m_current_trial.min_dist_to_obj = dist;
-    //       }
-    //     }
-    // } else if (key == "PLANNING_TIME") {
-    //   if (tolower(msg.GetCommunity()) == m_vehicle_name)
-    //     m_current_trial.planning_time += msg.GetDouble();
+          double dist;
+          if (tokParse(alert, "dist", ',', '=', dist)) {
+            if (dist < m_current_trial.min_dist_to_obj)
+              m_current_trial.min_dist_to_obj = dist;
+          }
+        }
+    } else if (key == "PLANNING_TIME") {
+      std::string vname{tolower(msg.GetCommunity())};
+      if ((isTrialOngoing()) && (vname == m_vehicle_name))
+        m_current_trial.planning_time += msg.GetDouble();
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -205,16 +213,12 @@ bool EvalPlanner::vehicleResetComplete(std::string node_report)
   double xval{tokDoubleParse(node_report, "x", ',', '=')};
   double yval{tokDoubleParse(node_report, "y", ',', '=')};
 
-  // todo: fix, should be exact
-  if (std::abs(xval - m_start_point.get_vx()) > 10)
+  // reset worked if vehicle is close to start point (allow for small error)
+  if (std::abs(xval - m_start_point.get_vx()) > 5)
     return (false);
-  if (std::abs(yval - m_start_point.get_vy()) > 10)
+  if (std::abs(yval - m_start_point.get_vy()) > 5)
     return (false);
   return (true);
-
-  // if ((xval == m_start_point.get_vx()) && (yval == m_start_point.get_vy()))
-  //   return (true);
-  // return (false);
 }
 
 
@@ -260,7 +264,9 @@ bool EvalPlanner::resetVehicles()
   bool return_val{true};
 
   std::string reset_pose{m_start_point.get_spec()};
-  reset_pose.append(", speed=0, heading=0, depth=0");
+  double heading{m_rel_hdg_on_reset ? relAng(m_start_point, m_goal_point) : m_hdg_on_reset};
+  reset_pose += ", speed=0, heading=" + doubleToString(heading, 2);
+  reset_pose += ", depth=0";
 
   std::string reset_var{m_reset_sim_var + "_" + toupper(m_vehicle_name)};
   return_val = Notify(reset_var, reset_pose) && return_val;
@@ -307,19 +313,6 @@ bool EvalPlanner::requestNewPath()
   msg += doubleToStringX(m_goal_point.get_vx(), 2);
   msg += ',' + doubleToStringX(m_goal_point.get_vy(), 2);
 
-  // post markers to start and goal
-  // todo: these posts should be made on startup, updated whenever start points change
-  // todo: sepearate function to post start/goal?
-  std::string marker{"type=diamond,color=firebrick,"};
-  marker += "label=" + m_vehicle_name + "_start,";
-  marker += m_start_point.get_spec();
-  return_val = Notify("VIEW_MARKER", marker) && return_val;
-
-  marker = "type=diamond,color=cornflowerblue,";
-  marker += "label=" + m_vehicle_name + "_goal,";
-  marker += m_goal_point.get_spec();
-  return_val = Notify("VIEW_MARKER", marker) && return_val;
-
   // todo: multiple vehicles
 
   // report event that new trial was requested
@@ -331,6 +324,17 @@ bool EvalPlanner::requestNewPath()
   return_val = Notify(request_var, msg) && return_val;
   m_current_trial.start_time = MOOSTime();
   m_request_new_path = SimRequest::OPEN;
+  return (return_val);
+}
+
+
+bool EvalPlanner::cleanupSim()
+{
+  bool return_val{true};
+  m_reset_vehicles = SimRequest::PENDING;
+  // todo: export metrics
+  return_val = postEndflags() && return_val;
+  m_sim_active = false;
   return (return_val);
 }
 
@@ -373,16 +377,16 @@ bool EvalPlanner::Iterate()
   clearPendingCommands();
 
   // if active trial has timed out, mark it a failure and start next trial
-  // if (m_sim_active) {
-  //   double elapsed_time{MOOSTime() - m_current_trial.start_time};
-  //   if (elapsed_time > m_trial_timeout) {
-  //     reportEvent("Trial " + intToString(m_current_trial.trial_num) +
-  //                 " has timed out after " + doubleToStringX(elapsed_time, 2) +
-  //                 " seconds! Marking trial as failed.");
-  //     m_current_trial.trial_successful = false;
-  //     handleNextTrial();
-  //   }
-  // }
+  if (isTrialOngoing()) {
+    double elapsed_time{MOOSTime() - m_current_trial.start_time};
+    if (elapsed_time > m_trial_timeout) {
+      reportEvent("Trial " + intToString(m_current_trial.trial_num) +
+                  " has timed out after " + doubleToStringX(elapsed_time, 2) +
+                  " seconds! Marking trial as failed.");
+      m_current_trial.trial_successful = false;
+      handleNextTrial();
+    }
+  }
 
   // send requests to other apps as needed
   if (m_reset_obstacles == SimRequest::PENDING)
@@ -404,13 +408,7 @@ bool EvalPlanner::handleEndSim() {
     return (true);
 
   reportEvent("Ending sim early!");
-  bool return_val{true};
-  // export metrics
-  return_val = resetVehicles() && return_val;
-  return_val = postEndflags() && return_val;
-
-  m_sim_active = false;
-  return (return_val);
+  return (cleanupSim());
 }
 
 
@@ -473,12 +471,7 @@ bool EvalPlanner::handleNextTrial() {
   m_trial_data.push_back(m_current_trial);
   if (m_trial_data.size() >= m_desired_trials) {  // we're done
     reportEvent("All Monte Carlo trials complete! Setting sim to inactive.");
-    // todo: below should be a separate method, also called in handleEndSim()
-    m_reset_vehicles = SimRequest::PENDING;
-    // todo: export metrics
-    postEndflags();
-    m_sim_active = false;
-    return (true);
+    return (cleanupSim());
   }
 
   // more trials left to go, get ready for the next one
@@ -521,6 +514,11 @@ bool EvalPlanner::OnStartUp()
       handled = setVPointConfig(&m_start_point, value);
     } else if (param == "goal_pos") {
       handled = setVPointConfig(&m_goal_point, value);
+    } else if (param == "heading_on_reset") {
+      if (value == "relative") {
+        m_rel_hdg_on_reset = true;
+        handled = true;
+      } else {handled = setDoubleOnString(m_hdg_on_reset, value);}
     } else if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, value);
     } else if (param == "path_complete_var") {
@@ -550,6 +548,13 @@ bool EvalPlanner::OnStartUp()
   if (m_reset_obs_vars.empty())
     m_reset_obs_vars.push_back("UFOS_RESET");
 
+  // make sure start and goal were set in config file
+  if (!m_start_point.valid())
+    reportConfigWarning("Planner start point has not been set!");
+  if (!m_goal_point.valid())
+    reportConfigWarning("Planner goal point has not been set!");
+
+  postVpointMarkers();
   registerVariables();
   return(true);
 }
@@ -584,8 +589,10 @@ bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
     return (return_val);
 
   // spec was good, change point
-  point->set_vx(std::stod(xval));
-  point->set_vy(std::stod(yval));
+  point->set_vertex(std::stod(xval), std::stod(yval));  // this marks point as valid
+
+  // post new markers and return
+  return_val = postVpointMarkers() && return_val;
   return (return_val);
 }
 
@@ -605,8 +612,7 @@ bool EvalPlanner::setVPointConfig(XYPoint* point, std::string point_spec)
     return (return_val);
 
   // spec was good, change point
-  point->set_vx(std::stod(xval));
-  point->set_vy(std::stod(yval));
+  point->set_vertex(std::stod(xval), std::stod(yval));  // this marks point as valid
   return (return_val);
 }
 
@@ -639,6 +645,37 @@ bool EvalPlanner::handleConfigEndflag(std::string flag) {
   m_endflags[var] = flag;
 
   return (no_dupl_found);
+}
+
+
+bool EvalPlanner::postVpointMarkers()
+{
+  bool return_val{true};
+  std::string marker;
+
+  // post start marker
+  if (m_start_point.valid()) {
+    marker = "type=diamond,color=firebrick,";
+    marker += "label=" + m_vehicle_name + "_start,";
+    marker += m_start_point.get_spec();
+    return_val = Notify("VIEW_MARKER", marker) && return_val;
+  } else {
+    reportRunWarning("Can't post marker for planner start point, start point is invalid");
+    return_val = false;
+  }
+
+  // post goal marker
+  if (m_start_point.valid()) {
+    marker = "type=diamond,color=cornflowerblue,";
+    marker += "label=" + m_vehicle_name + "_goal,";
+    marker += m_goal_point.get_spec();
+    return_val = Notify("VIEW_MARKER", marker) && return_val;
+  } else {
+    reportRunWarning("Can't post marker for planner goal point, start goal is invalid");
+    return_val = false;
+  }
+
+  return (return_val);
 }
 
 
@@ -716,7 +753,9 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Number: " << intToString(m_current_trial.trial_num) << endl;
   m_msgs << "  Trial Successful: " << toupper(boolToString(m_current_trial.trial_successful))
     << endl;
-  double elapsed_time{m_sim_active ? MOOSTime() - m_current_trial.start_time : 0};  // 0 if inactive
+  double elapsed_time{0};
+  if (isTrialOngoing())
+    elapsed_time = MOOSTime() - m_current_trial.start_time;
   m_msgs << "  Elapsed Time: " << doubleToStringX(elapsed_time, 2) << " sec" << endl;
   m_msgs << "  Time Spent Planning: " <<
     doubleToStringX(m_current_trial.planning_time, 2) << " sec" << endl;

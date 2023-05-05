@@ -492,6 +492,7 @@ ProcessConfig = uEvalPlanner
   timeout = 300
   start_pos = $(START_POS)
   goal_pos = $(GOAL_POS)
+  heading_on_reset = relative
 
   path_request_var = $(PATH_REQUEST_VAR)
   path_complete_var = $(PATH_COMPLETE_VAR)
