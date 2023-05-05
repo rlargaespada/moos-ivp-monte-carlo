@@ -47,7 +47,8 @@ class LPAStar : public AppCastingMOOSApp
   bool postPath();
 
   // replanning
-  bool checkObstacle();
+  bool checkObstacles();
+  bool replanFromCurrentPos();
 
  private:  // Configuration variables
   // todo: hard code any of these?
@@ -69,8 +70,9 @@ class LPAStar : public AppCastingMOOSApp
   std::map<std::string, XYPolygon> m_given_obstacles;
   std::map<std::string, XYPolygon> m_alerted_obstacles;  // todo: how long do obs stay in here?
 
-  bool m_path_requested;
+  bool m_path_request_pending;
   bool m_transiting;
+  bool m_replan_needed;
 
   std::vector<XYPoint> m_path;
 };

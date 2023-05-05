@@ -25,8 +25,9 @@ LPAStar::LPAStar()
 
   m_grid_density = 2;  // meters
 
-  m_path_requested = false;
+  m_path_request_pending = false;
   m_transiting = false;
+  m_replan_needed = false;
 
   m_start_point.invalidate();
   m_goal_point.invalidate();
@@ -62,7 +63,9 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
 #endif
 
     if (key == m_path_request_var) {
-      if (!setEndpoints(msg.GetString()))
+      if (setEndpoints(msg.GetString()))
+        m_path_request_pending = true;
+      else
         reportRunWarning("Invalid " + key + ": " + msg.GetString());
     } else if (key == "GIVEN_OBSTACLE") {
       // todo: add to obstacle vec
@@ -126,10 +129,65 @@ bool LPAStar::OnConnectToServer()
 bool LPAStar::Iterate()
 {
   AppCastingMOOSApp::Iterate();
-  // Do your thing here!
+
+  if (m_path_request_pending) {
+    double start_time{MOOSTime()};
+    planPath();
+    postPath();
+    double elapsed_time{MOOSTime() - start_time};
+    Notify("PLANNING_TIME", elapsed_time);
+  } else if (m_transiting) {
+    checkObstacles();
+    if (m_replan_needed) {
+      double start_time{MOOSTime()};
+      replanFromCurrentPos();
+      postPath();  // todo: when to post previous path stats?
+      double elapsed_time{MOOSTime() - start_time};
+      Notify("PLANNING_TIME", elapsed_time);
+    }
+  }
+
   AppCastingMOOSApp::PostReport();
   return (true);
 }
+
+
+//---------------------------------------------------------
+// Generic Procedures
+
+bool LPAStar::planPath()
+{}
+
+
+double LPAStar::getPathLength()
+{}
+
+
+std::string LPAStar::getPathSpec()
+{}
+
+
+bool LPAStar::postPath()
+{}
+
+
+bool LPAStar::checkObstacles()
+{}
+
+
+bool LPAStar::replanFromCurrentPos()
+{}
+
+
+//---------------------------------------------------------
+// LPA* Procedures
+bool LPAStar::clearGrid()
+{}
+
+
+bool LPAStar::addObsToGrid()
+{}
+
 
 //---------------------------------------------------------
 // Procedure: OnStartUp()
