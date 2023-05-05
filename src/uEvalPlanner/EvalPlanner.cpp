@@ -29,6 +29,8 @@ EvalPlanner::EvalPlanner()
   m_sim_active = false;
   initialize();
 
+  m_wait_for_zero_speed = false;  // workaround for bug with USM_RESET
+
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
   // vehicles should be saved using node reports, where to define start and goal? vehicle says so?
   // USM_RESET could be set on a per vehicle basis (from node reports), use qbridge
@@ -105,6 +107,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       if ((m_request_new_path == SimRequest::OPEN)  && (msg.GetString() =="true")) {
         m_request_new_path = SimRequest::CLOSED;
         m_next_trial_pending = true;
+        m_wait_for_zero_speed = true;
       }
     } else if (key == "START_POS") {
       setVPoint(&m_start_point, msg.GetString());
@@ -126,6 +129,14 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
         double trip_dist{tokDoubleParse(odo_report, "trip_dist", ',', '=')};
         if (trip_dist <= 100)  // todo: fix to only reset when speed is 0
           m_reset_odometry = SimRequest::CLOSED;
+      }
+    } else if (key == "UPC_SPEED_REPORT") {
+      if (m_wait_for_zero_speed) {
+        std::string sreport{tolower(msg.GetString())};
+        std::string vname{tokStringParse(sreport, "vname", ',', '=')};
+        double vspeed{tokDoubleParse(sreport, "avg_spd", ',', '=')};
+        if ((vname == m_vehicle_name)  && (vspeed < 0.2))
+          m_wait_for_zero_speed = false;
       }
     // } else if (key == "ENCOUNTER_ALERT") {
     //     std::string alert{tolower(msg.GetString())};
@@ -235,6 +246,16 @@ bool EvalPlanner::resetObstacles()
 
 bool EvalPlanner::resetVehicles()
 {
+  // workaround for bug with USM_RESET
+  // wait to reset until speed is low to prevent residual speed
+  // from persisting after reset and affecting next trial
+  // if sim inactive, just go ahead and reset since it won't affect anything
+  if (m_wait_for_zero_speed) {
+    if (m_sim_active)
+      return (false);
+    m_wait_for_zero_speed = false;  // if sim is inactive, set this to false
+  }
+
   // no preconditions for this request
   bool return_val{true};
 
@@ -325,6 +346,7 @@ bool EvalPlanner::postEndflags() {
   return (return_val);
 }
 
+
 //---------------------------------------------------------
 // Procedure: Iterate()
 //            happens AppTick times per second
@@ -333,7 +355,7 @@ bool EvalPlanner::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
-  bool return_val;
+  bool return_val{true};
 
   // only handle 1 action per iteration, in order of priority
   // executing one action clears all pending actions
@@ -348,6 +370,7 @@ bool EvalPlanner::Iterate()
   } else if (m_next_trial_pending) {
     return_val = handleNextTrial();
   }
+  clearPendingCommands();
 
   // if active trial has timed out, mark it a failure and start next trial
   // if (m_sim_active) {
@@ -360,8 +383,6 @@ bool EvalPlanner::Iterate()
   //     handleNextTrial();
   //   }
   // }
-
-  clearPendingCommands();
 
   // send requests to other apps as needed
   if (m_reset_obstacles == SimRequest::PENDING)
@@ -653,6 +674,7 @@ void EvalPlanner::registerVariables()
 
   // trajectory tracking
   Register("UPC_ODOMETRY_REPORT", 0);
+  Register("UPC_SPEED_REPORT", 0);
   // Register("WPT_EFF_SUM_ALL");
 
   // planning time

@@ -82,6 +82,7 @@ ProcessConfig = pMarineViewer
 
   // Context Pull-Down Menu
   left_context[$(V1_NAME)] = START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+  left_context[$(V1_NAME)] = STATION_START_UPDATES_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
   right_context[$(V1_NAME)] = GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
 
   // Exclusion Filter
@@ -317,6 +318,7 @@ ProcessConfig = uFldShoreBroker
 
   qbridge = USM_RESET
   qbridge = $(PATH_REQUEST_VAR)
+  qbridge = STATION_START_UPDATES
   bridge = src=GIVEN_OBSTACLE
   //todo: work with multiple vehicles
 }
