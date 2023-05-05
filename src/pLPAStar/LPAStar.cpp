@@ -73,6 +73,11 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
       // todo: add to obstacle vec
     } else if (key == m_wpt_complete_var) {
       // todo: post endflags
+    } else if (key == "NODE_REPORT_LOCAL") {
+      std::string report{tolower(msg.GetString())};
+      double xval{tokDoubleParse(report, "x", ',', '=')};
+      double yval{tokDoubleParse(report, "y", ',', '=')};
+      m_vpos.set_vertex(xval, yval);
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -156,37 +161,53 @@ bool LPAStar::Iterate()
 // Generic Procedures
 
 bool LPAStar::planPath()
-{}
+{
+  return (true);
+}
 
 
 double LPAStar::getPathLength()
-{}
+{
+  return (0);
+}
 
 
 std::string LPAStar::getPathSpec()
-{}
+{
+  return ("");
+}
 
 
 bool LPAStar::postPath()
-{}
+{
+  return (true);
+}
 
 
 bool LPAStar::checkObstacles()
-{}
+{
+  return (true);
+}
 
 
 bool LPAStar::replanFromCurrentPos()
-{}
+{
+  return (true);
+}
 
 
 //---------------------------------------------------------
 // LPA* Procedures
 bool LPAStar::clearGrid()
-{}
+{
+  return (true);
+}
 
 
 bool LPAStar::addObsToGrid()
-{}
+{
+  return (true);
+}
 
 
 //---------------------------------------------------------
@@ -249,6 +270,7 @@ void LPAStar::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
   Register("GIVEN_OBSTACLE", 0);
+  Register("NODE_REPORT_LOCAL", 0);
   if (!m_path_request_var.empty())
     Register(m_path_request_var, 0);
   if (!m_obs_alert_var.empty())
@@ -269,5 +291,6 @@ bool LPAStar::buildReport()
   std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
   m_msgs << "Start Point: " << start_spec << endl;
   m_msgs << "Goal Point: " << goal_spec << endl;
+  m_msgs << "Vehcile Position: "  << m_vpos.get_spec() << endl;
   return(true);
 }

@@ -66,6 +66,7 @@ class LPAStar : public AppCastingMOOSApp
  private:  // State variables
   XYPoint m_start_point;
   XYPoint m_goal_point;
+  XYPoint m_vpos;
 
   std::map<std::string, XYPolygon> m_given_obstacles;
   std::map<std::string, XYPolygon> m_alerted_obstacles;  // todo: how long do obs stay in here?
