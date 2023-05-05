@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include <vector>
 #include "MBUtils.h"
 #include "ACTable.h"
 #include "LPAStar.h"
@@ -26,6 +27,9 @@ LPAStar::LPAStar()
 
   m_path_requested = false;
   m_transiting = false;
+
+  m_start_point.invalidate();
+  m_goal_point.invalidate();
 }
 
 //---------------------------------------------------------
@@ -57,14 +61,54 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
     bool   mstr  = msg.IsString();
 #endif
 
-    if (key == "FOO")
-      std::cout << "great!";
-
-    else if (key != "APPCAST_REQ")  // handled by AppCastingMOOSApp
+    if (key == m_path_request_var) {
+      if (!setEndpoints(msg.GetString()))
+        reportRunWarning("Invalid " + key + ": " + msg.GetString());
+    } else if (key == "GIVEN_OBSTACLE") {
+      // todo: add to obstacle vec
+    } else if (key == m_obs_alert_var) {
+      // todo: add to obstacle vec
+    } else if (key == m_wpt_complete_var) {
+      // todo: post endflags
+    } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
+    }
   }
   return(true);
 }
+
+
+bool LPAStar::setEndpoints(std::string request)
+{
+  std::string start, goal, xval, yval;
+  request = tolower(request);
+
+  // pull out start and goal, return fail if can't find
+  start = tokStringParse(request, "start", ';', '=');
+  goal = tokStringParse(request, "goal", ';', '=');
+  if ((start.empty()) || (goal.empty()))
+    return (false);
+
+  // parse start pos x and y, return fail if not found, otherwise set vertex
+  xval = biteStringX(start, ',');
+  yval = start;  // remainder is just y value
+  if ((xval.empty()) || (yval.empty()))
+    return (false);
+  m_start_point.set_vertex(std::stod(xval), std::stod(yval));
+
+  xval.clear();
+  yval.clear();
+
+  // parse goal pos x and y, return fail if not found, otherwise set vertex
+  xval = biteStringX(goal, ',');
+  yval = goal;  // remainder is just y value
+  if ((xval.empty()) || (yval.empty()))
+    return (false);
+  m_goal_point.set_vertex(std::stod(xval), std::stod(yval));
+
+  return (true);
+}
+
 
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()
@@ -146,7 +190,13 @@ bool LPAStar::OnStartUp()
 void LPAStar::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
-  // Register("FOOBAR", 0);
+  Register("GIVEN_OBSTACLE", 0);
+  if (!m_path_request_var.empty())
+    Register(m_path_request_var, 0);
+  if (!m_obs_alert_var.empty())
+    Register(m_obs_alert_var, 0);
+  if (!m_wpt_complete_var.empty())
+    Register(m_wpt_complete_var, 0);
 }
 
 
@@ -156,9 +206,10 @@ void LPAStar::registerVariables()
 bool LPAStar::buildReport()
 {
   using std::endl;
+
+  std::string start_spec{m_start_point.valid() ? m_start_point.get_spec() : "UNSET"};
+  std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
+  m_msgs << "Start Point: " << start_spec << endl;
+  m_msgs << "Goal Point: " << goal_spec << endl;
   return(true);
 }
-
-
-
-

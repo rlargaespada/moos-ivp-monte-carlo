@@ -35,6 +35,7 @@ Processconfig = ANTLER
 
   Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_A
   Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_B
+  Run = pLPAStar         @ NewConsole = false
 }
 
 
@@ -320,8 +321,8 @@ ProcessConfig = pMarinePIDV22
 
 ProcessConfig = pNodeReporter
 {
-  AppTick    = 2
-  CommsTick	 = 2
+  AppTick    = 4
+  CommsTick	 = 4
 
   platform_type = kayak
   platform_color = $(VCOLOR)
@@ -421,4 +422,17 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_B
   // waypoints are done, let uEvalPath know
   event = var=$(PATH_COMPLETE_VAR), val=true
   event = var=WAYPOINTS_COMPLETE, val=false
+}
+
+
+//------------------------------------------
+// pLPAStar config block
+ProcessConfig = pLPAStar
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  path_request_var = $(PATH_REQUEST_VAR)
+  path_found_var = $(PATH_FOUND_VAR)
+  path_complete_var = $(PATH_COMPLETE_VAR)  
 }

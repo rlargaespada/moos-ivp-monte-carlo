@@ -50,6 +50,7 @@ class LPAStar : public AppCastingMOOSApp
   bool checkObstacle();
 
  private:  // Configuration variables
+  // todo: hard code any of these?
   std::string m_path_request_var;  // PLAN_PATH_REQUESTED (s)
 
   std::string m_obs_alert_var;  // OBSTACLE_ALERT (s)
@@ -60,6 +61,7 @@ class LPAStar : public AppCastingMOOSApp
   std::string m_path_complete_var;  // PATH_COMPLETE (p)
 
   double m_grid_density;  // todo: think about how this would work
+  XYPolygon m_grid_bounds;  // todo: add this
  private:  // State variables
   XYPoint m_start_point;
   XYPoint m_goal_point;
