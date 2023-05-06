@@ -33,8 +33,8 @@ Processconfig = ANTLER
 
   Run = pObstacleMgr     @ NewConsole = false
 
-  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_A
-  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_B
+  // Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_A
+  // Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_B
   Run = pLPAStar         @ NewConsole = false
 }
 
@@ -432,6 +432,9 @@ ProcessConfig = pLPAStar
   CommsTick	 = 4
 
   path_request_var = $(PATH_REQUEST_VAR)
+  obs_alert_var = OBSTACLE_ALERT
   path_found_var = $(PATH_FOUND_VAR)
-  path_complete_var = $(PATH_COMPLETE_VAR)  
+  wpt_update_var = PATH_UPDATE
+  wpt_complete_var = WAYPOINTS_COMPLETE
+  path_complete_var = $(PATH_COMPLETE_VAR)
 }

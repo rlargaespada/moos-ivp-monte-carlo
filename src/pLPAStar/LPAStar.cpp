@@ -12,6 +12,7 @@
 #include "MBUtils.h"
 #include "ACTable.h"
 #include "LPAStar.h"
+#include "XYPoint.h"
 
 
 //---------------------------------------------------------
@@ -29,8 +30,10 @@ LPAStar::LPAStar()
   m_grid_density = 2;  // meters
 
   m_path_request_pending = false;
+  m_planning_start_time = 0;
+  m_planning_in_progress = false;
   m_transiting = false;
-  m_replan_needed = false;
+  m_path_complete = false;
 
   m_start_point.invalidate();
   m_goal_point.invalidate();
@@ -75,6 +78,10 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_obs_alert_var) {
       // todo: add to obstacle vec
     } else if (key == m_wpt_complete_var) {
+      if (m_transiting) {
+        m_transiting = false;
+        m_path_complete = true;
+      }
       // todo: post endflags
     } else if (key == "NODE_REPORT_LOCAL") {
       std::string report{tolower(msg.GetString())};
@@ -91,7 +98,7 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
 
 bool LPAStar::setEndpoints(std::string request)
 {
-  std::string start, goal, xval, yval;
+  std::string start, goal;
   request = tolower(request);
 
   // pull out start and goal, return fail if can't find
@@ -101,21 +108,20 @@ bool LPAStar::setEndpoints(std::string request)
     return (false);
 
   // parse start pos x and y, return fail if not found, otherwise set vertex
-  xval = biteStringX(start, ',');
-  yval = start;  // remainder is just y value
-  if ((xval.empty()) || (yval.empty()))
+  std::string start_x, start_y;
+  start_x = biteStringX(start, ',');
+  start_y = start;  // remainder is just y value
+  if ((start_x.empty()) || (start_y.empty()))
     return (false);
-  m_start_point.set_vertex(std::stod(xval), std::stod(yval));
-
-  xval.clear();
-  yval.clear();
+  m_start_point.set_vertex(std::stod(start_x), std::stod(start_y));
 
   // parse goal pos x and y, return fail if not found, otherwise set vertex
-  xval = biteStringX(goal, ',');
-  yval = goal;  // remainder is just y value
-  if ((xval.empty()) || (yval.empty()))
+  std::string goal_x, goal_y;
+  goal_x = biteStringX(goal, ',');
+  goal_y = goal;  // remainder is just y value
+  if ((goal_x.empty()) || (goal_y.empty()))
     return (false);
-  m_goal_point.set_vertex(std::stod(xval), std::stod(yval));
+  m_goal_point.set_vertex(std::stod(goal_x), std::stod(goal_y));
 
   return (true);
 }
@@ -138,22 +144,60 @@ bool LPAStar::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
+  bool path_found{false};
+
+  // new path request
   if (m_path_request_pending) {
-    double start_time{MOOSTime()};
-    // todo: when to post PATH_FOUND? when to post PATH_COMPLETE?
-    planPath();
-    postPath();
-    double elapsed_time{MOOSTime() - start_time};
-    // Notify("PLANNING_TIME", elapsed_time);
+    m_path_request_pending = false;
+
+    // post new plan messages
+    Notify(m_path_found_var, "false");
+    Notify(m_path_complete_var, "false");
+    // todo: STATION_UPDATES is hardcoded for now but should be configured as a flag w/ macros
+    std::string station_pt{doubleToStringX(m_start_point.get_vx(), 2)};
+    station_pt += "," + doubleToStringX(m_start_point.get_vy(), 2);
+    Notify("STATION_UPDATES", "station_pt=" + station_pt + "# center_activate=false");
+
+    // todo: what if this takes a few iterations? need to break into steps
+    // todo: what if planning fails?
+    // plan path until we reach max number of iterations
+    m_planning_in_progress = true;
+    m_transiting = false;
+    m_path_complete = false;
+    m_planning_start_time = MOOSTime();
+    path_found = planPath();
+
+  // if already planning a path, pick up from where we left off
+  } else if (m_planning_in_progress) {
+    m_planning_in_progress = false;
+    // path_found = planPath();  temporarily disable
+
+  // if transiting, check if we need to replan and replan if needed
   } else if (m_transiting) {
-    checkObstacles();
-    if (m_replan_needed) {
-      double start_time{MOOSTime()};
-      replanFromCurrentPos();
-      postPath();  // todo: when to post previous path stats?
-      double elapsed_time{MOOSTime() - start_time};
-      // Notify("PLANNING_TIME", elapsed_time);
+    if (!checkObstacles()) {
+      Notify(m_path_found_var, "false");
+      Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
+
+      // plan path until we reach max number of iterations
+      m_planning_start_time = MOOSTime();
+      m_planning_in_progress = true;
+      m_transiting = false;
+      path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
     }
+  }
+
+  // notify that path has been found
+  if (path_found) {
+    m_planning_end_time = MOOSTime();
+    m_planning_in_progress = false;
+    postPath();  // todo: when to post previous path stats?
+    m_transiting = true;
+  }
+
+  if (m_path_complete) {
+    // todo: post endflags
+    Notify(m_path_complete_var, "true");
+    m_path_complete = false;
   }
 
   AppCastingMOOSApp::PostReport();
@@ -166,48 +210,48 @@ bool LPAStar::Iterate()
 
 bool LPAStar::planPath()
 {
-  if (!m_path_request_pending)
-    return (false);
-
   // clear previous state, add current set of obstacles
+  // todo: these should only be called for first iteration
   m_path.clear();
   clearGrid();
   addObsToGrid();
 
   // placeholder: path is just start point and goal point
-  m_path.push_back(m_start_point);
-  m_path.push_back(m_goal_point);
+  m_path.add_vertex(m_start_point);
+  m_path.add_vertex(m_goal_point);
+  // todo TJ: remove add vertex lines and implement LPA* here
 
   return (true);
 }
 
 
-double LPAStar::getPathLength()
+std::string LPAStar::getPathStats()
 {
-  return (0);
-}
-
-
-std::string LPAStar::getPathSpec()
-{
+  // todo Raul: implement this function
   return ("");
 }
 
 
 bool LPAStar::postPath()
 {
+  Notify(m_path_found_var, "true");
+  Notify(m_wpt_update_var, "points = " + m_path.get_spec_pts(2));
+  Notify("PATH_STATS", getPathStats());
+  // todo Raul: add traverse flags
   return (true);
 }
 
 
 bool LPAStar::checkObstacles()
 {
+  // todo TJ: implement this function
   return (true);
 }
 
 
 bool LPAStar::replanFromCurrentPos()
 {
+  // todo Raul: define a skeleton, give to TJ
   return (true);
 }
 
@@ -215,15 +259,16 @@ bool LPAStar::replanFromCurrentPos()
 //---------------------------------------------------------
 // LPA* Procedures
 // sets all cells in grid to empty
-bool LPAStar::clearGrid()
+void LPAStar::clearGrid()
 {
-  return (true);
+  // todo TJ: implement this function
 }
 
 
 // cells with obstacles in them are marked impassible
 bool LPAStar::addObsToGrid()
 {
+  // todo TJ: implement this function
   return (true);
 }
 
@@ -249,6 +294,8 @@ bool LPAStar::OnStartUp()
     std::string value = line;
 
     bool handled = false;
+    // todo: pick which vars should be hardcoded, which vars should be configurable
+    // todo: add prefix config var, so PATH_* -> <prefix>_*
     if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, value);
     } else if (param == "obs_alert_var") {
@@ -311,6 +358,7 @@ bool LPAStar::buildReport()
   std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
   m_msgs << "Start Point: " << start_spec << endl;
   m_msgs << "Goal Point: " << goal_spec << endl;
-  m_msgs << "Vehcile Position: "  << m_vpos.get_spec() << endl;
+  m_msgs << "Vehicle Position: "  << m_vpos.get_spec() << endl;
+  // todo: add flags here
   return(true);
 }

@@ -13,6 +13,7 @@
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include <XYPoint.h>
+#include <XYSegList.h>
 #include <XYPolygon.h>
 
 class LPAStar : public AppCastingMOOSApp
@@ -37,13 +38,12 @@ class LPAStar : public AppCastingMOOSApp
   bool setEndpoints(std::string request);
 
   // path planning
-  bool clearGrid();
+  void clearGrid();
   bool addObsToGrid();
   bool planPath();
 
   // path publishing
-  double getPathLength();
-  std::string getPathSpec();
+  std::string getPathStats();
   bool postPath();
 
   // replanning
@@ -61,6 +61,8 @@ class LPAStar : public AppCastingMOOSApp
   std::string m_wpt_complete_var;  // WAYPOINTS_COMPLETE (s)
   std::string m_path_complete_var;  // PATH_COMPLETE (p)
 
+  int m_max_iters;  // todo: add as config var
+
   double m_grid_density;  // todo: think about how this would work
   XYPolygon m_grid_bounds;  // todo: add this
  private:  // State variables
@@ -71,11 +73,15 @@ class LPAStar : public AppCastingMOOSApp
   std::map<std::string, XYPolygon> m_given_obstacles;
   std::map<std::string, XYPolygon> m_alerted_obstacles;  // todo: how long do obs stay in here?
 
+  // todo: bools should be an enum class
   bool m_path_request_pending;
+  double m_planning_start_time;
+  double m_planning_end_time;
+  bool m_planning_in_progress;
   bool m_transiting;
-  bool m_replan_needed;
+  bool m_path_complete;
 
-  std::vector<XYPoint> m_path;
+  XYSegList m_path;
 };
 
 #endif
