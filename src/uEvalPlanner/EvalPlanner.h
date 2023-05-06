@@ -144,7 +144,6 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // updates from vehicle
   bool m_next_trial_pending;
-  bool m_wait_for_zero_speed;  //^ workaround for bugs with USM_RESET
 
   // trial data
   TrialData m_current_trial;

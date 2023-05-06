@@ -37,8 +37,6 @@ EvalPlanner::EvalPlanner()
   m_sim_active = false;
   initialize();
 
-  m_wait_for_zero_speed = false;  //^ workaround for bug with USM_RESET
-
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
   // vehicles should be saved using node reports, where to define start and goal? vehicle says so?
   // USM_RESET could be set on a per vehicle basis (from node reports), use qbridge
@@ -117,12 +115,11 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
         if (msg.GetString() == "true") {
           m_request_new_path = SimRequest::CLOSED;
           m_next_trial_pending = true;
-          m_wait_for_zero_speed = true;  //^ workaround for bug with USM_RESET
         }
       }
-    } else if (key == "START_POS") {
+    } else if (key == "UEP_START_POS") {
       setVPoint(&m_start_point, msg.GetString());
-    } else if (key == "GOAL_POS") {
+    } else if (key == "UEP_GOAL_POS") {
       setVPoint(&m_goal_point, msg.GetString());
     // handle responses to sim requests
     } else if (key == "KNOWN_OBSTACLE_CLEAR") {
@@ -149,14 +146,6 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       }
       if (isTrialOngoing() && vname == m_vehicle_name)
         m_current_trial.dist_traveled = trip_dist;
-    } else if (key == "UPC_SPEED_REPORT") {
-      if (m_wait_for_zero_speed) {  //^ workaround for bug with USM_RESET
-        std::string sreport{tolower(msg.GetString())};
-        std::string vname{tokStringParse(sreport, "vname", ',', '=')};
-        double vspeed{tokDoubleParse(sreport, "avg_spd", ',', '=')};
-        if ((vname == m_vehicle_name)  && (vspeed < 0.1))
-          m_wait_for_zero_speed = false;
-      }
     } else if (key == "ENCOUNTER_ALERT") {
         std::string alert{tolower(msg.GetString())};
         std::string vname{tokStringParse(alert, "vname", ',', '=')};
@@ -262,16 +251,6 @@ bool EvalPlanner::resetObstacles()
 
 bool EvalPlanner::resetVehicles()
 {
-  //^ workaround for bug with USM_RESET
-  // wait to reset until speed is low to prevent residual speed
-  // from persisting after reset and affecting next trial
-  // if sim inactive, just go ahead and reset since it won't affect anything
-  if (m_wait_for_zero_speed) {
-    if (m_sim_active)
-      return (false);
-    m_wait_for_zero_speed = false;  // if sim is inactive, set this to false
-  }
-
   // no preconditions for this request
   bool return_val{true};
 
@@ -538,6 +517,7 @@ bool EvalPlanner::OnStartUp()
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
+    // todo: handle these same was as in endflags
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
       handled = handleConfigResetVars(value);
     } else if (param == "endflag") {
@@ -708,8 +688,8 @@ void EvalPlanner::registerVariables()
     Register(m_path_complete_var, 0);
 
   // start/goal updates
-  Register("START_POS");  // todo: do this for multiple vehicles
-  Register("GOAL_POS");
+  Register("UEP_START_POS");  // todo: do this for multiple vehicles
+  Register("UEP_GOAL_POS");
 
   // sim request responses
   Register("KNOWN_OBSTACLE_CLEAR");
@@ -724,7 +704,7 @@ void EvalPlanner::registerVariables()
 
   // trajectory tracking
   Register("UPC_ODOMETRY_REPORT", 0);
-  Register("UPC_SPEED_REPORT", 0);
+  // Register("UPC_SPEED_REPORT", 0);
   // Register("WPT_EFF_SUM_ALL");
 
   // planning time

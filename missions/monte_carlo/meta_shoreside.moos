@@ -81,9 +81,9 @@ ProcessConfig = pMarineViewer
   appcast_font_size    = large
 
   // Context Pull-Down Menu
-  left_context[$(V1_NAME)] = START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+  left_context[$(V1_NAME)] = UEP_START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
   left_context[$(V1_NAME)] = STATION_START_UPDATES_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
-  right_context[$(V1_NAME)] = GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+  right_context[$(V1_NAME)] = UEP_GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
 
   // Exclusion Filter
   // leave empty
@@ -92,8 +92,8 @@ ProcessConfig = pMarineViewer
   scope = PHI_HOST_INFO
   scope = MVIEWER_LCLICK
   scope = MVIEWER_RCLICK
-  scope = START_POS
-  scope = GOAL_POS
+  scope = UEP_START_POS
+  scope = UEP_GOAL_POS
   scope = UPC_ODOMETRY_REPORT
   scope = UPC_SPEED_REPORT
 
@@ -191,8 +191,8 @@ ProcessConfig = pLogger
   Log = END_SIM_REQUESTED @ 0 NOSYNC
   Log = RESET_TRIAL_REQUESTED @ 0 NOSYNC
   Log = SKIP_TRIAL_REQUESTED @ 0 NOSYNC
-  Log = START_POS @ 0 NOSYNC
-  Log = GOAL_POS @ 0 NOSYNC
+  Log = UEP_START_POS @ 0 NOSYNC
+  Log = UEP_GOAL_POS @ 0 NOSYNC
   Log = $(PATH_REQUEST_VAR) @ 0 NOSYNC
   Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
   Log = USM_RESET @ 0 NOSYNC
@@ -245,7 +245,7 @@ ProcessConfig = uXMS
   var = RESET_SIM_REQUESTED, END_SIM_REQUESTED
   var = RESET_TRIAL_REQUESTED, SKIP_TRIAL_REQUESTED
   var = $(PATH_REQUEST_VAR), $(PATH_COMPLETE_VAR), PATH_FOUND
-  var = START_POS, GOAL_POS
+  var = UEP_START_POS, UEP_GOAL_POS
   // todo: add metrics postings
 
   // vehicle updates

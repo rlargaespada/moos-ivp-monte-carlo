@@ -19,8 +19,11 @@
 
 LPAStar::LPAStar()
 {
+  m_path_request_var = "";
+  m_obs_alert_var = "";
   m_path_found_var = "PATH_FOUND";
   m_wpt_update_var = "PATH_UPDATE";
+  m_wpt_complete_var = "";
   m_path_complete_var = "PATH_COMPLETE";
 
   m_grid_density = 2;  // meters
@@ -137,10 +140,11 @@ bool LPAStar::Iterate()
 
   if (m_path_request_pending) {
     double start_time{MOOSTime()};
+    // todo: when to post PATH_FOUND? when to post PATH_COMPLETE?
     planPath();
     postPath();
     double elapsed_time{MOOSTime() - start_time};
-    Notify("PLANNING_TIME", elapsed_time);
+    // Notify("PLANNING_TIME", elapsed_time);
   } else if (m_transiting) {
     checkObstacles();
     if (m_replan_needed) {
@@ -148,7 +152,7 @@ bool LPAStar::Iterate()
       replanFromCurrentPos();
       postPath();  // todo: when to post previous path stats?
       double elapsed_time{MOOSTime() - start_time};
-      Notify("PLANNING_TIME", elapsed_time);
+      // Notify("PLANNING_TIME", elapsed_time);
     }
   }
 
@@ -162,6 +166,18 @@ bool LPAStar::Iterate()
 
 bool LPAStar::planPath()
 {
+  if (!m_path_request_pending)
+    return (false);
+
+  // clear previous state, add current set of obstacles
+  m_path.clear();
+  clearGrid();
+  addObsToGrid();
+
+  // placeholder: path is just start point and goal point
+  m_path.push_back(m_start_point);
+  m_path.push_back(m_goal_point);
+
   return (true);
 }
 
@@ -198,12 +214,14 @@ bool LPAStar::replanFromCurrentPos()
 
 //---------------------------------------------------------
 // LPA* Procedures
+// sets all cells in grid to empty
 bool LPAStar::clearGrid()
 {
   return (true);
 }
 
 
+// cells with obstacles in them are marked impassible
 bool LPAStar::addObsToGrid()
 {
   return (true);
@@ -244,6 +262,8 @@ bool LPAStar::OnStartUp()
     } else if (param == "path_complete_var") {
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
     }
+    // todo: add initial plan flags, replanflags, traverseflags, endflags,
+    // macro should include start and goal
 
     if (!handled)
       reportUnhandledConfigWarning(orig);

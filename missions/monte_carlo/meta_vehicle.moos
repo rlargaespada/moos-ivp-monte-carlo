@@ -392,7 +392,6 @@ ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
   event = var=STATION_UPDATES, val="station_pt=$(START_POS) # center_activate=false", time=1
 
   // after "planning" time, go into traversal mode with found points
-  // event = var=USM_RESET, val="$(START_POS),0,0,0", time=9  // workaround for issues with USM resets
   event = var=$(PATH_FOUND_VAR), val=true, time=10
   event = var=PATH_UPDATE, val="points = $(START_POS):50, -100:$(GOAL_POS)", time=10
   event = var=PLANNING_TIME, val=$[PTIME], time=10

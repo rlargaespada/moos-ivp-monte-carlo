@@ -63,7 +63,7 @@ Behavior = BHV_StationKeep
   visual_hints = vertex_size  = 1           // default
   visual_hints = edge_color   = light_blue  // default
   visual_hints = edge_size    = 1           // default
-  visual_hints = label_color  = white       // default
+  visual_hints = label_color  = invisible
   visual_hints = vertex_color = red         // default
 }
 
@@ -75,14 +75,14 @@ Behavior = BHV_ConstantSpeed
   // ---------------------------
   name         = zero_speed_idle
   pwt          = 100                // default
-  condition    = MODE==IDLE   // example
+  condition    = MODE==IDLE
   updates      = IDLE_SPD_UPDATES
 
   // Parameters specific to this behavior
   // ------------------------------------
   basewidth = 0.2          // default
   duration = no-time-limit
-  speed = 0.1            // default
+  speed = 0            // default
   speed_mismatch_var = SPEED_DIFF   // example
   peakwidth = 0            // default
   summitdelta = 0            // default
@@ -131,13 +131,14 @@ Behavior = BHV_StationKeep
   outer_speed  = 1.2     // default
   transit_speed  = 2.5     // default
   station_pt = $(START_POS)
-  center_activate = false
-  swing_time = 2
+  // center_activate = false
+  center_activate = true
+  swing_time = 5
 
   visual_hints = vertex_size  = 1           // default
   visual_hints = edge_color   = light_blue  // default
   visual_hints = edge_size    = 1           // default
-  visual_hints = label_color  = white       // default
+  visual_hints = label_color  = invisible
   visual_hints = vertex_color = red         // default
 }
 
