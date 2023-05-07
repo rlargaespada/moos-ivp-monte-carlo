@@ -33,8 +33,6 @@ Processconfig = ANTLER
 
   Run = pObstacleMgr     @ NewConsole = false
 
-  // Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_A
-  // Run = uTimerScript     @ NewConsole = false ~ uTimerScript_PLANNER_PLACEHOLDER_B
   Run = pLPAStar         @ NewConsole = false
 }
 
@@ -366,63 +364,6 @@ ProcessConfig = uTimerScript_RANDOM_DRIFTS
 #include plug_uFldNodeBroker.moos
 #include plug_pObstacleMgr.moos
 
-//------------------------------------------
-// uTimerScript_PLANNER_PLACEHOLDER configuration  block
-// While planner isn't written, emulate planner postings through timerscripts
-ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_A
-{
-  AppTick   = 2
-  CommsTick = 2
-  paused        = false
-  reset_max     = unlimited
-  reset_time    = end
-  delay_reset   = 0
-  script_name   = PLANNER_PLACEHOLDER_A
-  script_atomic = true
-  condition = $(PATH_REQUEST_VAR) != none
-  upon_awake = restart
-  randvar = varname=PTIME, min=10, max=30, key=at_post
-
-  event = var=$(PATH_REQUEST_VAR), val=none, time=0  // clear request
-
-  // go into planning mode, move towards start
-  event = var=$(PATH_COMPLETE_VAR), val=false, time=1
-  event = var=$(PATH_FOUND_VAR), val=false, time=1
-  // when initially planning, station keep around start
-  event = var=STATION_UPDATES, val="station_pt=$(START_POS) # center_activate=false", time=1
-
-  // after "planning" time, go into traversal mode with found points
-  event = var=$(PATH_FOUND_VAR), val=true, time=10
-  event = var=PATH_UPDATE, val="points = $(START_POS):50, -100:$(GOAL_POS)", time=10
-  event = var=PLANNING_TIME, val=$[PTIME], time=10
-
-  // encountered an obstacle, go back into planning mode
-  event = var=$(PATH_FOUND_VAR), val=false, time=40
-  // when replanning, station keep around current position
-  event = var=STATION_UPDATES, val="center_activate = true",time=40
-
-  // found new path, go back into traversal mode
-  event = var=$(PATH_FOUND_VAR), val=true, time=60
-  event = var=PLANNING_TIME, val=$[PTIME], time=60
-}
-
-ProcessConfig = uTimerScript_PLANNER_PLACEHOLDER_B
-{
-  AppTick   = 2
-  CommsTick = 2
-  paused        = false
-  reset_max     = unlimited
-  reset_time    = end
-  delay_reset   = 0
-  script_name   = PLANNER_PLACEHOLDER_B
-  script_atomic = true
-  condition = WAYPOINTS_COMPLETE == true
-
-  // waypoints are done, let uEvalPath know
-  event = var=$(PATH_COMPLETE_VAR), val=true
-  event = var=WAYPOINTS_COMPLETE, val=false
-}
-
 
 //------------------------------------------
 // pLPAStar config block
@@ -432,7 +373,7 @@ ProcessConfig = pLPAStar
   CommsTick	 = 4
 
   path_request_var = $(PATH_REQUEST_VAR)
-  obs_alert_var = OBSTACLE_ALERT
+  obs_alert_var = GENERAL_OBSTACLE_ALERT
   path_found_var = $(PATH_FOUND_VAR)
   wpt_update_var = PATH_UPDATE
   wpt_complete_var = WAYPOINTS_COMPLETE

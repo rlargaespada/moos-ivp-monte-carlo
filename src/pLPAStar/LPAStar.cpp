@@ -9,13 +9,14 @@
 #include <iterator>
 #include <string>
 #include <vector>
+#include "MacroUtils.h"
 #include "MBUtils.h"
 #include "ACTable.h"
 #include "LPAStar.h"
 #include "XYPoint.h"
 #include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsPoly.h"
-#include "Obstacle.h"
+#include "VarDataPair.h"
 
 
 //---------------------------------------------------------
@@ -74,10 +75,12 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
         m_mode = PlannerMode::REQUEST_PENDING;
       else
         reportRunWarning("Invalid " + key + ": " + msg.GetString());
-    } else if (key == "GIVEN_OBSTACLE") {
-      // todo: add to obstacle vec
     } else if (key == m_obs_alert_var) {
-      // todo: add to obstacle vec
+      handleObstacleAlert(msg.GetString());
+    } else if (key == "OBM_RESOLVED") {
+      std::string key{msg.GetString()};
+      if (m_obstacle_map.count(key))
+        m_obstacle_map.erase(key);
     } else if (key == m_wpt_complete_var) {
       if (m_mode == PlannerMode::IN_TRANSIT)
         m_mode = PlannerMode::PATH_COMPLETE;
@@ -105,12 +108,33 @@ bool LPAStar::setEndpoints(std::string request)
   if ((start.empty()) || (goal.empty()))
     return (false);
 
+  // apply spec to start and goal, if parsing fails return fail
   m_start_point = string2Point(start);
   m_goal_point = string2Point(goal);
-
   if (!m_start_point.valid() || !m_goal_point.valid())
     return (false);
 
+  return (true);
+}
+
+
+bool LPAStar::handleObstacleAlert(std::string obs_alert)
+{
+  // name=avd_obstacles_ob_0#poly=pts={-21.69,-135.31:-24.25,-132.75:-10.83,-132.03},label=ob_0
+  // pull out polygon from alert message
+  biteStringX(obs_alert, '#');  // removes name block
+  biteStringX(obs_alert, '=');  // removes poly= block, just leaves pts=
+
+  // parse obstacle from string
+  XYPolygon new_obs{string2Poly(obs_alert)};
+  if (!new_obs.is_convex())
+    return(false);
+
+  // add obstacle to obstacle map
+  std::string key{new_obs.get_label()};
+  m_obstacle_map[key] = new_obs;
+
+  reportEvent("new obstacle: " + key);
   return (true);
 }
 
@@ -319,8 +343,8 @@ bool LPAStar::OnStartUp()
 void LPAStar::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
-  Register("GIVEN_OBSTACLE", 0);
   Register("NODE_REPORT_LOCAL", 0);
+  Register("OBM_RESOLVED", 0);
   if (!m_path_request_var.empty())
     Register(m_path_request_var, 0);
   if (!m_obs_alert_var.empty())
@@ -341,7 +365,6 @@ bool LPAStar::buildReport()
   std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
   m_msgs << "Start Point: " << start_spec << endl;
   m_msgs << "Goal Point: " << goal_spec << endl;
-  m_msgs << "Vehicle Position: "  << m_vpos.get_spec() << endl;
-  // todo: add flags here
+  // todo: add flags here, add planner mode, add obstacles, add vars
   return(true);
 }

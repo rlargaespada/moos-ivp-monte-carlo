@@ -48,8 +48,7 @@ class LPAStar : public AppCastingMOOSApp
 
   // mail handling
   bool setEndpoints(std::string request);
-  bool handleGivenObstacle(std::string poly_spec);
-  bool handleObstacleAlert(std::string poly_spec);
+  bool handleObstacleAlert(std::string obs_alert);
 
   // path planning
   void clearGrid();
@@ -63,6 +62,9 @@ class LPAStar : public AppCastingMOOSApp
   // replanning
   bool checkObstacles();
   bool replanFromCurrentPos();
+
+  // other
+  std::string printPlannerMode();
 
  private:  // Configuration variables
   // todo: hard code any of these?
@@ -85,8 +87,8 @@ class LPAStar : public AppCastingMOOSApp
   XYPoint m_goal_point;
   XYPoint m_vpos;
 
-  std::map<std::string, XYPolygon> m_given_obstacles;
-  std::map<std::string, XYPolygon> m_alerted_obstacles;  // todo: how long do obs stay in here?
+  // todo: add a sub to a variable that clears these
+  std::map<std::string, XYPolygon> m_obstacle_map;
 
   PlannerMode m_mode;
   double m_planning_start_time;

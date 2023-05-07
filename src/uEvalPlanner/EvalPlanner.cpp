@@ -9,10 +9,12 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include "MacroUtils.h"
 #include "MBUtils.h"
 #include "ACTable.h"
 #include "EvalPlanner.h"
 #include "AngleUtils.h"
+#include "VarDataPair.h"
 
 
 //---------------------------------------------------------
@@ -331,6 +333,8 @@ bool EvalPlanner::cleanupSim()
 
 
 bool EvalPlanner::postEndflags() {
+  // todo: redo this with var data pairs, macros
+  // todo: add trial flags
   bool return_val{true};
   std::map<std::string, std::string>::iterator v;
   for (v = m_endflags.begin(); v != m_endflags.end(); v++) {
