@@ -15,7 +15,7 @@
 #include <XYPoint.h>
 #include <XYSegList.h>
 #include <XYPolygon.h>
-
+#include <XYConvexGrid.h>
 
 enum class PlannerMode
 {
@@ -51,7 +51,6 @@ class LPAStar : public AppCastingMOOSApp
   bool handleObstacleAlert(std::string obs_alert);
 
   // path planning
-  void clearGrid();
   bool addObsToGrid();
   bool planPath();
 
@@ -95,6 +94,7 @@ class LPAStar : public AppCastingMOOSApp
   double m_planning_end_time;
 
   XYSegList m_path;
+  XYConvexGrid m_grid;
 };
 
 #endif

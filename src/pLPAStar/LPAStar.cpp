@@ -219,7 +219,7 @@ bool LPAStar::planPath()
   // clear previous state, add current set of obstacles
   // todo: these should only be called for first iteration
   m_path.clear();
-  clearGrid();
+  m_grid.reset();
   addObsToGrid();
 
   // placeholder: path is just start point and goal point
@@ -264,13 +264,6 @@ bool LPAStar::replanFromCurrentPos()
 
 //---------------------------------------------------------
 // LPA* Procedures
-
-// sets all cells in grid to empty
-void LPAStar::clearGrid()
-{
-  // todo TJ: implement this function
-}
-
 
 // cells with obstacles in them are marked impassible
 bool LPAStar::addObsToGrid()
