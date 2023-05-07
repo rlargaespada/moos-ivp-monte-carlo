@@ -16,6 +16,18 @@
 #include <XYSegList.h>
 #include <XYPolygon.h>
 
+
+enum class PlannerMode
+{
+  IDLE,
+  REQUEST_PENDING,
+  PLANNING_IN_PROGRESS,
+  PLANNING_FAILED,
+  IN_TRANSIT,
+  PATH_COMPLETE,
+};
+
+
 class LPAStar : public AppCastingMOOSApp
 {
  public:
@@ -36,6 +48,8 @@ class LPAStar : public AppCastingMOOSApp
 
   // mail handling
   bool setEndpoints(std::string request);
+  bool handleGivenObstacle(std::string poly_spec);
+  bool handleObstacleAlert(std::string poly_spec);
 
   // path planning
   void clearGrid();
@@ -65,6 +79,7 @@ class LPAStar : public AppCastingMOOSApp
 
   double m_grid_density;  // todo: think about how this would work
   XYPolygon m_grid_bounds;  // todo: add this
+  bool m_post_visuals;  // todo: add as config var
  private:  // State variables
   XYPoint m_start_point;
   XYPoint m_goal_point;
@@ -73,13 +88,9 @@ class LPAStar : public AppCastingMOOSApp
   std::map<std::string, XYPolygon> m_given_obstacles;
   std::map<std::string, XYPolygon> m_alerted_obstacles;  // todo: how long do obs stay in here?
 
-  // todo: bools should be an enum class
-  bool m_path_request_pending;
+  PlannerMode m_mode;
   double m_planning_start_time;
   double m_planning_end_time;
-  bool m_planning_in_progress;
-  bool m_transiting;
-  bool m_path_complete;
 
   XYSegList m_path;
 };

@@ -570,6 +570,7 @@ bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
   std::string vname, xval, yval;
   point_spec = tolower(point_spec);
   return_val = tokParse(point_spec, "vname", ',', '=', vname) && return_val;
+  // todo: use string2Point
   return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
   return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
 
@@ -597,6 +598,7 @@ bool EvalPlanner::setVPointConfig(XYPoint* point, std::string point_spec)
   bool return_val{true};
   std::string vname, xval, yval;
   point_spec = tolower(point_spec);
+  // todo: use string2Point
   return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
   return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
 

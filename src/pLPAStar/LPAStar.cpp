@@ -13,6 +13,9 @@
 #include "ACTable.h"
 #include "LPAStar.h"
 #include "XYPoint.h"
+#include "XYFormatUtilsPoint.h"
+#include "XYFormatUtilsPoly.h"
+#include "Obstacle.h"
 
 
 //---------------------------------------------------------
@@ -20,20 +23,18 @@
 
 LPAStar::LPAStar()
 {
-  m_path_request_var = "";
-  m_obs_alert_var = "";
+  m_path_request_var = "";  // set in onStartup
+  m_obs_alert_var = "";  // set in onStartup
   m_path_found_var = "PATH_FOUND";
   m_wpt_update_var = "PATH_UPDATE";
-  m_wpt_complete_var = "";
+  m_wpt_complete_var = "";  // set in onStartup
   m_path_complete_var = "PATH_COMPLETE";
 
   m_grid_density = 2;  // meters
 
-  m_path_request_pending = false;
+  m_mode = PlannerMode::IDLE;
   m_planning_start_time = 0;
-  m_planning_in_progress = false;
-  m_transiting = false;
-  m_path_complete = false;
+  m_planning_end_time = 0;
 
   m_start_point.invalidate();
   m_goal_point.invalidate();
@@ -70,7 +71,7 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
 
     if (key == m_path_request_var) {
       if (setEndpoints(msg.GetString()))
-        m_path_request_pending = true;
+        m_mode = PlannerMode::REQUEST_PENDING;
       else
         reportRunWarning("Invalid " + key + ": " + msg.GetString());
     } else if (key == "GIVEN_OBSTACLE") {
@@ -78,11 +79,8 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_obs_alert_var) {
       // todo: add to obstacle vec
     } else if (key == m_wpt_complete_var) {
-      if (m_transiting) {
-        m_transiting = false;
-        m_path_complete = true;
-      }
-      // todo: post endflags
+      if (m_mode == PlannerMode::IN_TRANSIT)
+        m_mode = PlannerMode::PATH_COMPLETE;
     } else if (key == "NODE_REPORT_LOCAL") {
       std::string report{tolower(msg.GetString())};
       double xval{tokDoubleParse(report, "x", ',', '=')};
@@ -107,21 +105,11 @@ bool LPAStar::setEndpoints(std::string request)
   if ((start.empty()) || (goal.empty()))
     return (false);
 
-  // parse start pos x and y, return fail if not found, otherwise set vertex
-  std::string start_x, start_y;
-  start_x = biteStringX(start, ',');
-  start_y = start;  // remainder is just y value
-  if ((start_x.empty()) || (start_y.empty()))
-    return (false);
-  m_start_point.set_vertex(std::stod(start_x), std::stod(start_y));
+  m_start_point = string2Point(start);
+  m_goal_point = string2Point(goal);
 
-  // parse goal pos x and y, return fail if not found, otherwise set vertex
-  std::string goal_x, goal_y;
-  goal_x = biteStringX(goal, ',');
-  goal_y = goal;  // remainder is just y value
-  if ((goal_x.empty()) || (goal_y.empty()))
+  if (!m_start_point.valid() || !m_goal_point.valid())
     return (false);
-  m_goal_point.set_vertex(std::stod(goal_x), std::stod(goal_y));
 
   return (true);
 }
@@ -147,8 +135,8 @@ bool LPAStar::Iterate()
   bool path_found{false};
 
   // new path request
-  if (m_path_request_pending) {
-    m_path_request_pending = false;
+  if (m_mode == PlannerMode::REQUEST_PENDING) {
+    m_mode = PlannerMode::PLANNING_IN_PROGRESS;
 
     // post new plan messages
     Notify(m_path_found_var, "false");
@@ -161,27 +149,22 @@ bool LPAStar::Iterate()
     // todo: what if this takes a few iterations? need to break into steps
     // todo: what if planning fails?
     // plan path until we reach max number of iterations
-    m_planning_in_progress = true;
-    m_transiting = false;
-    m_path_complete = false;
     m_planning_start_time = MOOSTime();
     path_found = planPath();
 
   // if already planning a path, pick up from where we left off
-  } else if (m_planning_in_progress) {
-    m_planning_in_progress = false;
+  } else if (m_mode == PlannerMode::PLANNING_IN_PROGRESS) {
     // path_found = planPath();  temporarily disable
 
   // if transiting, check if we need to replan and replan if needed
-  } else if (m_transiting) {
+  } else if (m_mode == PlannerMode::IN_TRANSIT) {
     if (!checkObstacles()) {
       Notify(m_path_found_var, "false");
       Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
 
       // plan path until we reach max number of iterations
+      m_mode = PlannerMode::PLANNING_IN_PROGRESS;
       m_planning_start_time = MOOSTime();
-      m_planning_in_progress = true;
-      m_transiting = false;
       path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
     }
   }
@@ -189,15 +172,14 @@ bool LPAStar::Iterate()
   // notify that path has been found
   if (path_found) {
     m_planning_end_time = MOOSTime();
-    m_planning_in_progress = false;
+    m_mode = PlannerMode::IN_TRANSIT;
     postPath();  // todo: when to post previous path stats?
-    m_transiting = true;
   }
 
-  if (m_path_complete) {
+  if (m_mode == PlannerMode::PATH_COMPLETE) {
     // todo: post endflags
     Notify(m_path_complete_var, "true");
-    m_path_complete = false;
+    m_mode = PlannerMode::IDLE;
   }
 
   AppCastingMOOSApp::PostReport();
@@ -221,7 +203,7 @@ bool LPAStar::planPath()
   m_path.add_vertex(m_goal_point);
   // todo TJ: remove add vertex lines and implement LPA* here
 
-  return (true);
+  return (true);  // todo: instead of returning true, set mode to PLAN_IN_PROGRESS or PLAN_FAILED
 }
 
 
@@ -258,6 +240,7 @@ bool LPAStar::replanFromCurrentPos()
 
 //---------------------------------------------------------
 // LPA* Procedures
+
 // sets all cells in grid to empty
 void LPAStar::clearGrid()
 {

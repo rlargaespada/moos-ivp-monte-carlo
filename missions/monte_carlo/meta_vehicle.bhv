@@ -188,7 +188,7 @@ Behavior=BHV_AvoidObstacleV21
   use_refinery = true
 
   allowable_ttc = 10
-  pwt_outer_dist = 16
+  pwt_outer_dist = 16  // sets alert range
   pwt_inner_dist = 5
   min_util_cpa_dist = 5
   max_util_cpa_dist = 16
