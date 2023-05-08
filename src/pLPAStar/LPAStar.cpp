@@ -14,6 +14,8 @@
 #include "ACTable.h"
 #include "LPAStar.h"
 #include "XYPoint.h"
+#include "XYPolygon.h"
+#include "XYSquare.h"
 #include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsPoly.h"
 #include "XYFormatUtilsConvexGrid.h"
@@ -158,6 +160,14 @@ bool LPAStar::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
+  // refresh obstacle grid each iteration if we're not
+  // actively planning
+  if (m_mode != PlannerMode::PLANNING_IN_PROGRESS) {
+    m_grid.reset("obs");
+    addObsToGrid();
+  }
+
+
   bool path_found{false};
 
   // new path request
@@ -176,23 +186,26 @@ bool LPAStar::Iterate()
     // todo: what if planning fails?
     // plan path until we reach max number of iterations
     m_planning_start_time = MOOSTime();
+    m_path.clear();  // start fresh upon new request
     path_found = planPath();
 
   // if already planning a path, pick up from where we left off
   } else if (m_mode == PlannerMode::PLANNING_IN_PROGRESS) {
-    // path_found = planPath();  temporarily disable
+    //! path_found = planPath();  temporarily disable
+    path_found = true;
 
   // if transiting, check if we need to replan and replan if needed
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
-    if (!checkObstacles()) {
-      Notify(m_path_found_var, "false");
-      Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
+    //! temporarily disable
+    // if (!checkObstacles()) {
+    //   Notify(m_path_found_var, "false");
+    //   Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
 
-      // plan path until we reach max number of iterations
-      m_mode = PlannerMode::PLANNING_IN_PROGRESS;
-      m_planning_start_time = MOOSTime();
-      path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
-    }
+    //   // plan path until we reach max number of iterations
+    //   m_mode = PlannerMode::PLANNING_IN_PROGRESS;
+    //   m_planning_start_time = MOOSTime();
+    //   path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
+    // }
   }
 
   // notify that path has been found
@@ -202,11 +215,16 @@ bool LPAStar::Iterate()
     postPath();  // todo: when to post previous path stats?
   }
 
+  // if path is complete, cleanup
   if (m_mode == PlannerMode::PATH_COMPLETE) {
     // todo: post endflags
     Notify(m_path_complete_var, "true");
     m_mode = PlannerMode::IDLE;
   }
+
+  // if we're not idle, post visuals
+  if ((m_post_visuals)  && (m_mode != PlannerMode::IDLE))
+    postGrid();
 
   AppCastingMOOSApp::PostReport();
   return (true);
@@ -223,12 +241,6 @@ bool LPAStar::planPath()
     reportEvent("Cannot plan because " + GetAppName() + " is configured incorrectly.");
     return (false);
   }
-
-  // clear previous state, add current set of obstacles
-  // todo: these should only be called for first iteration
-  m_path.clear();
-  m_grid.reset();
-  addObsToGrid();
 
   // placeholder: path is just start point and goal point
   m_path.add_vertex(m_start_point);
@@ -258,7 +270,17 @@ bool LPAStar::postPath()
 
 bool LPAStar::checkObstacles()
 {
-  // todo TJ: implement this function
+  // grab pairs of points on path
+  for (int i = 0; i < m_path.size() - 1; i++) {
+    double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
+    double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
+
+    // if line between points intersects an obstacle, replan false
+    for (auto const& obs : m_obstacle_map) {
+      if (obs.second.seg_intercepts(x1, y1, x2, y2))
+        return (false);
+    }
+  }
   return (true);
 }
 
@@ -287,9 +309,25 @@ bool LPAStar::checkPlanningPreconditions()
 
 
 // cells with obstacles in them are marked impassible
-bool LPAStar::addObsToGrid()
+void LPAStar::addObsToGrid()
 {
-  // todo TJ: implement this function
+  unsigned int cix{m_grid.getCellVarIX("obs")};
+
+  for (int ix = 0; ix < m_grid.size(); ix++) {
+    // for each obstacle, if obs intersects with grid cell, set val to 1
+    for (auto const& obs : m_obstacle_map) {
+      if (obs.second.intersects(m_grid.getElement(ix))) {
+        m_grid.setVal(ix, 1, cix);
+        break;  // if one obs intersects we don't need to check the rest
+      }
+    }
+  }
+}
+
+
+bool LPAStar::postGrid()
+{
+  // todo: implement this, in which system modes?
   return (true);
 }
 

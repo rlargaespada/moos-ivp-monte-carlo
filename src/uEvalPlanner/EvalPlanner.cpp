@@ -698,7 +698,7 @@ void EvalPlanner::registerVariables()
   Register("UEP_GOAL_POS");
 
   // sim request responses
-  Register("KNOWN_OBSTACLE_CLEAR");
+  Register("KNOWN_OBSTACLE_CLEAR");  // todo: this should be a config var
   Register("NODE_REPORT");
 
   // variables used to calculate metrics

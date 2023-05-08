@@ -52,12 +52,13 @@ class LPAStar : public AppCastingMOOSApp
 
   // path planning
   bool checkPlanningPreconditions();
-  bool addObsToGrid();
+  void addObsToGrid();
   bool planPath();
 
   // path publishing
   std::string getPathStats();
   bool postPath();
+  bool postGrid();
 
   // replanning
   bool checkObstacles();
@@ -79,7 +80,7 @@ class LPAStar : public AppCastingMOOSApp
 
   int m_max_iters;  // todo: add as config var, also higher level timeout?
 
-  bool m_post_visuals;  // todo: add as config var
+  bool m_post_visuals;
 
  private:  // State variables
   XYPoint m_start_point;
