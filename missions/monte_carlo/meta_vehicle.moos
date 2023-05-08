@@ -379,6 +379,7 @@ ProcessConfig = pLPAStar
   wpt_complete_var = WAYPOINTS_COMPLETE
   path_complete_var = $(PATH_COMPLETE_VAR)
 
-  grid_bounds = {-159,91:-159,-357:276,-357:276,91}
+  // grid_bounds = {-159,91:-159,-357:276,-357:276,91}
+  grid_bounds = {-150, 50:-150,-250:250,-250:250,50}  // todo: should set per map/layout
   grid_cell_size = 5
 }

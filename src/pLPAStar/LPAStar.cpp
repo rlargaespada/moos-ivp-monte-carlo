@@ -162,7 +162,7 @@ bool LPAStar::Iterate()
 
   // refresh obstacle grid each iteration if we're not
   // actively planning
-  if (m_mode != PlannerMode::PLANNING_IN_PROGRESS) {
+  if ((m_mode != PlannerMode::IDLE) && (m_mode != PlannerMode::PLANNING_IN_PROGRESS)) {
     m_grid.reset("obs");
     addObsToGrid();
   }
@@ -277,8 +277,10 @@ bool LPAStar::checkObstacles()
 
     // if line between points intersects an obstacle, replan false
     for (auto const& obs : m_obstacle_map) {
-      if (obs.second.seg_intercepts(x1, y1, x2, y2))
+      if (obs.second.seg_intercepts(x1, y1, x2, y2)) {
+        reportEvent("Replan required, path intersects with " + obs.first);
         return (false);
+      }
     }
   }
   return (true);
@@ -297,11 +299,16 @@ bool LPAStar::replanFromCurrentPos()
 
 bool LPAStar::checkPlanningPreconditions()
 {
+  // todo: add run warnings for each of these
   if (m_grid.size() == 0)
     return (false);
   if (m_max_iters <= 0)
     return (false);
   if (!m_start_point.valid() || !m_goal_point.valid())
+    return (false);
+  if (!m_grid.ptIntersect(m_start_point.get_vx(), m_start_point.get_vy()))
+    return (false);
+  if (!m_grid.ptIntersect(m_goal_point.get_vx(), m_goal_point.get_vy()))
     return (false);
 
   return (true);
