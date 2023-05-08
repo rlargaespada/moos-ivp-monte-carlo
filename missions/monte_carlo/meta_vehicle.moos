@@ -378,4 +378,7 @@ ProcessConfig = pLPAStar
   wpt_update_var = PATH_UPDATE
   wpt_complete_var = WAYPOINTS_COMPLETE
   path_complete_var = $(PATH_COMPLETE_VAR)
+
+  grid_bounds = {-159,91:-159,-357:276,-357:276,91}
+  grid_cell_size = 5
 }

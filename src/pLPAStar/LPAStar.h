@@ -22,7 +22,7 @@ enum class PlannerMode
   IDLE,
   REQUEST_PENDING,
   PLANNING_IN_PROGRESS,
-  PLANNING_FAILED,
+  PLANNING_FAILED,  // todo: handle this case more thoughtfully
   IN_TRANSIT,
   PATH_COMPLETE,
 };
@@ -51,6 +51,7 @@ class LPAStar : public AppCastingMOOSApp
   bool handleObstacleAlert(std::string obs_alert);
 
   // path planning
+  bool checkPlanningPreconditions();
   bool addObsToGrid();
   bool planPath();
 
@@ -76,11 +77,10 @@ class LPAStar : public AppCastingMOOSApp
   std::string m_wpt_complete_var;  // WAYPOINTS_COMPLETE (s)
   std::string m_path_complete_var;  // PATH_COMPLETE (p)
 
-  int m_max_iters;  // todo: add as config var
+  int m_max_iters;  // todo: add as config var, also higher level timeout?
 
-  double m_grid_density;  // todo: think about how this would work
-  XYPolygon m_grid_bounds;  // todo: add this
   bool m_post_visuals;  // todo: add as config var
+
  private:  // State variables
   XYPoint m_start_point;
   XYPoint m_goal_point;

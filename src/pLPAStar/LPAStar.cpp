@@ -16,6 +16,7 @@
 #include "XYPoint.h"
 #include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsPoly.h"
+#include "XYFormatUtilsConvexGrid.h"
 #include "VarDataPair.h"
 
 
@@ -31,7 +32,8 @@ LPAStar::LPAStar()
   m_wpt_complete_var = "";  // set in onStartup
   m_path_complete_var = "PATH_COMPLETE";
 
-  m_grid_density = 2;  // meters
+  m_max_iters = 1000;
+  m_post_visuals = true;
 
   m_mode = PlannerMode::IDLE;
   m_planning_start_time = 0;
@@ -216,6 +218,12 @@ bool LPAStar::Iterate()
 
 bool LPAStar::planPath()
 {
+  if (!checkPlanningPreconditions()) {
+    m_mode = PlannerMode::PLANNING_FAILED;
+    reportEvent("Cannot plan because " + GetAppName() + " is configured incorrectly.");
+    return (false);
+  }
+
   // clear previous state, add current set of obstacles
   // todo: these should only be called for first iteration
   m_path.clear();
@@ -265,13 +273,25 @@ bool LPAStar::replanFromCurrentPos()
 //---------------------------------------------------------
 // LPA* Procedures
 
+bool LPAStar::checkPlanningPreconditions()
+{
+  if (m_grid.size() == 0)
+    return (false);
+  if (m_max_iters <= 0)
+    return (false);
+  if (!m_start_point.valid() || !m_goal_point.valid())
+    return (false);
+
+  return (true);
+}
+
+
 // cells with obstacles in them are marked impassible
 bool LPAStar::addObsToGrid()
 {
   // todo TJ: implement this function
   return (true);
 }
-
 
 //---------------------------------------------------------
 // Procedure: OnStartUp()
@@ -285,6 +305,8 @@ bool LPAStar::OnStartUp()
   m_MissionReader.EnableVerbatimQuoting(false);
   if (!m_MissionReader.GetConfiguration(GetAppName(), sParams))
     reportConfigWarning("No config block found for " + GetAppName());
+
+  std::string grid_bounds{"pts="}, grid_cell_size{"cell_size="};
 
   STRING_LIST::iterator p;
   for (p = sParams.begin(); p != sParams.end(); p++) {
@@ -308,6 +330,26 @@ bool LPAStar::OnStartUp()
       handled = setNonWhiteVarOnString(m_wpt_complete_var, value);
     } else if (param == "path_complete_var") {
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
+    } else if (param == "grid_bounds") {
+      if (!strBegins(value, "{"))
+        value = "{" + value;
+      if (!strEnds(value, "}"))
+        value += "}";
+      grid_bounds += value;
+      handled = true;
+    } else if (param == "grid_cell_size") {
+      grid_cell_size += value;
+      handled = true;
+    } else if (param == "max_planning_iters") {
+      int max_iters{std::stoi(value)};
+      if (max_iters > 0) {
+        handled = true;
+        m_max_iters = max_iters;
+      } else {
+        reportConfigWarning("Max iterations must be above 0, received " + value);
+      }
+    } else if (param == "post_visuals") {
+      handled = setBooleanOnString(m_post_visuals, value);
     }
     // todo: add initial plan flags, replanflags, traverseflags, endflags,
     // macro should include start and goal
@@ -325,6 +367,12 @@ bool LPAStar::OnStartUp()
     m_obs_alert_var = "OBSTACLE_ALERT";
   if (m_wpt_complete_var.empty())
     m_wpt_complete_var = "WAYPOINTS_COMPLETE";
+
+  // create grid based on parameters
+  std::string cell_vars{"cell_vars=obs:0:vertex:0"};
+  m_grid = string2ConvexGrid(grid_bounds + "," + grid_cell_size + "," + cell_vars);
+  if (m_grid.size() == 0)
+    reportConfigWarning("Unable to generate grid for LPA* algorithm due to bad config!");
 
   registerVariables();
   return(true);
@@ -358,6 +406,6 @@ bool LPAStar::buildReport()
   std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
   m_msgs << "Start Point: " << start_spec << endl;
   m_msgs << "Goal Point: " << goal_spec << endl;
-  // todo: add flags here, add planner mode, add obstacles, add vars
+  // todo: add flags here, add planner mode, add obstacles, add vars, add grid bounds/cell size
   return(true);
 }
