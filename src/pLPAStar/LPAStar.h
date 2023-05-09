@@ -54,7 +54,6 @@ class LPAStar : public AppCastingMOOSApp
   // path planning
   bool checkPlanningPreconditions();
   void syncObstacles();
-  void addObsToGrid();
   bool planPath();
 
   // path publishing

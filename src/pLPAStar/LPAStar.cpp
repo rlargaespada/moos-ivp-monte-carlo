@@ -330,26 +330,6 @@ bool LPAStar::checkPlanningPreconditions()
 
 
 // cells with obstacles in them are marked impassible
-void LPAStar::addObsToGrid()
-{
-  unsigned int cix{m_grid.getCellVarIX("obs")};
-
-  for (int ix = 0; ix < m_grid.size(); ix++) {
-    if (m_grid.getVal(ix, cix) != 0)  // if there's already an obstacle here, skip
-      continue;
-
-    // for each obstacle, if obs intersects with grid cell, set val to 1
-    for (auto const& obs : m_obstacle_map) {
-      if (obs.second.intersects(m_grid.getElement(ix))) {
-        m_grid.setVal(ix, 1, cix);
-        break;  // if one obs intersects we don't need to check the rest
-      }
-    }
-  }
-}
-
-
-// cells with obstacles in them are marked impassible
 void LPAStar::syncObstacles()
 {
   // no obstacles to change, exit early
