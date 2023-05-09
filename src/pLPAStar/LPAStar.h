@@ -11,11 +11,13 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
-#include <XYPoint.h>
-#include <XYSegList.h>
-#include <XYPolygon.h>
-#include <XYConvexGrid.h>
+#include "VarDataPair.h"
+#include "XYPoint.h"
+#include "XYSegList.h"
+#include "XYPolygon.h"
+#include "XYConvexGrid.h"
 
 enum class PlannerMode
 {
@@ -66,21 +68,28 @@ class LPAStar : public AppCastingMOOSApp
 
   // state publishing
   std::string printPlannerMode();
+  void postFlags(const std::vector<VarDataPair>& flags);
 
  private:  // Configuration variables
-  // todo: hard code any of these?
-  std::string m_path_request_var;  // PLAN_PATH_REQUESTED (s)
+  // vars to subscribe to
+  std::string m_path_request_var;  // PLAN_PATH_REQUESTED
+  std::string m_obs_alert_var;  // OBSTACLE_ALERT
+  std::string m_wpt_complete_var;  // WAYPOINTS_COMPLETE
 
-  std::string m_obs_alert_var;  // OBSTACLE_ALERT (s)
+  // publication config
+  std::string m_prefix;  // PATH_*
+  std::vector<VarDataPair> m_init_plan_flags;
+  std::vector<VarDataPair> m_traverse_flags;
+  std::vector<VarDataPair> m_replan_flags;
+  std::vector<VarDataPair> m_end_flags;
+  bool m_post_visuals;
 
-  std::string m_path_found_var;  // PATH_FOUND (p)
-  std::string m_wpt_update_var;  // PATH_UPDATE (p)
-  std::string m_wpt_complete_var;  // WAYPOINTS_COMPLETE (s)
-  std::string m_path_complete_var;  // PATH_COMPLETE (p)
-
+  // planning config
   int m_max_iters;  // todo: add as config var, also higher level timeout?
 
-  bool m_post_visuals;
+  // not set in config
+  std::string m_path_found_var;  // PATH_FOUND
+  std::string m_path_complete_var;  // PATH_COMPLETE
 
  private:  // State variables
   XYPoint m_start_point;

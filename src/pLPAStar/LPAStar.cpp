@@ -21,6 +21,7 @@
 #include "XYFormatUtilsConvexGrid.h"
 #include "XYGridUpdate.h"
 #include "VarDataPair.h"
+#include "VarDataPairUtils.h"
 
 
 //---------------------------------------------------------
@@ -30,9 +31,10 @@ LPAStar::LPAStar()
 {
   m_path_request_var = "";  // set in onStartup
   m_obs_alert_var = "";  // set in onStartup
-  m_path_found_var = "PATH_FOUND";
-  m_wpt_update_var = "PATH_UPDATE";
   m_wpt_complete_var = "";  // set in onStartup
+
+  m_prefix = "";
+  m_path_found_var = "PATH_FOUND";
   m_path_complete_var = "PATH_COMPLETE";
 
   m_max_iters = 1000;
@@ -87,7 +89,7 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_wpt_complete_var) {
       if (m_mode == PlannerMode::IN_TRANSIT)
         m_mode = PlannerMode::PATH_COMPLETE;
-    } else if (key == "NODE_REPORT_LOCAL") {
+    } else if ((key == "NODE_REPORT_LOCAL") || (key == "NODE_REPORT")) {
       std::string report{tolower(msg.GetString())};
       double xval{tokDoubleParse(report, "x", ',', '=')};
       double yval{tokDoubleParse(report, "y", ',', '=')};
@@ -193,12 +195,9 @@ bool LPAStar::Iterate()
     m_mode = PlannerMode::PLANNING_IN_PROGRESS;
 
     // post new plan messages
-    Notify(m_path_found_var, "false");
-    Notify(m_path_complete_var, "false");
-    // todo: STATION_UPDATES is hardcoded for now but should be configured as a flag w/ macros
-    std::string station_pt{doubleToStringX(m_start_point.get_vx(), 2)};
-    station_pt += "," + doubleToStringX(m_start_point.get_vy(), 2);
-    Notify("STATION_UPDATES", "station_pt=" + station_pt + "# center_activate=false");
+    Notify(m_prefix + m_path_found_var, "false");
+    Notify(m_prefix + m_path_complete_var, "false");
+    postFlags(m_init_plan_flags);
 
     // todo: what if this takes a few iterations? need to break into steps
     // todo: what if planning fails?
@@ -216,8 +215,8 @@ bool LPAStar::Iterate()
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
     if (!checkObstacles()) {
       //! temporarily disable
-      // Notify(m_path_found_var, "false");
-      // Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
+      // Notify(m_prefix + m_path_found_var, "false");
+      // postFlags(m_replan_flags);
 
       // // plan path until we reach max number of iterations
       // m_mode = PlannerMode::PLANNING_IN_PROGRESS;
@@ -235,8 +234,8 @@ bool LPAStar::Iterate()
 
   // if path is complete, cleanup
   if (m_mode == PlannerMode::PATH_COMPLETE) {
-    // todo: post endflags
-    Notify(m_path_complete_var, "true");
+    Notify(m_prefix + m_path_complete_var, "true");
+    postFlags(m_end_flags);
     m_mode = PlannerMode::IDLE;
   }
 
@@ -274,10 +273,9 @@ std::string LPAStar::getPathStats()
 
 bool LPAStar::postPath()
 {
-  Notify(m_path_found_var, "true");
-  Notify(m_wpt_update_var, "points = " + m_path.get_spec_pts(2));
-  Notify("PATH_STATS", getPathStats());
-  // todo Raul: add traverse flags
+  Notify(m_prefix + m_path_found_var, "true");
+  Notify(m_prefix + "PATH_STATS", getPathStats());
+  postFlags(m_traverse_flags);
   return (true);
 }
 
@@ -305,6 +303,45 @@ bool LPAStar::replanFromCurrentPos()
 {
   // todo Raul: define a skeleton, give to TJ
   return (true);
+}
+
+
+std::string LPAStar::printPlannerMode()
+{
+  return ("");  //! use switch statement here for practice
+}
+
+void LPAStar::postFlags(const std::vector<VarDataPair>& flags)
+{
+  for (VarDataPair pair : flags) {
+    std::string moosvar{pair.get_var()};
+
+    // If posting is a double, just post. No macro expansion
+    if (!pair.is_string()) {
+      double dval = pair.get_ddata();
+      Notify(moosvar, dval);
+      continue;
+    }
+
+    // Otherwise if string posting, handle macro expansion
+    std::string sval{pair.get_sdata()};
+    sval = macroExpand(sval, "START_X", m_start_point.get_vx(), 2);
+    sval = macroExpand(sval, "START_Y", m_start_point.get_vy(), 2);
+    sval = macroExpand(sval, "GOAL_X", m_goal_point.get_vx(), 2);
+    sval = macroExpand(sval, "GOAL_Y", m_goal_point.get_vy(), 2);
+    sval = macroExpand(sval, "V_X", m_vpos.get_vx(), 2);
+    sval = macroExpand(sval, "V_Y", m_vpos.get_vy(), 2);
+
+    sval = macroExpand(sval, "MODE", printPlannerMode());
+    sval = macroExpand(sval, "PATH_SPEC", m_path.get_spec(2));
+    sval = macroExpand(sval, "PATH_PTS", m_path.get_spec_pts(2));
+
+    // if final val is a number, post as double
+    if (isNumber(sval))
+      Notify(moosvar, std::stod(sval));
+    else
+      Notify(moosvar, sval);
+  }
 }
 
 
@@ -435,20 +472,27 @@ bool LPAStar::OnStartUp()
     std::string value = line;
 
     bool handled = false;
-    // todo: pick which vars should be hardcoded, which vars should be configurable
-    // todo: add prefix config var, so PATH_* -> <prefix>_*
+    // vars to subscribe to
     if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, toupper(value));
     } else if (param == "obs_alert_var") {
       handled = setNonWhiteVarOnString(m_obs_alert_var, toupper(value));
-    } else if (param == "path_found_var") {
-      handled = setNonWhiteVarOnString(m_path_found_var, toupper(value));
-    } else if (param == "wpt_update_var") {
-      handled = setNonWhiteVarOnString(m_wpt_update_var, toupper(value));
     } else if (param == "wpt_complete_var") {
       handled = setNonWhiteVarOnString(m_wpt_complete_var, toupper(value));
-    } else if (param == "path_complete_var") {
-      handled = setNonWhiteVarOnString(m_path_complete_var, toupper(value));
+    // publication config
+    } else if (param == "prefix") {
+      handled = setNonWhiteVarOnString(m_prefix, toupper(value));
+    } else if (param == "init_plan_flag") {
+      handled = addVarDataPairOnString(m_init_plan_flags, value);
+    } else if (param == "traverse_flag") {
+      handled = addVarDataPairOnString(m_traverse_flags, value);
+    } else if (param == "replan_flag") {
+      handled = addVarDataPairOnString(m_replan_flags, value);
+    } else if ((param == "end_flag") || (param == "endflag")) {
+      handled = addVarDataPairOnString(m_end_flags, value);
+    } else if (param == "post_visuals") {
+      handled = setBooleanOnString(m_post_visuals, value);
+    // planning config
     } else if (param == "grid_bounds") {
       if (!strBegins(value, "{"))
         value = "{" + value;
@@ -467,11 +511,7 @@ bool LPAStar::OnStartUp()
       } else {
         reportConfigWarning("Max iterations must be above 0, received " + value);
       }
-    } else if (param == "post_visuals") {
-      handled = setBooleanOnString(m_post_visuals, value);
     }
-    // todo: add initial plan flags, replanflags, traverseflags, endflags,
-    // macro should include start and goal
 
     if (!handled)
       reportUnhandledConfigWarning(orig);
@@ -510,6 +550,7 @@ bool LPAStar::OnStartUp()
 void LPAStar::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
+  Register("NODE_REPORT", 0);
   Register("NODE_REPORT_LOCAL", 0);
   Register("OBM_RESOLVED", 0);
   if (!m_path_request_var.empty())

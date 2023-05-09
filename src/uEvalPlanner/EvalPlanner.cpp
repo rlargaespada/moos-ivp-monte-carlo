@@ -141,12 +141,14 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "UPC_ODOMETRY_REPORT") {
       std::string odo_report{tolower(msg.GetString())};
       std::string vname{tokStringParse(odo_report, "vname", ',', '=')};
+      if (vname != m_vehicle_name)
+        continue;
       double trip_dist{tokDoubleParse(odo_report, "trip_dist", ',', '=')};
-      if (m_reset_odometry == SimRequest::OPEN && vname == m_vehicle_name) {
+      if (m_reset_odometry == SimRequest::OPEN) {
         if (trip_dist <= 10)  // close once odo is close to 0 (allow for small error)
           m_reset_odometry = SimRequest::CLOSED;
       }
-      if (isTrialOngoing() && vname == m_vehicle_name)
+      if (isTrialOngoing())
         m_current_trial.dist_traveled = trip_dist;
     } else if (key == "ENCOUNTER_ALERT") {
         std::string alert{tolower(msg.GetString())};
