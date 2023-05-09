@@ -54,9 +54,9 @@ class LPAStar : public AppCastingMOOSApp
   bool handleObstacleResolved(std::string obs_label);
 
   // path planning
-  bool checkPlanningPreconditions();
-  void syncObstacles();
-  bool planPath();
+  bool checkPlanningPreconditions();  // LPA*, signature in base
+  void syncObstacles();  // LPA*, signature in base
+  bool planPath();  // LPA*, signature in base
 
   // path publishing
   std::string getPathStats();
@@ -64,7 +64,7 @@ class LPAStar : public AppCastingMOOSApp
 
   // replanning
   bool checkObstacles();
-  bool replanFromCurrentPos();
+  bool replanFromCurrentPos();  // LPA*, signature in base
 
   // state publishing
   std::string printPlannerMode();

@@ -48,12 +48,14 @@ LPAStar::LPAStar()
   m_goal_point.invalidate();
 }
 
+
 //---------------------------------------------------------
 // Destructor
 
 LPAStar::~LPAStar()
 {
 }
+
 
 //---------------------------------------------------------
 // Procedure: OnNewMail()
@@ -166,6 +168,7 @@ bool LPAStar::handleObstacleResolved(std::string obs_label)
   return (false);
 }
 
+
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()
 
@@ -174,6 +177,7 @@ bool LPAStar::OnConnectToServer()
   registerVariables();
   return (true);
 }
+
 
 //---------------------------------------------------------
 // Procedure: Iterate()
@@ -245,124 +249,6 @@ bool LPAStar::Iterate()
 
 
 //---------------------------------------------------------
-// Generic Procedures
-
-bool LPAStar::planPath()
-{
-  if (!checkPlanningPreconditions()) {
-    m_mode = PlannerMode::PLANNING_FAILED;
-    return (false);
-  }
-
-  // placeholder: path is just start point and goal point
-  m_path.add_vertex(m_start_point);
-  m_path.add_vertex(m_goal_point);
-  // todo TJ: remove add vertex lines and implement LPA* here
-
-  return (true);  // todo: instead of returning true, set mode to PLAN_IN_PROGRESS or PLAN_FAILED
-}
-
-
-std::string LPAStar::getPathStats()
-{
-  // todo Raul: implement this function
-  return ("");
-}
-
-
-bool LPAStar::postPath()
-{
-  Notify(m_prefix + m_path_found_var, "true");
-  Notify(m_prefix + "PATH_STATS", getPathStats());
-  postFlags(m_traverse_flags);
-  return (true);
-}
-
-
-bool LPAStar::checkObstacles()
-{
-  // grab pairs of points on path
-  for (int i = 0; i < m_path.size() - 1; i++) {
-    double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
-    double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
-
-    // if line between points intersects an obstacle, replan false
-    for (auto const& obs : m_obstacle_map) {
-      if (obs.second.seg_intercepts(x1, y1, x2, y2)) {
-        reportEvent("Replan required, path intersects with " + obs.first);
-        return (false);
-      }
-    }
-  }
-  return (true);
-}
-
-
-bool LPAStar::replanFromCurrentPos()
-{
-  // todo Raul: define a skeleton, give to TJ
-  return (true);
-}
-
-
-std::string LPAStar::printPlannerMode()
-{
-  switch (m_mode)
-  {
-  case PlannerMode::IDLE:
-    return ("IDLE");
-  case PlannerMode::REQUEST_PENDING:
-    return ("REQUEST_PENDING");
-  case PlannerMode::PLANNING_IN_PROGRESS:
-    return ("PLANNING_IN_PROGRESS");
-  case PlannerMode::PLANNING_FAILED:
-    return ("PLANNING_FAILED");
-  case PlannerMode::IN_TRANSIT:
-    return ("IN_TRANSIT");
-  case PlannerMode::PATH_COMPLETE:
-    return ("PATH_COMPLETE");
-  default:
-    return ("UNKNOWN");
-  }
-}
-
-
-void LPAStar::postFlags(const std::vector<VarDataPair>& flags)
-{
-  for (VarDataPair pair : flags) {
-    std::string moosvar{pair.get_var()};
-
-    // If posting is a double, just post. No macro expansion
-    if (!pair.is_string()) {
-      double dval = pair.get_ddata();
-      Notify(moosvar, dval);
-      continue;
-    }
-
-    // Otherwise if string posting, handle macro expansion
-    std::string sval{pair.get_sdata()};
-    sval = macroExpand(sval, "START_X", m_start_point.get_vx(), 2);
-    sval = macroExpand(sval, "START_Y", m_start_point.get_vy(), 2);
-    sval = macroExpand(sval, "GOAL_X", m_goal_point.get_vx(), 2);
-    sval = macroExpand(sval, "GOAL_Y", m_goal_point.get_vy(), 2);
-    sval = macroExpand(sval, "V_X", m_vpos.get_vx(), 2);
-    sval = macroExpand(sval, "V_Y", m_vpos.get_vy(), 2);
-
-    sval = macroExpand(sval, "MODE", printPlannerMode());
-    sval = macroExpand(sval, "PATH_SPEC", m_path.get_spec(2));
-    sval = macroExpand(sval, "PATH_PTS", m_path.get_spec_pts(2));
-
-    // if final val is a number, post as double
-    if (isNumber(sval))
-      Notify(moosvar, std::stod(sval));
-    else
-      Notify(moosvar, sval);
-  }
-}
-
-
-//---------------------------------------------------------
-// LPA* Procedures
 
 bool LPAStar::checkPlanningPreconditions()
 {
@@ -476,6 +362,126 @@ void LPAStar::syncObstacles()
 }
 
 
+bool LPAStar::planPath()
+{
+  if (!checkPlanningPreconditions()) {
+    m_mode = PlannerMode::PLANNING_FAILED;
+    return (false);
+  }
+
+  // placeholder: path is just start point and goal point
+  m_path.add_vertex(m_start_point);
+  m_path.add_vertex(m_goal_point);
+  // todo TJ: remove add vertex lines and implement LPA* here
+
+  return (true);  // todo: instead of returning true, set mode to PLAN_IN_PROGRESS or PLAN_FAILED
+}
+
+
+//---------------------------------------------------------
+
+std::string LPAStar::getPathStats()
+{
+  // todo Raul: implement this function
+  return ("");
+}
+
+
+bool LPAStar::postPath()
+{
+  Notify(m_prefix + m_path_found_var, "true");
+  Notify(m_prefix + "PATH_STATS", getPathStats());
+  postFlags(m_traverse_flags);
+  return (true);
+}
+
+
+//---------------------------------------------------------
+
+bool LPAStar::checkObstacles()
+{
+  // grab pairs of points on path
+  for (int i = 0; i < m_path.size() - 1; i++) {
+    double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
+    double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
+
+    // if line between points intersects an obstacle, replan false
+    for (auto const& obs : m_obstacle_map) {
+      if (obs.second.seg_intercepts(x1, y1, x2, y2)) {
+        reportEvent("Replan required, path intersects with " + obs.first);
+        return (false);
+      }
+    }
+  }
+  return (true);
+}
+
+
+bool LPAStar::replanFromCurrentPos()
+{
+  // todo Raul: define a skeleton, give to TJ
+  return (true);
+}
+
+
+//---------------------------------------------------------
+
+std::string LPAStar::printPlannerMode()
+{
+  switch (m_mode)
+  {
+  case PlannerMode::IDLE:
+    return ("IDLE");
+  case PlannerMode::REQUEST_PENDING:
+    return ("REQUEST_PENDING");
+  case PlannerMode::PLANNING_IN_PROGRESS:
+    return ("PLANNING_IN_PROGRESS");
+  case PlannerMode::PLANNING_FAILED:
+    return ("PLANNING_FAILED");
+  case PlannerMode::IN_TRANSIT:
+    return ("IN_TRANSIT");
+  case PlannerMode::PATH_COMPLETE:
+    return ("PATH_COMPLETE");
+  default:
+    return ("UNKNOWN");
+  }
+}
+
+
+void LPAStar::postFlags(const std::vector<VarDataPair>& flags)
+{
+  for (VarDataPair pair : flags) {
+    std::string moosvar{pair.get_var()};
+
+    // If posting is a double, just post. No macro expansion
+    if (!pair.is_string()) {
+      double dval = pair.get_ddata();
+      Notify(moosvar, dval);
+      continue;
+    }
+
+    // Otherwise if string posting, handle macro expansion
+    std::string sval{pair.get_sdata()};
+    sval = macroExpand(sval, "START_X", m_start_point.get_vx(), 2);
+    sval = macroExpand(sval, "START_Y", m_start_point.get_vy(), 2);
+    sval = macroExpand(sval, "GOAL_X", m_goal_point.get_vx(), 2);
+    sval = macroExpand(sval, "GOAL_Y", m_goal_point.get_vy(), 2);
+    sval = macroExpand(sval, "V_X", m_vpos.get_vx(), 2);
+    sval = macroExpand(sval, "V_Y", m_vpos.get_vy(), 2);
+
+    sval = macroExpand(sval, "MODE", printPlannerMode());
+    sval = macroExpand(sval, "PATH_SPEC", m_path.get_spec(2));
+    sval = macroExpand(sval, "PATH_PTS", m_path.get_spec_pts(2));
+
+    // if final val is a number, post as double
+    if (isNumber(sval))
+      Notify(moosvar, std::stod(sval));
+    else
+      Notify(moosvar, sval);
+  }
+}
+
+
 //---------------------------------------------------------
 // Procedure: OnStartUp()
 //            happens before connection is open
@@ -570,6 +576,7 @@ bool LPAStar::OnStartUp()
   registerVariables();
   return(true);
 }
+
 
 //---------------------------------------------------------
 // Procedure: registerVariables()
