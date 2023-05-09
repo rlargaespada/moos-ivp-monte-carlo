@@ -356,11 +356,6 @@ ProcessConfig = uFldObsMonteCarloSim_CONSTANT
   // obstacle reset configuration
   // for constant obstacles, don't want obstacles to reset
   reset_requests_enabled = false  // disable reset requests
-  // reset_interval = -1  // disable timed resets
-  // obstacle region is entire map
-  // vehicles will never exit obstacle region, so obstacles
-  // will never reset
-  // reset_range = 1000  // add a buffer to map limits for safety
 }
 
 
@@ -417,9 +412,9 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
   obstacle_file_var = NEW_OBSTSACLE_FILE_UNKNOWN
 
   // parameters to draw known obstacles
-  poly_vert_color = orangered
-  poly_edge_color = orangered
-  poly_fill_color = coral
+  poly_vert_color = forestgreen
+  poly_edge_color = forestgreen
+  poly_fill_color = chartreuse
   // poly_label_color = invisible
   poly_label_color = white
 

@@ -757,6 +757,7 @@ bool EvalPlanner::buildReport()
   m_msgs << header << endl;
   m_msgs << "Global Metrics" << endl;
   // todo: add counters for total collisions, near misses, encounters
+  // todo: maybe these could be in a table?
   // m_msgs << "  Total Collisions: " << intToString(m_collision_count) << endl;
   // m_msgs << "  Total Near Misses: " << intToString(m_near_miss_count) << endl;
   // m_msgs << "  Total Encounters: " << intToString(m_encounter_count) << endl;

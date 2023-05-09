@@ -7,8 +7,8 @@
 
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <string>
-#include <vector>
 #include "MacroUtils.h"
 #include "MBUtils.h"
 #include "ACTable.h"
@@ -19,6 +19,7 @@
 #include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsPoly.h"
 #include "XYFormatUtilsConvexGrid.h"
+#include "XYGridUpdate.h"
 #include "VarDataPair.h"
 
 
@@ -82,9 +83,7 @@ bool LPAStar::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_obs_alert_var) {
       handleObstacleAlert(msg.GetString());
     } else if (key == "OBM_RESOLVED") {
-      std::string key{msg.GetString()};
-      if (m_obstacle_map.count(key))
-        m_obstacle_map.erase(key);
+      handleObstacleResolved(msg.GetString());
     } else if (key == m_wpt_complete_var) {
       if (m_mode == PlannerMode::IN_TRANSIT)
         m_mode = PlannerMode::PATH_COMPLETE;
@@ -134,14 +133,36 @@ bool LPAStar::handleObstacleAlert(std::string obs_alert)
   if (!new_obs.is_convex())
     return(false);
 
-  // add obstacle to obstacle map
+  // add new obstacle to the ADD queue
   std::string key{new_obs.get_label()};
-  m_obstacle_map[key] = new_obs;
+  m_obstacle_add_queue[key] = new_obs;
+
+  // if this is an obstacle with a label we've seen before,
+  // add it to the REFRESH queue so we can remove the old
+  // obstacle in the iterate loop
+  // REFRESH queue is a subset of the ADD queue
+  if (m_obstacle_map.count(key))
+    m_obstacle_refresh_queue.insert(key);
 
   reportEvent("new obstacle: " + key);
   return (true);
 }
 
+
+bool LPAStar::handleObstacleResolved(std::string obs_label)
+{
+  // if obs is in ADD/REFRESH queue for some reason, remove it
+  m_obstacle_add_queue.erase(obs_label);
+  m_obstacle_refresh_queue.erase(obs_label);
+
+  // if obstacle is in obstacle map, add to REMOVE queue
+  if (m_obstacle_map.count(obs_label)) {
+    m_obstacle_remove_queue.insert(obs_label);
+    return (true);
+  }
+  // otherwise ignore message
+  return (false);
+}
 
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()
@@ -162,11 +183,8 @@ bool LPAStar::Iterate()
 
   // refresh obstacle grid each iteration if we're not
   // actively planning
-  if ((m_mode != PlannerMode::IDLE) && (m_mode != PlannerMode::PLANNING_IN_PROGRESS)) {
-    m_grid.reset("obs");
-    addObsToGrid();
-  }
-
+  if (m_mode != PlannerMode::PLANNING_IN_PROGRESS)
+    syncObstacles();
 
   bool path_found{false};
 
@@ -196,16 +214,16 @@ bool LPAStar::Iterate()
 
   // if transiting, check if we need to replan and replan if needed
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
-    //! temporarily disable
-    // if (!checkObstacles()) {
-    //   Notify(m_path_found_var, "false");
-    //   Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
+    if (!checkObstacles()) {
+      //! temporarily disable
+      // Notify(m_path_found_var, "false");
+      // Notify("STATION_UPDATES", "center_activate=true");  // todo: add as replan flag
 
-    //   // plan path until we reach max number of iterations
-    //   m_mode = PlannerMode::PLANNING_IN_PROGRESS;
-    //   m_planning_start_time = MOOSTime();
-    //   path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
-    // }
+      // // plan path until we reach max number of iterations
+      // m_mode = PlannerMode::PLANNING_IN_PROGRESS;
+      // m_planning_start_time = MOOSTime();
+      // path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
+    }
   }
 
   // notify that path has been found
@@ -221,10 +239,6 @@ bool LPAStar::Iterate()
     Notify(m_path_complete_var, "true");
     m_mode = PlannerMode::IDLE;
   }
-
-  // if we're not idle, post visuals
-  if ((m_post_visuals)  && (m_mode != PlannerMode::IDLE))
-    postGrid();
 
   AppCastingMOOSApp::PostReport();
   return (true);
@@ -321,6 +335,9 @@ void LPAStar::addObsToGrid()
   unsigned int cix{m_grid.getCellVarIX("obs")};
 
   for (int ix = 0; ix < m_grid.size(); ix++) {
+    if (m_grid.getVal(ix, cix) != 0)  // if there's already an obstacle here, skip
+      continue;
+
     // for each obstacle, if obs intersects with grid cell, set val to 1
     for (auto const& obs : m_obstacle_map) {
       if (obs.second.intersects(m_grid.getElement(ix))) {
@@ -332,11 +349,88 @@ void LPAStar::addObsToGrid()
 }
 
 
-bool LPAStar::postGrid()
+// cells with obstacles in them are marked impassible
+void LPAStar::syncObstacles()
 {
-  // todo: implement this, in which system modes?
-  return (true);
+  // no obstacles to change, exit early
+  if ((m_obstacle_add_queue.empty()) && (m_obstacle_remove_queue.empty()))
+    return;
+
+  XYGridUpdate update{m_grid.get_label()};
+  update.setUpdateTypeReplace();
+
+  // update obstacle grid
+  unsigned int cix{m_grid.getCellVarIX("obs")};
+  for (int ix = 0; ix < m_grid.size(); ix++) {
+    XYSquare grid_cell{m_grid.getElement(ix)};
+    bool cell_clear_pending{false};
+
+    // if grid cell intersects with an existing obstacle that needs to be
+    // updated, mark the cell to be cleared
+    for (auto const& obs : m_obstacle_refresh_queue) {
+      if (m_obstacle_map[obs].intersects(grid_cell)) {
+        cell_clear_pending = true;
+        break;  // only need to check for a single intersection
+      }
+    }
+
+    // if grid cell intersects with an obstacle that is marked to remove,
+    // mark the cell to be cleared
+    for (auto const& obs : m_obstacle_remove_queue) {
+      if (m_obstacle_map[obs].intersects(grid_cell)) {
+        cell_clear_pending = true;
+        break;  // only need to check for a single intersection
+      }
+    }
+
+    // if cell is marked to be cleared, check if it intersects with any
+    // obstacle that should NOT be removed/refreshed.
+    // if so, don't clear the cell
+    if (cell_clear_pending) {
+      for (auto const& obs : m_obstacle_map) {
+        // if obstacle is on REFRESH/REMOVED queue, we don't need to check again
+        if (m_obstacle_refresh_queue.count(obs.first))
+          continue;
+        if (m_obstacle_remove_queue.count(obs.first))
+          continue;
+
+        // does the cell intersect with any obstacles that should be unchanged?
+        if (obs.second.intersects(m_grid.getElement(ix))) {
+          cell_clear_pending = false;
+          break;
+        }
+      }
+    }
+    // we're good to clear the cell, go ahead
+    if (cell_clear_pending) {
+      m_grid.setVal(ix, 0, cix);
+      update.addUpdate(ix, "obs", 0);
+    }
+
+    // if grid cell intersects with an obstacle to add, set cell to 1
+    for (auto const& obs : m_obstacle_add_queue) {
+      if (obs.second.intersects(grid_cell)) {
+        m_grid.setVal(ix, 1, cix);
+        update.addUpdate(ix, "obs", 1);
+        break;  // only need to check for a single intersection
+      }
+    }
+  }
+
+  // update obstacle map and clear queues
+  for (auto const& obs : m_obstacle_remove_queue)
+    m_obstacle_map.erase(obs);
+  for (auto const& obs : m_obstacle_add_queue)
+    m_obstacle_map[obs.first] = obs.second;
+  m_obstacle_add_queue.clear();
+  m_obstacle_refresh_queue.clear();
+  m_obstacle_remove_queue.clear();
+
+  // post visuals
+  if ((m_post_visuals) && (update.size() > 0))
+    Notify("VIEW_GRID_DELTA", update.get_spec());
 }
+
 
 //---------------------------------------------------------
 // Procedure: OnStartUp()
@@ -364,17 +458,17 @@ bool LPAStar::OnStartUp()
     // todo: pick which vars should be hardcoded, which vars should be configurable
     // todo: add prefix config var, so PATH_* -> <prefix>_*
     if (param == "path_request_var") {
-      handled = setNonWhiteVarOnString(m_path_request_var, value);
+      handled = setNonWhiteVarOnString(m_path_request_var, toupper(value));
     } else if (param == "obs_alert_var") {
-      handled = setNonWhiteVarOnString(m_obs_alert_var, value);
+      handled = setNonWhiteVarOnString(m_obs_alert_var, toupper(value));
     } else if (param == "path_found_var") {
-      handled = setNonWhiteVarOnString(m_path_found_var, value);
+      handled = setNonWhiteVarOnString(m_path_found_var, toupper(value));
     } else if (param == "wpt_update_var") {
-      handled = setNonWhiteVarOnString(m_wpt_update_var, value);
+      handled = setNonWhiteVarOnString(m_wpt_update_var, toupper(value));
     } else if (param == "wpt_complete_var") {
-      handled = setNonWhiteVarOnString(m_wpt_complete_var, value);
+      handled = setNonWhiteVarOnString(m_wpt_complete_var, toupper(value));
     } else if (param == "path_complete_var") {
-      handled = setNonWhiteVarOnString(m_path_complete_var, value);
+      handled = setNonWhiteVarOnString(m_path_complete_var, toupper(value));
     } else if (param == "grid_bounds") {
       if (!strBegins(value, "{"))
         value = "{" + value;
@@ -415,9 +509,16 @@ bool LPAStar::OnStartUp()
 
   // create grid based on parameters
   std::string cell_vars{"cell_vars=obs:0:vertex:0"};
-  m_grid = string2ConvexGrid(grid_bounds + "," + grid_cell_size + "," + cell_vars);
+  std::string obs_min_max{"cell_min=obs:0, cell_max=obs:1"};
+  std::string grid_config{grid_bounds + "," + grid_cell_size + "," + cell_vars + "," + obs_min_max};
+  m_grid = string2ConvexGrid(grid_config);
   if (m_grid.size() == 0)
     reportConfigWarning("Unable to generate grid for LPA* algorithm due to bad config!");
+
+  // post grid visuals
+  m_grid.set_label("LPA*");
+  if (m_post_visuals)
+    Notify("VIEW_GRID", m_grid.get_spec());
 
   registerVariables();
   return(true);

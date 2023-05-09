@@ -9,8 +9,8 @@
 #define LPAStar_HEADER
 
 #include <map>
+#include <set>
 #include <string>
-#include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include <XYPoint.h>
 #include <XYSegList.h>
@@ -49,22 +49,23 @@ class LPAStar : public AppCastingMOOSApp
   // mail handling
   bool setEndpoints(std::string request);
   bool handleObstacleAlert(std::string obs_alert);
+  bool handleObstacleResolved(std::string obs_label);
 
   // path planning
   bool checkPlanningPreconditions();
+  void syncObstacles();
   void addObsToGrid();
   bool planPath();
 
   // path publishing
   std::string getPathStats();
   bool postPath();
-  bool postGrid();
 
   // replanning
   bool checkObstacles();
   bool replanFromCurrentPos();
 
-  // other
+  // state publishing
   std::string printPlannerMode();
 
  private:  // Configuration variables
@@ -96,6 +97,9 @@ class LPAStar : public AppCastingMOOSApp
 
   XYSegList m_path;
   XYConvexGrid m_grid;
+  std::map<std::string, XYPolygon> m_obstacle_add_queue;
+  std::set<std::string> m_obstacle_refresh_queue;
+  std::set<std::string> m_obstacle_remove_queue;
 };
 
 #endif
