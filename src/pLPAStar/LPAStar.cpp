@@ -251,7 +251,6 @@ bool LPAStar::planPath()
 {
   if (!checkPlanningPreconditions()) {
     m_mode = PlannerMode::PLANNING_FAILED;
-    reportEvent("Cannot plan because " + GetAppName() + " is configured incorrectly.");
     return (false);
   }
 
@@ -308,8 +307,25 @@ bool LPAStar::replanFromCurrentPos()
 
 std::string LPAStar::printPlannerMode()
 {
-  return ("");  //! use switch statement here for practice
+  switch (m_mode)
+  {
+  case PlannerMode::IDLE:
+    return ("IDLE");
+  case PlannerMode::REQUEST_PENDING:
+    return ("REQUEST_PENDING");
+  case PlannerMode::PLANNING_IN_PROGRESS:
+    return ("PLANNING_IN_PROGRESS");
+  case PlannerMode::PLANNING_FAILED:
+    return ("PLANNING_FAILED");
+  case PlannerMode::IN_TRANSIT:
+    return ("IN_TRANSIT");
+  case PlannerMode::PATH_COMPLETE:
+    return ("PATH_COMPLETE");
+  default:
+    return ("UNKNOWN");
+  }
 }
+
 
 void LPAStar::postFlags(const std::vector<VarDataPair>& flags)
 {
@@ -350,19 +366,30 @@ void LPAStar::postFlags(const std::vector<VarDataPair>& flags)
 
 bool LPAStar::checkPlanningPreconditions()
 {
-  // todo: add run warnings for each of these
-  if (m_grid.size() == 0)
-    return (false);
-  if (m_max_iters <= 0)
-    return (false);
-  if (!m_start_point.valid() || !m_goal_point.valid())
-    return (false);
-  if (!m_grid.ptIntersect(m_start_point.get_vx(), m_start_point.get_vy()))
-    return (false);
-  if (!m_grid.ptIntersect(m_goal_point.get_vx(), m_goal_point.get_vy()))
-    return (false);
+  std::vector<std::string> warnings;
 
-  return (true);
+  // check all preconditions
+  if (m_grid.size() == 0)
+    warnings.push_back("Grid configured incorrectly!");
+  if (m_max_iters <= 0)
+    warnings.push_back("Iteration limit <= 0, must be positive!");
+  if (!m_start_point.valid() || !m_goal_point.valid())
+    warnings.push_back("Start or goal point not valid!");
+  if (!m_grid.ptIntersect(m_start_point.get_vx(), m_start_point.get_vy()))
+    warnings.push_back("Start point located outside search grid!");
+  if (!m_grid.ptIntersect(m_goal_point.get_vx(), m_goal_point.get_vy()))
+    warnings.push_back("Goal point located outside search grid!");
+
+  // no warnings, we're good
+  if (warnings.empty())
+    return (true);
+
+  // otherwise, post warnings
+  reportRunWarning("Cannot plan, " + GetAppName() +
+    " is configured incorrectly for the following reasons:");
+  for (std::string warning : warnings)
+    reportRunWarning(warning);
+  return (false);
 }
 
 
@@ -568,11 +595,48 @@ void LPAStar::registerVariables()
 bool LPAStar::buildReport()
 {
   using std::endl;
+  std::string header{"================================"};
+  m_msgs << header << endl;
+  m_msgs << "Subscriptions:" << endl;
+  m_msgs << "  path_request_var: " << m_path_request_var << endl;
+  m_msgs << "  obs_alert_var: " << m_obs_alert_var << endl;
+  m_msgs << "  obs_resolved_var (not set by user): OBM_RESOLVED" << endl;
+  m_msgs << "  wpt_complete_var: " << m_wpt_complete_var << endl;
 
+  m_msgs << header << endl;
+  m_msgs << "Publications:" << endl;
+  m_msgs << "  " << m_prefix << m_path_found_var << endl;
+  m_msgs << "  " << m_prefix << m_path_complete_var << endl;
+  m_msgs << header << endl;
+  m_msgs << "Flags:" << endl;
+  m_msgs << "  Initial Plan Flags:" << endl;
+  for (VarDataPair pair : m_init_plan_flags)
+    m_msgs << "    " << pair.getPrintable() << endl;
+  m_msgs << "  Traverse Flags:" << endl;
+  for (VarDataPair pair : m_traverse_flags)
+    m_msgs << "    " << pair.getPrintable() << endl;
+  m_msgs << "  Replan Flags:" << endl;
+  for (VarDataPair pair : m_replan_flags)
+    m_msgs << "    " << pair.getPrintable() << endl;
+  m_msgs << "  End Flags:" << endl;
+  for (VarDataPair pair : m_end_flags)
+    m_msgs << "    " << pair.getPrintable() << endl;
+
+  m_msgs << header << endl;
+  m_msgs << "Planner Mode: " << printPlannerMode() << endl;
+  m_msgs << "Grid Config: " << m_grid.getConfigStr() << endl;
   std::string start_spec{m_start_point.valid() ? m_start_point.get_spec() : "UNSET"};
   std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
   m_msgs << "Start Point: " << start_spec << endl;
   m_msgs << "Goal Point: " << goal_spec << endl;
-  // todo: add flags here, add planner mode, add obstacles, add vars, add grid bounds/cell size
+
+  m_msgs << header << endl;
+  m_msgs << "Tracked Obstacles: ";
+  for (auto const& obs : m_obstacle_map)
+    m_msgs << obs.first << ";";
+  m_msgs << endl;
+
+  m_msgs << header << endl;
+  m_msgs << "Path Stats:" << "todo" << endl;
   return(true);
 }

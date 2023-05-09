@@ -112,6 +112,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "SKIP_TRIAL_REQUESTED") {
       handleUserCommand(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
+      // todo: handle path failed
       std::string vname{tolower(msg.GetCommunity())};
       if ((isTrialOngoing())  && (vname == m_vehicle_name)) {
         if (msg.GetString() == "true") {
@@ -725,7 +726,7 @@ void EvalPlanner::registerVariables()
 bool EvalPlanner::buildReport()
 {
   using std::endl;
-  std::string header = "================================";
+  std::string header{"================================"};
 
   // high level config
   std::string upvname{toupper(m_vehicle_name)};
