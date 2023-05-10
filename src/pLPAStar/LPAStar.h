@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "VarDataPair.h"
@@ -60,6 +61,11 @@ class LPAStar : public AppCastingMOOSApp
 
   // LPA* utils
   std::set<int> getNeighbors(int grid_ix);
+  double heuristic(int grid_ix);
+  std::pair<double, double> calculateKey(int grid_ix);
+  void initializeLPAStar();
+  void updateVertex(int grid_ix);
+  bool computeShortestPath();
 
   // path publishing
   std::string getPathStats();

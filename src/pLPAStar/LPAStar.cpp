@@ -5,6 +5,7 @@
 /*    DATE: December 29th, 1963                             */
 /************************************************************/
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <map>
@@ -383,8 +384,9 @@ bool LPAStar::planPath()
 
 //---------------------------------------------------------
 
-std::set<int> LPAStar::getNeighbors(int grid_ix) {
-  if (m_neighbors.count(grid_ix))
+std::set<int> LPAStar::getNeighbors(int grid_ix)
+{
+  if (m_neighbors.count(grid_ix))  // check in cache first
     return (m_neighbors[grid_ix]);
 
   // center of search cell + cell size
@@ -468,6 +470,37 @@ std::set<int> LPAStar::getNeighbors(int grid_ix) {
   }
 
   return (m_neighbors[grid_ix]);
+}
+
+
+double LPAStar::heuristic(int grid_ix)
+{
+  double cx{m_grid.getElement(grid_ix).getCenterX()};
+  double cy{m_grid.getElement(grid_ix).getCenterY()};
+  return (hypot(m_goal_point.x() - cx, m_goal_point.y() - cy));
+}
+
+
+std::pair<double, double> LPAStar::calculateKey(int grid_ix)
+{
+  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
+  double first{std::min(g, rhs + heuristic(grid_ix))}, second{std::min(g, rhs)};
+  return (std::pair<double, double> {first, second});
+}
+
+
+void LPAStar::initializeLPAStar()
+{}
+
+
+void LPAStar::updateVertex(int grid_ix)
+{}
+
+
+bool LPAStar::computeShortestPath()
+{
+  return (true);
 }
 
 
@@ -655,7 +688,7 @@ bool LPAStar::OnStartUp()
 
   // create grid based on parameters
   m_grid_bounds = string2Poly(grid_bounds);
-  std::string cell_vars{"cell_vars=obs:0:vertex:0"};
+  std::string cell_vars{"cell_vars=obs:0:g:0:rhs:0"};  // add vars for LPA*
   std::string obs_min_max{"cell_min=obs:0, cell_max=obs:1"};
   std::string grid_config{grid_bounds + "," + grid_cell_size + "," + cell_vars + "," + obs_min_max};
   m_grid = string2ConvexGrid(grid_config);
