@@ -8,20 +8,23 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <set>
 #include <string>
-#include "MacroUtils.h"
-#include "MBUtils.h"
+#include <utility>
+#include <vector>
 #include "ACTable.h"
 #include "LPAStar.h"
-#include "XYPoint.h"
-#include "XYPolygon.h"
-#include "XYSquare.h"
+#include "MacroUtils.h"
+#include "MBUtils.h"
+#include "VarDataPair.h"
+#include "VarDataPairUtils.h"
 #include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsPoly.h"
 #include "XYFormatUtilsConvexGrid.h"
 #include "XYGridUpdate.h"
-#include "VarDataPair.h"
-#include "VarDataPairUtils.h"
+#include "XYPoint.h"
+#include "XYPolygon.h"
+#include "XYSquare.h"
 
 
 //---------------------------------------------------------
@@ -153,7 +156,7 @@ bool LPAStar::handleObstacleAlert(std::string obs_alert)
 }
 
 
-bool LPAStar::handleObstacleResolved(std::string obs_label)
+bool LPAStar::handleObstacleResolved(const std::string obs_label)
 {
   // if obs is in ADD/REFRESH queue for some reason, remove it
   m_obstacle_add_queue.erase(obs_label);
@@ -261,9 +264,9 @@ bool LPAStar::checkPlanningPreconditions()
     warnings.push_back("Iteration limit <= 0, must be positive!");
   if (!m_start_point.valid() || !m_goal_point.valid())
     warnings.push_back("Start or goal point not valid!");
-  if (!m_grid.ptIntersect(m_start_point.get_vx(), m_start_point.get_vy()))
+  if (!m_grid.ptIntersect(m_start_point.x(), m_start_point.y()))
     warnings.push_back("Start point located outside search grid!");
-  if (!m_grid.ptIntersect(m_goal_point.get_vx(), m_goal_point.get_vy()))
+  if (!m_grid.ptIntersect(m_goal_point.x(), m_goal_point.y()))
     warnings.push_back("Goal point located outside search grid!");
 
   // no warnings, we're good
@@ -380,6 +383,96 @@ bool LPAStar::planPath()
 
 //---------------------------------------------------------
 
+std::set<int> LPAStar::getNeighbors(int grid_ix) {
+  if (m_neighbors.count(grid_ix))
+    return (m_neighbors[grid_ix]);
+
+  // center of search cell + cell size
+  double cx{m_grid.getElement(grid_ix).getCenterX()};
+  double cy{m_grid.getElement(grid_ix).getCenterY()};
+  double l{m_grid.getCellSize()};
+
+  // loop variables
+  int neighbor_ix{grid_ix - 1};
+  int center_ix{0};
+  XYSquare possible_neighbor;
+  double neighbor_cx, neighbor_cy;
+
+  // find neighbors with grid indices less than index of search cell
+  // neighbors of search cell should have centers at the following points
+  std::vector<std::pair<double, double>> neighbor_centers{
+    {cx, cy - l},  // south
+    {cx - l, cy + l},  // northeast
+    {cx - l, cy},  // east
+    {cx - l, cy - l},  // southeast
+  };
+
+  // search for neigbors starting with the index of the search cell - 1
+  while ((neighbor_ix > 0) && (center_ix < neighbor_centers.size())) {
+    neighbor_cx = neighbor_centers[center_ix].first;
+    neighbor_cy = neighbor_centers[center_ix].second;
+
+    // neighbor center is out of bounds, skip
+    if (!m_grid_bounds.contains(neighbor_cx, neighbor_cy)) {
+      center_ix += 1;
+      continue;
+    }
+
+    // if neighbor center is contained in the cell at neighbor_ix,
+    // then it's a neighbor of the search cell; save it and continue
+    possible_neighbor = m_grid.getElement(neighbor_ix);
+    if (possible_neighbor.containsPoint(neighbor_cx, neighbor_cy)) {
+      m_neighbors[grid_ix].insert(neighbor_ix);
+      neighbor_ix -= 1;
+      center_ix += 1;
+      continue;
+    } else {
+      neighbor_ix -= 1;
+    }
+  }
+
+  neighbor_ix = grid_ix + 1;
+  center_ix = 0;
+
+  // find neighbors with grid indices greater than index of search cell
+  // neighbors of search cell should have centers at the following points
+  neighbor_centers = {
+    {cx, cy + l},  // north
+    {cx + l, cy - l},  // southwest
+    {cx + l, cy},  // west
+    {cx + l, cy + l}  // northwest
+  };
+
+  // search for neigbors starting with the index of the search cell + 1
+  while ((neighbor_ix < m_grid.size()) && (center_ix < neighbor_centers.size())) {
+    neighbor_cx = neighbor_centers[center_ix].first;
+    neighbor_cy = neighbor_centers[center_ix].second;
+
+    // neighbor center is out of bounds, skip
+    if (!m_grid_bounds.contains(neighbor_cx, neighbor_cy)) {
+      center_ix += 1;
+      continue;
+    }
+
+    // if neighbor center is contained in the cell at neighbor_ix,
+    // then it's a neighbor of the search cell; save it and continue
+    possible_neighbor = m_grid.getElement(neighbor_ix);
+    if (possible_neighbor.containsPoint(neighbor_cx, neighbor_cy)) {
+      m_neighbors[grid_ix].insert(neighbor_ix);
+      neighbor_ix += 1;
+      center_ix += 1;
+      continue;
+    } else {
+      neighbor_ix += 1;
+    }
+  }
+
+  return (m_neighbors[grid_ix]);
+}
+
+
+//---------------------------------------------------------
+
 std::string LPAStar::getPathStats()
 {
   // todo Raul: implement this function
@@ -462,12 +555,12 @@ void LPAStar::postFlags(const std::vector<VarDataPair>& flags)
 
     // Otherwise if string posting, handle macro expansion
     std::string sval{pair.get_sdata()};
-    sval = macroExpand(sval, "START_X", m_start_point.get_vx(), 2);
-    sval = macroExpand(sval, "START_Y", m_start_point.get_vy(), 2);
-    sval = macroExpand(sval, "GOAL_X", m_goal_point.get_vx(), 2);
-    sval = macroExpand(sval, "GOAL_Y", m_goal_point.get_vy(), 2);
-    sval = macroExpand(sval, "V_X", m_vpos.get_vx(), 2);
-    sval = macroExpand(sval, "V_Y", m_vpos.get_vy(), 2);
+    sval = macroExpand(sval, "START_X", m_start_point.x(), 2);
+    sval = macroExpand(sval, "START_Y", m_start_point.y(), 2);
+    sval = macroExpand(sval, "GOAL_X", m_goal_point.x(), 2);
+    sval = macroExpand(sval, "GOAL_Y", m_goal_point.y(), 2);
+    sval = macroExpand(sval, "V_X", m_vpos.x(), 2);
+    sval = macroExpand(sval, "V_Y", m_vpos.y(), 2);
 
     sval = macroExpand(sval, "MODE", printPlannerMode());
     sval = macroExpand(sval, "PATH_SPEC", m_path.get_spec(2));
@@ -561,6 +654,7 @@ bool LPAStar::OnStartUp()
     m_wpt_complete_var = "WAYPOINTS_COMPLETE";
 
   // create grid based on parameters
+  m_grid_bounds = string2Poly(grid_bounds);
   std::string cell_vars{"cell_vars=obs:0:vertex:0"};
   std::string obs_min_max{"cell_min=obs:0, cell_max=obs:1"};
   std::string grid_config{grid_bounds + "," + grid_cell_size + "," + cell_vars + "," + obs_min_max};
@@ -638,7 +732,7 @@ bool LPAStar::buildReport()
   m_msgs << "Goal Point: " << goal_spec << endl;
 
   m_msgs << header << endl;
-  m_msgs << "Tracked Obstacles: ";
+  m_msgs << "Tracked Obstacles: " << endl;
   for (auto const& obs : m_obstacle_map)
     m_msgs << obs.first << ";";
   m_msgs << endl;

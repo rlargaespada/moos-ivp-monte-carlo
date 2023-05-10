@@ -14,10 +14,10 @@
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "VarDataPair.h"
-#include "XYPoint.h"
-#include "XYSegList.h"
-#include "XYPolygon.h"
 #include "XYConvexGrid.h"
+#include "XYPoint.h"
+#include "XYPolygon.h"
+#include "XYSegList.h"
 
 enum class PlannerMode
 {
@@ -58,6 +58,9 @@ class LPAStar : public AppCastingMOOSApp
   void syncObstacles();  // LPA*, signature in base
   bool planPath();  // LPA*, signature in base
 
+  // LPA* utils
+  std::set<int> getNeighbors(int grid_ix);
+
   // path publishing
   std::string getPathStats();
   bool postPath();
@@ -77,12 +80,17 @@ class LPAStar : public AppCastingMOOSApp
   std::string m_wpt_complete_var;  // WAYPOINTS_COMPLETE
 
   // publication config
-  std::string m_prefix;  // PATH_*
+  std::string m_prefix;
   std::vector<VarDataPair> m_init_plan_flags;
   std::vector<VarDataPair> m_traverse_flags;
   std::vector<VarDataPair> m_replan_flags;
   std::vector<VarDataPair> m_end_flags;
   bool m_post_visuals;
+
+  // grid config
+  XYPolygon m_grid_bounds;
+  XYConvexGrid m_grid;
+  std::map<int, std::set<int>> m_neighbors;
 
   // planning config
   int m_max_iters;  // todo: add as config var, also higher level timeout?
@@ -96,7 +104,6 @@ class LPAStar : public AppCastingMOOSApp
   XYPoint m_goal_point;
   XYPoint m_vpos;
 
-  // todo: add a sub to a variable that clears these
   std::map<std::string, XYPolygon> m_obstacle_map;
 
   PlannerMode m_mode;
@@ -104,7 +111,7 @@ class LPAStar : public AppCastingMOOSApp
   double m_planning_end_time;
 
   XYSegList m_path;
-  XYConvexGrid m_grid;
+
   std::map<std::string, XYPolygon> m_obstacle_add_queue;
   std::set<std::string> m_obstacle_refresh_queue;
   std::set<std::string> m_obstacle_remove_queue;

@@ -101,7 +101,9 @@ class EvalPlanner : public AppCastingMOOSApp
   bool isTrialOngoing() {return (m_request_new_path == SimRequest::OPEN);}
   bool cleanupSim();
   void calcMetrics();
-  std::string getMetricsSpc();
+  std::string getMetricsSpec();
+  // todo: export to a different file with each reset
+  // todo: resetting sim while active should export current metrics
   bool exportMetrics();
   bool postEndflags();
 
