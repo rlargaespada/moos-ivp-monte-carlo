@@ -16,6 +16,7 @@ INCLUDE_DIRECTORIES(${LOCAL_LIBRARY_DIRS})
 #============================================================================
 # ADD_SUBDIRECTORY(lib_behaviors-test)
 ADD_SUBDIRECTORY(pLPAStar)
+ADD_SUBDIRECTORY(pDStarLite)
 ADD_SUBDIRECTORY(uEvalPlanner)
 ADD_SUBDIRECTORY(uFldObsMonteCarloSim)
 

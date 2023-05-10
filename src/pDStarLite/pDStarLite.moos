@@ -1,0 +1,9 @@
+//------------------------------------------------
+// pDStarLite config block
+
+ProcessConfig = pDStarLite
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+

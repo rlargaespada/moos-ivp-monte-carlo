@@ -33,7 +33,7 @@ Processconfig = ANTLER
 
   Run = pObstacleMgr     @ NewConsole = false
 
-  Run = pLPAStar         @ NewConsole = false
+  Run = pDStarLite         @ NewConsole = false
 }
 
 
@@ -371,7 +371,7 @@ ProcessConfig = uTimerScript_RANDOM_DRIFTS
 
 //------------------------------------------
 // pLPAStar config block
-ProcessConfig = pLPAStar
+ProcessConfig = pDStarLite
 {
   AppTick    = 4
   CommsTick	 = 4
