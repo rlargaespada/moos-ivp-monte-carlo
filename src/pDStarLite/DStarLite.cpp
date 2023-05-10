@@ -33,23 +33,34 @@
 
 DStarLite::DStarLite()
 {
-  m_path_request_var = "";  // set in onStartup
-  m_obs_alert_var = "";  // set in onStartup
-  m_wpt_complete_var = "";  // set in onStartup
+  //* Config Variables
+  // vars to subscribe to, all are set in onStartup()
+  m_path_request_var = "";
+  m_obs_alert_var = "";
+  m_wpt_complete_var = "";
 
+  // publication config
   m_prefix = "";
   m_path_found_var = "PATH_FOUND";
   m_path_complete_var = "PATH_COMPLETE";
-
-  m_max_iters = 1000;
   m_post_visuals = true;
 
+  // D* Lite config
+  m_max_iters = 1000;
+
+  //* State Variables
+  m_start_cell = -1;  // set these to -1 to signify they're invalid
+  m_goal_cell = -1;
+  m_vpos_cell = -1;
+
+  // planning state data
   m_mode = PlannerMode::IDLE;
   m_planning_start_time = 0;
   m_planning_end_time = 0;
 
-  m_start_point.invalidate();
-  m_goal_point.invalidate();
+  // D* Lite state
+  m_last_cell = -1;  // -1 is invalid
+  m_k_m = 0;
 }
 
 
@@ -483,35 +494,43 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
 }
 
 
-double DStarLite::heuristic(int grid_ix)
+double DStarLite::heuristic(int cell1, int cell2)
 {
-  double cx{m_grid.getElement(grid_ix).getCenterX()};
-  double cy{m_grid.getElement(grid_ix).getCenterY()};
-  return (hypot(m_goal_point.x() - cx, m_goal_point.y() - cy));
+  double x1{m_grid.getElement(cell1).getCenterX()};
+  double y1{m_grid.getElement(cell1).getCenterY()};
+  double x2{m_grid.getElement(cell2).getCenterX()};
+  double y2{m_grid.getElement(cell2).getCenterY()};
+  return (hypot(x2 - x1, y2 - y2));
 }
 
 
-std::pair<double, double> DStarLite::calculateKey(int grid_ix)
+dsl_key DStarLite::calculateKey(int grid_ix)
 {
   unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
   double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
-  double first{std::min(g, rhs + heuristic(grid_ix))}, second{std::min(g, rhs)};
-  return (std::pair<double, double> {first, second});
+  double first{std::min(g, rhs) + heuristic(m_start_cell, grid_ix) + m_k_m};
+  double second{std::min(g, rhs)};
+  return (dsl_key {first, second});
 }
 
 
 void DStarLite::initializeDStarLite()
 {
-  // make new priority queue
+  // clear priority queue, k_m
+  m_dstar_queue.clear();
+  m_k_m = 0;
 
   // initialize g and rhs values
-  // unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
-  // for (int ix = 0; ix < m_grid.size(); ix++) {
-  //   m_grid.setVal(ix, INFINITY, g_cix);
-  //   m_grid.setVal(ix, INFINITY, rhs_cix);
-  // }
+  // todo: do this as we go instead of all at once
+  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  for (int ix = 0; ix < m_grid.size(); ix++) {
+    m_grid.setVal(ix, INFINITY, g_cix);
+    m_grid.setVal(ix, INFINITY, rhs_cix);
+  }
 
-  // add start state to priority queue
+  // add goal state to priority queue
+  m_grid.setVal(m_goal_cell, 0, rhs_cix);
+  m_dstar_queue[m_goal_cell] = dsl_key{heuristic(m_start_cell, m_goal_cell), 0};
 }
 
 

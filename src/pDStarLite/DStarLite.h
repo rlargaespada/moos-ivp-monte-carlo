@@ -30,6 +30,8 @@ enum class PlannerMode
   PATH_COMPLETE,
 };
 
+typedef std::pair<double, double> dsl_key;  // keys in D* Lite consist of two doubles
+
 
 class DStarLite : public AppCastingMOOSApp
 {
@@ -61,8 +63,8 @@ class DStarLite : public AppCastingMOOSApp
 
   // D* Lite utils
   std::set<int> getNeighbors(int grid_ix);
-  double heuristic(int grid_ix);
-  std::pair<double, double> calculateKey(int grid_ix);
+  double heuristic(int cell1, int cell2);
+  dsl_key calculateKey(int grid_ix);
   void initializeDStarLite();
   void updateVertex(int grid_ix);
   bool computeShortestPath(int max_iters);
@@ -98,7 +100,7 @@ class DStarLite : public AppCastingMOOSApp
   XYConvexGrid m_grid;
   std::map<int, std::set<int>> m_neighbors;
 
-  // planning config
+  // D* Lite config
   int m_max_iters;  // todo: add as config var, also higher level timeout?
 
   // not set in config
@@ -106,21 +108,32 @@ class DStarLite : public AppCastingMOOSApp
   std::string m_path_complete_var;  // PATH_COMPLETE
 
  private:  // State variables
+  // start, goal, and vehicle positions as XYPoints
   XYPoint m_start_point;
   XYPoint m_goal_point;
   XYPoint m_vpos;
 
+  // index of cell in graph that contains start, goal, and vehicle positions
+  int m_start_cell;
+  int m_goal_cell;
+  int m_vpos_cell;
+
+  // containers for obstacles we know about
   std::map<std::string, XYPolygon> m_obstacle_map;
-
-  PlannerMode m_mode;
-  double m_planning_start_time;
-  double m_planning_end_time;
-
-  XYSegList m_path;
-
   std::map<std::string, XYPolygon> m_obstacle_add_queue;
   std::set<std::string> m_obstacle_refresh_queue;
   std::set<std::string> m_obstacle_remove_queue;
+
+  // planning state data
+  PlannerMode m_mode;
+  double m_planning_start_time;
+  double m_planning_end_time;
+  XYSegList m_path;
+
+  // D* Lite state
+  int m_last_cell;  // used for replanning
+  double m_k_m;
+  std::map<int, dsl_key> m_dstar_queue;
 };
 
 #endif
