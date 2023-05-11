@@ -51,7 +51,6 @@ DStarLite::DStarLite()
   //* State Variables
   m_start_cell = -1;  // set these to -1 to signify they're invalid
   m_goal_cell = -1;
-  m_vpos_cell = -1;
 
   // planning state data
   m_mode = PlannerMode::IDLE;
@@ -276,10 +275,10 @@ bool DStarLite::checkPlanningPreconditions()
     warnings.push_back("Iteration limit <= 0, must be positive!");
   if (!m_start_point.valid() || !m_goal_point.valid())
     warnings.push_back("Start or goal point not valid!");
-  if (!m_grid.ptIntersect(m_start_point.x(), m_start_point.y()))
-    warnings.push_back("Start point located outside search grid!");
-  if (!m_grid.ptIntersect(m_goal_point.x(), m_goal_point.y()))
-    warnings.push_back("Goal point located outside search grid!");
+  // if (!m_grid.ptIntersect(m_start_point.x(), m_start_point.y()))
+  //   warnings.push_back("Start point located outside search grid!");
+  // if (!m_grid.ptIntersect(m_goal_point.x(), m_goal_point.y()))
+  //   warnings.push_back("Goal point located outside search grid!");
 
   // no warnings, we're good
   if (warnings.empty())
@@ -390,13 +389,32 @@ bool DStarLite::planPath()
   // todo TJ: remove add vertex lines and implement D* Lite here
 
   /*
-  initialize
-  planning done = compute shortest path
+  if mode == PPR  // first time through
+    find start cell, goal cell
+      if this fails, set planning failed and return false, report explanation
+    last_cell = start_cell
+    initialize
+    planning done = compute shortest path(m_max_iters/2)  // not as much time after init work
+  else if mode == PLANNING_IN_PROGRESS
+    planning done = compute shortest path(m_max_iters)  // continue from when we left off
+  else if mode == IN_TRANSIT  // we're replanning
+    start_cell = cell with current vpos
+    km += h(last, start)
+    ! how to find which nodes to update? call update vertex in sync obs?
+    planning done = compute shortest path(m_max_iters/2)  // not as much time after replan work
+
+
   if planning_done
-    raul: parse path out by following grid?
-    if can't parse path, set mode to planning failed, report event, return false
-    otherwise set path to m_path and return true
-  else planning's not done, so continue from where we left off without initializing
+    raul: parse path out
+    if can't parse path
+      mode = PLANNING_FAILED;
+      reportEvent
+      return false;
+    return true;
+  else
+    mode = PLANNING_IN_PROGRESS;
+    return false;
+    planning's not done, so continue from where we left off without initializing
   */
 
   return (true);
@@ -418,7 +436,6 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
   // loop variables
   int neighbor_ix{grid_ix - 1};
   int center_ix{0};
-  XYSquare possible_neighbor;
   double neighbor_cx, neighbor_cy;
 
   // find neighbors with grid indices less than index of search cell
@@ -443,8 +460,7 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
 
     // if neighbor center is contained in the cell at neighbor_ix,
     // then it's a neighbor of the search cell; save it and continue
-    possible_neighbor = m_grid.getElement(neighbor_ix);
-    if (possible_neighbor.containsPoint(neighbor_cx, neighbor_cy)) {
+    if (m_grid.ptIntersect(neighbor_ix, neighbor_cx, neighbor_cy)) {
       m_neighbors[grid_ix].insert(neighbor_ix);
       neighbor_ix -= 1;
       center_ix += 1;
@@ -479,8 +495,7 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
 
     // if neighbor center is contained in the cell at neighbor_ix,
     // then it's a neighbor of the search cell; save it and continue
-    possible_neighbor = m_grid.getElement(neighbor_ix);
-    if (possible_neighbor.containsPoint(neighbor_cx, neighbor_cy)) {
+    if (m_grid.ptIntersect(neighbor_ix, neighbor_cx, neighbor_cy)) {
       m_neighbors[grid_ix].insert(neighbor_ix);
       neighbor_ix += 1;
       center_ix += 1;
@@ -494,6 +509,7 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
 }
 
 
+// Euclidean distance between cells
 double DStarLite::heuristic(int cell1, int cell2)
 {
   double x1{m_grid.getElement(cell1).getCenterX()};
@@ -530,37 +546,74 @@ void DStarLite::initializeDStarLite()
 
   // add goal state to priority queue
   m_grid.setVal(m_goal_cell, 0, rhs_cix);
-  m_dstar_queue[m_goal_cell] = dsl_key{heuristic(m_start_cell, m_goal_cell), 0};
+  m_dstar_queue[m_goal_cell] = calculateKey(m_goal_cell);
+  // m_dstar_queue[m_goal_cell] = dsl_key{heuristic(m_start_cell, m_goal_cell), 0};  // opt. version
 }
 
 
 void DStarLite::updateVertex(int grid_ix)
 {
-  // if grid_ix != start
-    // set rhs(ix)
-  // if ix in queue, remove
-  // if ix.g != ix.rhs, add to queue
+  /*
+  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  unsigned int obs_cix{m__grid.getCellVarIX("obs")};
+  if (grid_ix != m_goal_cell) {
+    rhs = 0
+    for neighbor in getNeighbors(grid_ix)
+      if grid[grid_ix, obs_cix] == 1  // obstacle, not a valid neighbor
+        continue;
+      g_neighbor = grid[neighbor, g_cix]
+      cost is hheuristic(grid_ix, neighbor) since cost and heuristic are both euclidean dist
+      rhs = min(rhs, cost + g_neighbor)
+  if (m_dstar_queue.count(grid_ix))
+    m_dstar_queue.erase(grid_ix);
+  double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
+  if (g != rhs)
+    m_dstar_queue[grid_ix] = calculateKey(grid_ix);
+  }
+  */
+
+  // optimized version
+  // unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  // double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
+  // if (g != rhs)
+  //   m_dstar_queue[grid_ix] = calculateKey(grid_ix);
+  // else
+  //   m_dstar_queue.erase(grid_ix);
 }
 
 
 bool DStarLite::computeShortestPath(int max_iters)
 {
   /*
+  to get top of queue, iterate through queue and get key with smallest value
+  do this in getNextCell
+  u = getNextCell()
+  k_old = queue[u]
+  dsl_keys can be compared using < and > directly
   iters = 0
-  while (queue.top < calcKey(goal) || goal.rhs != goal.g)
-    node = queue.pop
-    if (node.g > node.rhs)
-      node.g = node.rhs
-      for all s in getNeighbors(node)
-        Update vertex(s)
+  while (k_old < calcKey(start) || start.rhs != start.g)
+    queue.erase(u)
+    key_u = calcKey(u)
+    g_u = ..., rhs_u = ...
+    if k_old < key_u
+      queue[u] = key_u
+    else if (g_u > rhs u)
+      grid setVal(u, rhs_u, g_cix)
+      for neighbor in getNeighbors(s)
+        updateVertex(neighbor)
     else
-      node.g = INFINITY
-      for all s in getNeighbors(node)
-        Update vertex(s)
-      Update vertex(node)  //? required?
+      g_u = INFINITY
+      for neighbor in getNeighbors(s)
+        updateVertex(neighbor)
+      updateVertex(u)
 
-      if iters > m_max_iters
-        return false;  // didn't find a path within allotted iterations
+    iters += 1;
+    if iters > m_max_iters
+      return false;  // didn't find a path within allotted iterations
+
+    prep for next iter
+    u = getNextCell()
+    k_old = queue[u]
 
   return true  // found a path
   */
@@ -604,13 +657,6 @@ bool DStarLite::checkObstacles()
       }
     }
   }
-  return (true);
-}
-
-
-bool DStarLite::replanFromCurrentPos()
-{
-  // todo Raul: define a skeleton, give to TJ
   return (true);
 }
 

@@ -62,12 +62,17 @@ class DStarLite : public AppCastingMOOSApp
   bool planPath();  // D* Lite, signature in base
 
   // D* Lite utils
+  void findCellByPoint(XYPoint pt);
   std::set<int> getNeighbors(int grid_ix);
+  int getNextCell();
+
   double heuristic(int cell1, int cell2);
   dsl_key calculateKey(int grid_ix);
   void initializeDStarLite();
   void updateVertex(int grid_ix);
+
   bool computeShortestPath(int max_iters);
+  XYSegList parsePathFromGrid();
 
   // path publishing
   std::string getPathStats();
@@ -75,7 +80,6 @@ class DStarLite : public AppCastingMOOSApp
 
   // replanning
   bool checkObstacles();
-  bool replanFromCurrentPos();  // D* Lite, signature in base
 
   // state publishing
   std::string printPlannerMode();
@@ -116,7 +120,6 @@ class DStarLite : public AppCastingMOOSApp
   // index of cell in graph that contains start, goal, and vehicle positions
   int m_start_cell;
   int m_goal_cell;
-  int m_vpos_cell;
 
   // containers for obstacles we know about
   std::map<std::string, XYPolygon> m_obstacle_map;
@@ -131,7 +134,7 @@ class DStarLite : public AppCastingMOOSApp
   XYSegList m_path;
 
   // D* Lite state
-  int m_last_cell;  // used for replanning
+  int m_last_cell;  // last cell planned from, used for replanning
   double m_k_m;
   std::map<int, dsl_key> m_dstar_queue;
 };

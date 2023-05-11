@@ -498,7 +498,7 @@ void LPAStar::updateVertex(int grid_ix)
 {}
 
 
-bool LPAStar::computeShortestPath()
+bool LPAStar::computeShortestPath(int max_iters)
 {
   return (true);
 }

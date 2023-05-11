@@ -65,7 +65,7 @@ class LPAStar : public AppCastingMOOSApp
   std::pair<double, double> calculateKey(int grid_ix);
   void initializeLPAStar();
   void updateVertex(int grid_ix);
-  bool computeShortestPath();
+  bool computeShortestPath(int max_iters);
 
   // path publishing
   std::string getPathStats();
