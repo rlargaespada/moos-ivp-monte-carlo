@@ -617,25 +617,6 @@ void DStarLite::initializeDStarLite()
 
 void DStarLite::updateVertex(int grid_ix)
 {
-  /*
-  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
-  unsigned int obs_cix{m__grid.getCellVarIX("obs")};
-  if (grid_ix != m_goal_cell) {
-    rhs = 0
-    for neighbor in getNeighbors(grid_ix)
-      if grid[grid_ix, obs_cix] == 1  // obstacle, not a valid neighbor
-        continue;
-      g_neighbor = grid[neighbor, g_cix]
-      c = cost(grid_ix, neighbor)
-      rhs = min(rhs, c + g_neighbor)
-  if (m_dstar_queue.count(grid_ix))
-    m_dstar_queue.erase(grid_ix);
-  double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
-  if (g != rhs)
-    m_dstar_queue[grid_ix] = calculateKey(grid_ix);
-  }
-  */
-
   // optimized version
   // unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
   // double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
@@ -643,6 +624,30 @@ void DStarLite::updateVertex(int grid_ix)
   //   m_dstar_queue[grid_ix] = calculateKey(grid_ix);
   // else
   //   m_dstar_queue.erase(grid_ix);
+
+  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  unsigned int obs_cix{m_grid.getCellVarIX("obs")};
+  double g_neighbor, c;
+
+  if (grid_ix != m_goal_cell) {
+    double rhs{INFINITY};
+    std::set<int> neighbors{getNeighbors(grid_ix)};
+    for (const int& i : neighbors) {
+      if (m_grid.getVal(grid_ix, obs_cix))
+        continue; // obstacle, not a valid neighbor
+      
+      g_neighbor = m_grid.getVal(i, g_cix);
+      c = cost(grid_ix, i);
+      rhs = std::min(rhs, c + g_neighbor);
+    }
+  }
+
+  if (m_dstar_queue.count(grid_ix))
+    m_dstar_queue.erase(grid_ix);
+
+  double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
+  if (g != rhs)
+    m_dstar_queue[grid_ix] = calculateKey(grid_ix);
 }
 
 
