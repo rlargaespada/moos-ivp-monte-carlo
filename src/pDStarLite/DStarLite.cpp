@@ -644,39 +644,45 @@ void DStarLite::updateVertex(int grid_ix)
 
 bool DStarLite::computeShortestPath(int max_iters)
 {
-  /*
-  to get top of queue, iterate through queue and get key with smallest value
-  do this in getNextCell
-  u = getNextCell()
-  k_old = queue[u]
-  dsl_keys can be compared using < and > directly
-  iters = 0
-  while (k_old < calcKey(start) || start.rhs != start.g)
-    queue.erase(u)
-    key_u = calcKey(u)
-    g_u = ..., rhs_u = ...
-    if k_old < key_u
-      queue[u] = key_u
-    else if (g_u > rhs u)
-      grid setVal(u, rhs_u, g_cix)
-      for neighbor in getNeighbors(s)
-        updateVertex(neighbor)
-    else
-      g_u = INFINITY
-      for neighbor in getNeighbors(s)
-        updateVertex(neighbor)
-      updateVertex(u)
+  // initialize loop vars
+  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  int u{getNextCell()}; 
+  dsl_key k_old{m_dstar_queue[u]};
+  int iters{0};
+  double g_u, rhs_u;
 
+  while ((k_old < calculateKey(m_start_cell)) ||
+         (m_grid.getVal(m_start_cell, rhs_cix) != m_grid.getVal(m_start_cell, g_cix))) {
+    m_dstar_queue.erase(u);  // "pop" u from queue
+
+    // get data for current node
+    dsl_key key_u{calculateKey(u)};
+    g_u = m_grid.getVal(u, g_cix);
+    rhs_u = m_grid.getVal(u, rhs_cix);
+
+    // update queue or update vertices as needed
+    if (k_old < key_u) {
+      m_dstar_queue[u] = key_u;
+    } else if (g_u > rhs_u) {
+      m_grid.setVal(u, rhs_u, g_cix);
+      for (const int& n : getNeighbors(u))
+        updateVertex(n);
+    } else {
+      m_grid.setVal(u, INFINITY, g_cix);
+      for (const int& n : getNeighbors(u))
+        updateVertex(n);
+      updateVertex(u);
+    }
+
+    // if out of time, exit
     iters += 1;
-    if iters > m_max_iters
-      return false;  // didn't find a path within allotted iterations
+    if (iters > m_max_iters)
+      return (false);  // didn't find a path within allotted iterations
 
-    prep for next iter
-    u = getNextCell()
-    k_old = queue[u]
-
-  return true  // found a path
-  */
+    // prep for next iter
+    u = getNextCell();
+    k_old = m_dstar_queue[u];
+  }
 
   return (true);
 }
