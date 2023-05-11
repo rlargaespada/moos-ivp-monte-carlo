@@ -68,7 +68,7 @@ class DStarLite : public AppCastingMOOSApp
   int getNextCell();
 
   double heuristic(int cell1, int cell2);
-  double cost(int cell1, int cell2) {return (heuristic(cell1, cell2));}
+  double cost(int cell1, int cell2);
   dsl_key calculateKey(int grid_ix);
   void initializeDStarLite();
   void updateVertex(int grid_ix);

@@ -290,10 +290,6 @@ bool DStarLite::checkPlanningPreconditions()
     warnings.push_back("Iteration limit <= 0, must be positive!");
   if (!m_start_point.valid() || !m_goal_point.valid())
     warnings.push_back("Start or goal point not valid!");
-  // if (!m_grid.ptIntersect(m_start_point.x(), m_start_point.y()))
-  //   warnings.push_back("Start point located outside search grid!");
-  // if (!m_grid.ptIntersect(m_goal_point.x(), m_goal_point.y()))
-  //   warnings.push_back("Goal point located outside search grid!");
 
   // no warnings, we're good
   if (warnings.empty())
@@ -585,6 +581,17 @@ double DStarLite::heuristic(int cell1, int cell2)
 }
 
 
+// Infinite if either cell is an obstacle, otherwise Euclidean dist
+double DStarLite::cost(int cell1, int cell2)
+{
+  unsigned int obs_cix{m_grid.getCellVarIX("obs")};
+  if ((m_grid.getVal(cell1, obs_cix)) || m_grid.getVal(cell2, obs_cix))
+    return (INFINITY);
+
+  return (heuristic(cell1, cell2));
+}
+
+
 dsl_key DStarLite::calculateKey(int grid_ix)
 {
   unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
@@ -611,35 +618,19 @@ void DStarLite::initializeDStarLite()
   // add goal state to priority queue
   m_grid.setVal(m_goal_cell, 0, rhs_cix);
   m_dstar_queue[m_goal_cell] = calculateKey(m_goal_cell);
-  // m_dstar_queue[m_goal_cell] = dsl_key{heuristic(m_start_cell, m_goal_cell), 0};  // opt. version
 }
 
 
 void DStarLite::updateVertex(int grid_ix)
 {
-  // optimized version
-  // unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
-  // double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
-  // if (g != rhs)
-  //   m_dstar_queue[grid_ix] = calculateKey(grid_ix);
-  // else
-  //   m_dstar_queue.erase(grid_ix);
-
   unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
   unsigned int obs_cix{m_grid.getCellVarIX("obs")};
-  double g_neighbor, c;
 
   if (grid_ix != m_goal_cell) {
     double rhs{INFINITY};
     std::set<int> neighbors{getNeighbors(grid_ix)};
-    for (const int& i : neighbors) {
-      if (m_grid.getVal(grid_ix, obs_cix))
-        continue; // obstacle, not a valid neighbor
-      
-      g_neighbor = m_grid.getVal(i, g_cix);
-      c = cost(grid_ix, i);
-      rhs = std::min(rhs, c + g_neighbor);
-    }
+    for (const int& i : neighbors)
+      rhs = std::min(rhs, cost(grid_ix, i) + m_grid.getVal(i, g_cix));
   }
 
   if (m_dstar_queue.count(grid_ix))
@@ -693,9 +684,39 @@ bool DStarLite::computeShortestPath(int max_iters)
 
 XYSegList DStarLite::parsePathFromGrid()
 {
-  // todo: raul
   XYSegList path;
   path.set_label("D* Lite");
+  // unsigned int g_cix{m_grid.getCellVarIX("g")};
+
+  // // check no path found condition
+  // if (std::isinf(m_grid.getVal(m_start_cell, g_cix)))
+  //   return (path);
+
+  // int current_cell{m_start_cell}, next_cell;
+  // double wpt_x, wpt_y, min_cost, neighbor_cost;
+  // while (current_cell != m_goal_cell) {
+  //   // add current cell to path
+  //   wpt_x = m_grid.getElement(current_cell).getCenterX();
+  //   wpt_y = m_grid.getElement(current_cell).getCenterY();
+  //   path.add_vertex(wpt_x, wpt_y);
+
+  //   // determine next cell on the path
+  //   next_cell = -1;
+  //   min_cost = INFINITY;
+  //   for (const int& n : getNeighbors(current_cell)) {
+  //     neighbor_cost = cost(current_cell, n) + m_grid.getVal(n, g_cix);
+  //     if (neighbor_cost < min_cost) {
+  //       next_cell = n;
+  //       min_cost = neighbor_cost;
+  //     }
+  //   }
+  //   current_cell = next_cell;
+  // }
+
+  // path.add_vertex(m_goal_point);
+  // path.set_label("D* Lite");
+  // return (path);
+
   path.add_vertex(m_start_point);
   path.add_vertex(55, -95);
   path.add_vertex(m_goal_point);
