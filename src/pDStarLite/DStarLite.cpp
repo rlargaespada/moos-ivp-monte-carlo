@@ -108,17 +108,27 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "OBM_RESOLVED") {
       handleObstacleResolved(msg.GetString());
     } else if (key == m_wpt_complete_var) {
-      if (m_mode == PlannerMode::IN_TRANSIT)
+      if (m_mode == PlannerMode::IN_TRANSIT) {
         m_mode = PlannerMode::PATH_COMPLETE;
+
+        // add to dist travelled
+        unsigned int last_idx{m_path.size() - 1};
+        double x1{m_path.get_vx(last_idx)}, y1{m_path.get_vy(last_idx)};
+        double x0{m_path.get_vx(last_idx - 1)}, y0{m_path.get_vy(last_idx - 1)};
+        m_path_len_traversed += hypot(x1 - x0, y1 - y0);
+      }
     } else if ((key == "NODE_REPORT_LOCAL") || (key == "NODE_REPORT")) {
       std::string report{tolower(msg.GetString())};
       double xval{tokDoubleParse(report, "x", ',', '=')};
       double yval{tokDoubleParse(report, "y", ',', '=')};
       m_vpos.set_vertex(xval, yval);
-    } else if (key == "WPT_IDX") {
-      if (m_mode == PlannerMode::IN_TRANSIT) {
-        int idx{static_cast<int>(msg.GetDouble())};
-        m_path_len_traversed = (m_path.length() - m_path.length(idx));
+    } else if (key == "WPT_INDEX") {
+      // add to dist travelled
+      int prev_idx{static_cast<int>(msg.GetDouble()) - 1};
+      if ((m_mode == PlannerMode::IN_TRANSIT)  && (prev_idx > 0)) {
+        double x1{m_path.get_vx(prev_idx)}, y1{m_path.get_vy(prev_idx)};
+        double x0{m_path.get_vx(prev_idx - 1)}, y0{m_path.get_vy(prev_idx - 1)};
+        m_path_len_traversed += hypot(x1 - x0, y1 - y0);
       }
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
@@ -690,7 +700,12 @@ bool DStarLite::computeShortestPath(int max_iters)
 XYSegList DStarLite::parsePathFromGrid()
 {
   // todo: raul
-  return XYSegList{m_start_point, m_goal_point, "D* Lite"};
+  XYSegList path;
+  path.set_label("D* Lite");
+  path.add_vertex(m_start_point);
+  path.add_vertex(55, -95);
+  path.add_vertex(m_goal_point);
+  return (path);
 }
 
 
@@ -909,7 +924,7 @@ void DStarLite::registerVariables()
   Register("NODE_REPORT", 0);
   Register("NODE_REPORT_LOCAL", 0);
   Register("OBM_RESOLVED", 0);
-  Register("WPT_IDX", 0);
+  Register("WPT_INDEX", 0);
   if (!m_path_request_var.empty())
     Register(m_path_request_var, 0);
   if (!m_obs_alert_var.empty())
