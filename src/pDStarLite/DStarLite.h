@@ -25,7 +25,7 @@ enum class PlannerMode
   IDLE,
   REQUEST_PENDING,
   PLANNING_IN_PROGRESS,
-  PLANNING_FAILED,  // todo: handle this case more thoughtfully
+  PLANNING_FAILED,
   IN_TRANSIT,
   PATH_COMPLETE,
 };
@@ -60,6 +60,7 @@ class DStarLite : public AppCastingMOOSApp
   bool checkPlanningPreconditions();  // D* Lite, signature in base
   void syncObstacles();  // D* Lite, signature in base
   bool planPath();  // D* Lite, signature in base
+  void handlePlanningFail(std::string warning_msg);
 
   // D* Lite utils
   int findCellByPoint(XYPoint pt);
@@ -67,6 +68,7 @@ class DStarLite : public AppCastingMOOSApp
   int getNextCell();
 
   double heuristic(int cell1, int cell2);
+  double cost(int cell1, int cell2) {return (heuristic(cell1, cell2));}
   dsl_key calculateKey(int grid_ix);
   void initializeDStarLite();
   void updateVertex(int grid_ix);
@@ -105,7 +107,7 @@ class DStarLite : public AppCastingMOOSApp
   std::map<int, std::set<int>> m_neighbors;
 
   // D* Lite config
-  int m_max_iters;  // todo: add as config var, also higher level timeout?
+  int m_max_iters;
 
   // not set in config
   std::string m_path_found_var;  // PATH_FOUND

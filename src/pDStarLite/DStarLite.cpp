@@ -6,6 +6,7 @@
 /************************************************************/
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <iterator>
 #include <map>
@@ -388,11 +389,8 @@ bool DStarLite::planPath()
     m_start_cell = findCellByPoint(m_start_point);
     m_goal_cell = findCellByPoint(m_goal_point);
     if ((m_start_cell < 0) || (m_goal_cell < 0)) {
-      reportRunWarning("ERROR: tried to plan a path between points, where at least "
-                       "one point was outside the search grid!");
-      reportRunWarning("Planning failed!");
-      m_mode = PlannerMode::PLANNING_FAILED;
-      Notify(m_prefix + "PATH_FAILED", "true");
+      handlePlanningFail("ERROR: tried to plan a path between points, where at least "
+                         "one point was outside the search grid!");
       return (false);
     }
 
@@ -409,6 +407,12 @@ bool DStarLite::planPath()
   // if we're in transit, plan again from the current vehicle position
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
     m_start_cell = findCellByPoint(m_vpos);
+    if (m_start_cell < 0) {
+      handlePlanningFail("ERROR: tried to replan from current vehicle position, "
+                         "but vehicle has drifted outside the search grid!");
+      return (false);
+    }
+
     m_k_m += heuristic(m_last_cell, m_start_cell);
     // todo: how to find which nodes to update? call update vertex in sync obs?
     // run with fewer iters since we had to do replanning work
@@ -419,10 +423,7 @@ bool DStarLite::planPath()
   if (planning_complete) {
     m_path = parsePathFromGrid();
     if (m_path.size() == 0) {
-      reportRunWarning("Unable to find a path from the start to the goal!");
-      reportRunWarning("Planning failed!");
-      m_mode = PlannerMode::PLANNING_FAILED;
-      Notify(m_prefix + "PATH_FAILED", "true");
+      handlePlanningFail("Unable to find a path from the start to the goal!");
       return (false);
     }
     return (true);  // if planning worked and we got a path
@@ -431,6 +432,15 @@ bool DStarLite::planPath()
   // planning not done yet, return false
   m_mode = PlannerMode::PLANNING_IN_PROGRESS;
   return (false);
+}
+
+
+void DStarLite::handlePlanningFail(std::string warning_msg)
+{
+  reportRunWarning(warning_msg);
+  reportRunWarning("Planning failed!");
+  m_mode = PlannerMode::PLANNING_FAILED;
+  Notify(m_prefix + "PATH_FAILED", "true");
 }
 
 
@@ -574,7 +584,6 @@ void DStarLite::initializeDStarLite()
   m_k_m = 0;
 
   // initialize g and rhs values
-  // todo: do this as we go instead of all at once
   unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
   for (int ix = 0; ix < m_grid.size(); ix++) {
     m_grid.setVal(ix, INFINITY, g_cix);
@@ -599,8 +608,8 @@ void DStarLite::updateVertex(int grid_ix)
       if grid[grid_ix, obs_cix] == 1  // obstacle, not a valid neighbor
         continue;
       g_neighbor = grid[neighbor, g_cix]
-      cost is hheuristic(grid_ix, neighbor) since cost and heuristic are both euclidean dist
-      rhs = min(rhs, cost + g_neighbor)
+      c = cost(grid_ix, neighbor)
+      rhs = min(rhs, c + g_neighbor)
   if (m_dstar_queue.count(grid_ix))
     m_dstar_queue.erase(grid_ix);
   double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
