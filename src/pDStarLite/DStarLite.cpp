@@ -25,6 +25,7 @@
 #include "XYGridUpdate.h"
 #include "XYPoint.h"
 #include "XYPolygon.h"
+#include "XYSegList.h"
 #include "XYSquare.h"
 
 
@@ -94,10 +95,12 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
 #endif
 
     if (key == m_path_request_var) {
-      if (setEndpoints(msg.GetString()))
+      std::string request{msg.GetString()};
+      reportEvent("Path Requested: " + request);
+      if (setEndpoints(request))
         m_mode = PlannerMode::REQUEST_PENDING;
       else
-        reportRunWarning("Invalid " + key + ": " + msg.GetString());
+        reportRunWarning("Invalid " + key + ": " + request);
     } else if (key == m_obs_alert_var) {
       handleObstacleAlert(msg.GetString());
     } else if (key == "OBM_RESOLVED") {
@@ -210,15 +213,11 @@ bool DStarLite::Iterate()
 
   // new path request
   if (m_mode == PlannerMode::REQUEST_PENDING) {
-    m_mode = PlannerMode::PLANNING_IN_PROGRESS;
-
     // post new plan messages
     Notify(m_prefix + m_path_found_var, "false");
     Notify(m_prefix + m_path_complete_var, "false");
     postFlags(m_init_plan_flags);
 
-    // todo: what if this takes a few iterations? need to break into steps
-    // todo: what if planning fails?
     // plan path until we reach max number of iterations
     m_planning_start_time = MOOSTime();
     m_path.clear();  // start fresh upon new request
@@ -226,21 +225,18 @@ bool DStarLite::Iterate()
 
   // if already planning a path, pick up from where we left off
   } else if (m_mode == PlannerMode::PLANNING_IN_PROGRESS) {
-    //! path_found = planPath();  temporarily disable
-    path_found = true;
-
+    path_found = planPath();
   // if transiting, check if we need to replan and replan if needed
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
-    if (!checkObstacles()) {
-      //! temporarily disable
-      // Notify(m_prefix + m_path_found_var, "false");
-      // postFlags(m_replan_flags);
+    // ! temporarily disable
+    // if (!checkObstacles()) {
+    //   Notify(m_prefix + m_path_found_var, "false");
+    //   postFlags(m_replan_flags);
 
-      // // plan path until we reach max number of iterations
-      // m_mode = PlannerMode::PLANNING_IN_PROGRESS;
-      // m_planning_start_time = MOOSTime();
-      // path_found = replanFromCurrentPos();  // todo: what if this takes multiple iterations?
-    }
+    //   // plan path until we reach max number of iterations
+    //   m_planning_start_time = MOOSTime();
+    //   path_found = planPath();
+    // }
   }
 
   // notify that path has been found
@@ -383,45 +379,72 @@ bool DStarLite::planPath()
     return (false);
   }
 
-  // placeholder: path is just start point and goal point
-  m_path.add_vertex(m_start_point);
-  m_path.add_vertex(m_goal_point);
-  // todo TJ: remove add vertex lines and implement D* Lite here
+  bool planning_complete{false};
 
-  /*
-  if mode == PPR  // first time through
-    find start cell, goal cell
-      if this fails, set planning failed and return false, report explanation
-    last_cell = start_cell
-    initialize
-    planning done = compute shortest path(m_max_iters/2)  // not as much time after init work
-  else if mode == PLANNING_IN_PROGRESS
-    planning done = compute shortest path(m_max_iters)  // continue from when we left off
-  else if mode == IN_TRANSIT  // we're replanning
-    start_cell = cell with current vpos
-    km += h(last, start)
-    ! how to find which nodes to update? call update vertex in sync obs?
-    planning done = compute shortest path(m_max_iters/2)  // not as much time after replan work
+  //* D* Lite Algorithm
+  // got a request for a new path, start from scratch
+  if (m_mode == PlannerMode::REQUEST_PENDING) {
+    // figure out where in the grid the start and goal points are
+    m_start_cell = findCellByPoint(m_start_point);
+    m_goal_cell = findCellByPoint(m_goal_point);
+    if ((m_start_cell < 0) || (m_goal_cell < 0)) {
+      reportRunWarning("ERROR: tried to plan a path between points, where at least "
+                       "one point was outside the search grid!");
+      reportRunWarning("Planning failed!");
+      m_mode = PlannerMode::PLANNING_FAILED;
+      Notify(m_prefix + "PATH_FAILED", "true");
+      return (false);
+    }
 
+    // initialize and compute path
+    m_last_cell = m_start_cell;
+    initializeDStarLite();
+    // run with fewer iters since we had to do initialization work
+    planning_complete = computeShortestPath(m_max_iters/2);
 
-  if planning_done
-    raul: parse path out
-    if can't parse path
-      mode = PLANNING_FAILED;
-      reportEvent
-      return false;
-    return true;
-  else
-    mode = PLANNING_IN_PROGRESS;
-    return false;
-    planning's not done, so continue from where we left off without initializing
-  */
+  // if we were already planning, pick up from where we left off
+  } else if (m_mode == PlannerMode::PLANNING_IN_PROGRESS) {
+    planning_complete = computeShortestPath(m_max_iters);
 
-  return (true);
+  // if we're in transit, plan again from the current vehicle position
+  } else if (m_mode == PlannerMode::IN_TRANSIT) {
+    m_start_cell = findCellByPoint(m_vpos);
+    m_k_m += heuristic(m_last_cell, m_start_cell);
+    // todo: how to find which nodes to update? call update vertex in sync obs?
+    // run with fewer iters since we had to do replanning work
+    planning_complete = computeShortestPath(m_max_iters/2);
+  }
+
+  // planning done, return true if we found a path
+  if (planning_complete) {
+    m_path = parsePathFromGrid();
+    if (m_path.size() == 0) {
+      reportRunWarning("Unable to find a path from the start to the goal!");
+      reportRunWarning("Planning failed!");
+      m_mode = PlannerMode::PLANNING_FAILED;
+      Notify(m_prefix + "PATH_FAILED", "true");
+      return (false);
+    }
+    return (true);  // if planning worked and we got a path
+  }
+
+  // planning not done yet, return false
+  m_mode = PlannerMode::PLANNING_IN_PROGRESS;
+  return (false);
 }
 
 
 //---------------------------------------------------------
+
+int DStarLite::findCellByPoint(XYPoint pt)
+{
+  for (int ix = 0; ix < m_grid.size(); ix++) {
+    if (m_grid.getElement(ix).containsPoint(pt.x(), pt.y()))
+      return (ix);
+  }
+  return (-1);  // -1 if point not in graph
+}
+
 
 std::set<int> DStarLite::getNeighbors(int grid_ix)
 {
@@ -506,6 +529,20 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
   }
 
   return (m_neighbors[grid_ix]);
+}
+
+
+int DStarLite::getNextCell()
+{
+  int min_cell;
+  dsl_key min_key{INFINITY, INFINITY};
+  for (auto const& cell : m_dstar_queue) {
+    if (cell.second < min_key) {
+      min_cell = cell.first;
+      min_key = cell.second;
+    }
+  }
+  return (min_cell);
 }
 
 
@@ -619,6 +656,13 @@ bool DStarLite::computeShortestPath(int max_iters)
   */
 
   return (true);
+}
+
+
+XYSegList DStarLite::parsePathFromGrid()
+{
+  // todo: raul
+  return XYSegList{m_start_point, m_goal_point, "D* Lite"};
 }
 
 
@@ -880,6 +924,12 @@ bool DStarLite::buildReport()
   for (auto const& obs : m_obstacle_map)
     m_msgs << obs.first << ";";
   m_msgs << endl;
+
+  m_msgs << header << endl;
+  m_msgs << "D* Lite State:" << endl;
+  m_msgs << "  Start Cell: " << intToString(m_start_cell)  << endl;
+  m_msgs << "  Goal Cell: " << intToString(m_goal_cell)  << endl;
+  m_msgs << "  Cells in Queue: "  << intToString(m_dstar_queue.size())  << endl;
 
   m_msgs << header << endl;
   m_msgs << "Path Stats:" << "todo" << endl;

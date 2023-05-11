@@ -62,7 +62,7 @@ class DStarLite : public AppCastingMOOSApp
   bool planPath();  // D* Lite, signature in base
 
   // D* Lite utils
-  void findCellByPoint(XYPoint pt);
+  int findCellByPoint(XYPoint pt);
   std::set<int> getNeighbors(int grid_ix);
   int getNextCell();
 
