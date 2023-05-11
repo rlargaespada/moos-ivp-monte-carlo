@@ -58,6 +58,7 @@ DStarLite::DStarLite()
   m_mode = PlannerMode::IDLE;
   m_planning_start_time = 0;
   m_planning_end_time = 0;
+  m_path_len_traversed = 0;
 
   // D* Lite state
   m_last_cell = -1;  // -1 is invalid
@@ -114,6 +115,11 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
       double xval{tokDoubleParse(report, "x", ',', '=')};
       double yval{tokDoubleParse(report, "y", ',', '=')};
       m_vpos.set_vertex(xval, yval);
+    } else if (key == "WPT_IDX") {
+      if (m_mode == PlannerMode::IN_TRANSIT) {
+        int idx{static_cast<int>(msg.GetDouble())};
+        m_path_len_traversed = (m_path.length() - m_path.length(idx));
+      }
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -166,7 +172,6 @@ bool DStarLite::handleObstacleAlert(std::string obs_alert)
   if (m_obstacle_map.count(key))
     m_obstacle_refresh_queue.insert(key);
 
-  reportEvent("new obstacle: " + key);
   return (true);
 }
 
@@ -219,9 +224,12 @@ bool DStarLite::Iterate()
     Notify(m_prefix + m_path_complete_var, "false");
     postFlags(m_init_plan_flags);
 
-    // plan path until we reach max number of iterations
+    // clear planning state data
     m_planning_start_time = MOOSTime();
-    m_path.clear();  // start fresh upon new request
+    m_path_len_traversed = 0;
+    m_path.clear();
+
+    // plan path until we reach max number of iterations
     path_found = planPath();
 
   // if already planning a path, pick up from where we left off
@@ -244,7 +252,7 @@ bool DStarLite::Iterate()
   if (path_found) {
     m_planning_end_time = MOOSTime();
     m_mode = PlannerMode::IN_TRANSIT;
-    postPath();  // todo: when to post previous path stats?
+    postPath();
   }
 
   // if path is complete, cleanup
@@ -679,8 +687,20 @@ XYSegList DStarLite::parsePathFromGrid()
 
 std::string DStarLite::getPathStats()
 {
-  // todo Raul: implement this function
-  return ("");
+  std::vector<std::string> stats;
+  std::string s{"algorithm=D* Lite"};
+  stats.push_back(s);
+
+  s = "planning_time=" + doubleToStringX(m_planning_end_time - m_planning_start_time, 2);
+  stats.push_back(s);
+
+  s = "path_length=" + doubleToStringX(m_path.length(), 2);
+  stats.push_back(s);
+
+  s = "path_len_traversed=" + doubleToStringX(m_path_len_traversed, 2);
+  stats.push_back(s);
+
+  return stringVectorToString(stats, ',');
 }
 
 
@@ -878,6 +898,7 @@ void DStarLite::registerVariables()
   Register("NODE_REPORT", 0);
   Register("NODE_REPORT_LOCAL", 0);
   Register("OBM_RESOLVED", 0);
+  Register("WPT_IDX", 0);
   if (!m_path_request_var.empty())
     Register(m_path_request_var, 0);
   if (!m_obs_alert_var.empty())
@@ -902,10 +923,6 @@ bool DStarLite::buildReport()
   m_msgs << "  wpt_complete_var: " << m_wpt_complete_var << endl;
 
   m_msgs << header << endl;
-  m_msgs << "Publications:" << endl;
-  m_msgs << "  " << m_prefix << m_path_found_var << endl;
-  m_msgs << "  " << m_prefix << m_path_complete_var << endl;
-  m_msgs << header << endl;
   m_msgs << "Flags:" << endl;
   m_msgs << "  Initial Plan Flags:" << endl;
   for (VarDataPair pair : m_init_plan_flags)
@@ -927,6 +944,8 @@ bool DStarLite::buildReport()
   std::string goal_spec{m_goal_point.valid() ? m_goal_point.get_spec() : "UNSET"};
   m_msgs << "Start Point: " << start_spec << endl;
   m_msgs << "Goal Point: " << goal_spec << endl;
+  if (!m_prefix.empty())
+    m_msgs << "Publication Prefix: " << m_prefix << endl;
 
   m_msgs << header << endl;
   m_msgs << "Tracked Obstacles: " << endl;
@@ -941,6 +960,16 @@ bool DStarLite::buildReport()
   m_msgs << "  Cells in Queue: "  << intToString(m_dstar_queue.size())  << endl;
 
   m_msgs << header << endl;
-  m_msgs << "Path Stats:" << "todo" << endl;
+  if (m_mode == PlannerMode::PLANNING_IN_PROGRESS) {
+    m_msgs << "PLANNING IN PROGRESS" << endl;
+    return (true);
+  }
+
+  m_msgs << "Path Stats:" << endl;
+  m_msgs << "  Planning Time: " <<
+    doubleToStringX(m_planning_end_time - m_planning_start_time, 2) << endl;
+  m_msgs << "  Path Length: " << doubleToStringX(m_path.length(), 2) << endl;
+  m_msgs << "  Path Length Previously Traversed: " <<
+    doubleToStringX(m_path_len_traversed, 2) << endl;
   return(true);
 }

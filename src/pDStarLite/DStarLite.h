@@ -133,6 +133,7 @@ class DStarLite : public AppCastingMOOSApp
   PlannerMode m_mode;
   double m_planning_start_time;
   double m_planning_end_time;
+  double m_path_len_traversed;
   XYSegList m_path;
 
   // D* Lite state
