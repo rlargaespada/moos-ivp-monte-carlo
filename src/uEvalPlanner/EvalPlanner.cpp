@@ -254,7 +254,11 @@ void EvalPlanner::handlePathStats(std::string stats)
   m_current_trial.planning_time += tokDoubleParse(stats, "planning_time", ',', '=');
   double path_len_traversed{tokDoubleParse(stats, "path_len_traversed", ',', '=')};
   double path_len_to_go{tokDoubleParse(stats, "path_len_to_go", ',', '=')};
-  m_current_trial.path_length = (path_len_traversed + path_len_to_go);
+  m_current_trial.path_len = (path_len_traversed + path_len_to_go);
+
+  // first time through, set the length of the first path we got from planner
+  if (m_current_trial.initial_path_len == 0)
+    m_current_trial.initial_path_len = m_current_trial.path_len;
 }
 
 
@@ -534,7 +538,8 @@ bool EvalPlanner::handleNextTrial() {
   // calculate and post final metrics now that trial is done
   m_current_trial.end_time = MOOSTime();
   m_current_trial.duration = (m_current_trial.end_time - m_current_trial.start_time);
-  m_current_trial.efficiency = (m_current_trial.dist_traveled/m_current_trial.path_length);
+  m_current_trial.dist_eff = (m_current_trial.dist_traveled/m_current_trial.path_len);
+  m_current_trial.energy_eff = (m_current_trial.path_len/m_current_trial.initial_path_len);
   // todo: post stats, add in event?
   // Notify("TRIAL_STATS", getTrialSpec());
   m_trial_data.push_back(m_current_trial);
@@ -829,7 +834,9 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Distance Traveled: " <<
     doubleToStringX(m_current_trial.dist_traveled, 2) << " m" << endl;
   m_msgs << "  Path Length: " <<
-    doubleToStringX(m_current_trial.path_length, 2) << " m" << endl;
+    doubleToStringX(m_current_trial.path_len, 2) << " m" << endl;
+  m_msgs << "  Initial Path Length: " <<
+    doubleToStringX(m_current_trial.initial_path_len, 2) << " m" << endl;
   m_msgs << "  Total Deviation > " << doubleToStringX(m_deviation_limit, 2) <<
     " m from Path: " << doubleToStringX(m_current_trial.total_deviation) << " m" << endl;
   m_msgs << "  Maximum Deviation > " << doubleToStringX(m_deviation_limit, 2) <<

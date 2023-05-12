@@ -26,28 +26,28 @@ enum class SimRequest
 
 struct TrialData
 {
-  int trial_num{0};
-  bool trial_successful{true};
+  int trial_num{0};  // trial index out of all trials completed
+  bool trial_successful{true};  // collision or timeout indicates failure
 
-  double start_time{0};
-  double end_time{0};
-  double planning_time{0};
-  double duration{0};
+  double start_time{0};  // start time of trial
+  double end_time{0};  // end time of trial
+  double planning_time{0};  // total time spent planning, sourced from planner app
+  double duration{0};  // trial total duration
 
-  int encounter_count{0};
-  int near_miss_count{0};
-  int collision_count{0};
-  double min_dist_to_obj{INFINITY};
+  int encounter_count{0};  // number of encounters with obstacles
+  int near_miss_count{0};  // numbrer of near misses with obstacles
+  int collision_count{0};  // number of collisions with obstacles
+  double min_dist_to_obj{INFINITY};  // closest aprpach to any obstacle during a trial
 
-  double dist_traveled{0};
-  double path_length{0};
-  double efficiency{0};
+  double dist_traveled{0};  // total odometry during a trial
+  double initial_path_len{0};  // length of first path received from planner during a trial
+  double path_len{0};  // length of final path received from planner
+  double dist_eff{0};  // dist_traveled / path_len
 
-  double total_deviation{0};
-  double max_deviation{0};
+  double total_deviation{0};  // total deviation from path given by planner
+  double max_deviation{0};  // maximum deviation from path given by planner
 
-  // todo
-  double energy_efficiency{0};  // final path followed / initially planned path
+  double energy_eff{0};  // path_len / initial_path_len
 
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
