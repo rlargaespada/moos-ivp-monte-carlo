@@ -9,11 +9,12 @@
 #include <iostream>
 #include <iterator>
 #include <string>
+#include "ACTable.h"
+#include "AngleUtils.h"
+#include "EvalPlanner.h"
+#include "GeomUtils.h"
 #include "MacroUtils.h"
 #include "MBUtils.h"
-#include "ACTable.h"
-#include "EvalPlanner.h"
-#include "AngleUtils.h"
 #include "VarDataPair.h"
 #include "VarDataPairUtils.h"
 #include "XYFormatUtilsPoint.h"
@@ -25,20 +26,17 @@
 EvalPlanner::EvalPlanner()
 {
   // config variable defaults
-  m_desired_trials = 10;
-  m_trial_timeout = 300;  // seconds
+  m_hdg_on_reset = 0;
+  m_rel_hdg_on_reset = false;
+  m_deviation_limit = 5;  // meters
   m_path_request_var = "PLAN_PATH_REQUESTED";
   m_reset_sim_var = "USM_RESET";
-  m_obstacle_reset_responses = 0;
-  m_rel_hdg_on_reset = false;
-  m_hdg_on_reset = 0;
-
-  // mark start/goal as invalid to start, must be set in config file
-  m_start_point.invalidate();
-  m_goal_point.invalidate();
+  m_desired_trials = 10;
+  m_trial_timeout = 300;  // seconds
 
   // state variables
   m_sim_active = false;
+  m_obstacle_reset_responses = 0;
   initialize();
 
   // todo: think about how this would work for multiple vehicles, _$V, _ALL
@@ -63,6 +61,14 @@ void EvalPlanner::clearPendingRequests()
   m_reset_vehicles = SimRequest::CLOSED;
   m_reset_odometry = SimRequest::CLOSED;
   m_request_new_path = SimRequest::CLOSED;
+}
+
+
+void EvalPlanner::clearCurrentTrialData(int trial_num)
+{
+  m_current_trial = TrialData{trial_num};
+  m_prev_wpt.invalidate();
+  m_next_wpt.invalidate();
 }
 
 
@@ -137,14 +143,24 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
         }
       }
     } else if ((key == "NODE_REPORT_LOCAL") || (key == "NODE_REPORT")) {
+      // check report is for correct vehicle
       std::string report{tolower(msg.GetString())};
-      if (m_reset_vehicles == SimRequest::OPEN) {
-        if (vehicleResetComplete(report))
-          m_reset_vehicles = SimRequest::CLOSED;
-      }
+      std::string vname{tokStringParse(report, "name", ',', '=')};
+      if (vname != m_vehicle_name)
+        continue;
+
+      // save vehicle position from report
       double xval{tokDoubleParse(report, "x", ',', '=')};
       double yval{tokDoubleParse(report, "y", ',', '=')};
       m_vpos.set_vertex(xval, yval);
+
+      // close reset request if open and vehicle is close to start
+      if (m_reset_vehicles == SimRequest::OPEN) {
+        if ((std::abs(xval - m_start_point.x()) < 5) &&
+            (std::abs(yval - m_start_point.y()) < 5)) {
+              m_reset_vehicles = SimRequest::CLOSED;
+            }
+      }
     } else if (key == "UPC_ODOMETRY_REPORT") {
       std::string odo_report{tolower(msg.GetString())};
       std::string vname{tokStringParse(odo_report, "vname", ',', '=')};
@@ -198,6 +214,24 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       std::string vname{tolower(msg.GetCommunity())};
       if ((isTrialOngoing()) && (vname == m_vehicle_name))
         handlePathStats(msg.GetString());
+    } else if (key == "WPT_ADVANCED") {
+      // make sure it's from the right vehicle
+      std::string vname{tolower(msg.GetCommunity())};
+      // save previous and next waypoint
+      if ((isTrialOngoing()) && (vname == m_vehicle_name)) {
+        std::string prev{tokStringParse(msg.GetString(), "prev", ';', '=')};
+        std::string next{tokStringParse(msg.GetString(), "next", ';', '=')};
+        m_prev_wpt = string2Point(prev);
+        m_next_wpt = string2Point(next);
+
+        // if flag is posted before first waypoint is hit or after
+        // last waypoint is hit, wpt behavior will give same point
+        // for prev wpt and next wpt; ignore mail in these cases
+        if (distPointToPoint(m_prev_wpt, m_next_wpt) == 0) {
+          m_prev_wpt.invalidate();
+          m_next_wpt.invalidate();
+        }
+      }
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -212,25 +246,6 @@ void EvalPlanner::handleUserCommand(std::string command, bool* pending_flag)
   command = tolower(command);
   if ((command == "all") || (command == m_vehicle_name))
     *pending_flag = true;
-}
-
-
-bool EvalPlanner::vehicleResetComplete(std::string node_report)
-{
-  node_report = tolower(node_report);
-  std::string vname{tokStringParse(node_report, "name", ',', '=')};
-  if (vname != m_vehicle_name)
-    return (false);
-
-  double xval{tokDoubleParse(node_report, "x", ',', '=')};
-  double yval{tokDoubleParse(node_report, "y", ',', '=')};
-
-  // reset worked if vehicle is close to start point (allow for small error)
-  if (std::abs(xval - m_start_point.get_vx()) > 5)
-    return (false);
-  if (std::abs(yval - m_start_point.get_vy()) > 5)
-    return (false);
-  return (true);
 }
 
 
@@ -371,12 +386,12 @@ void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
 
 bool EvalPlanner::cleanupSim()
 {
-  bool return_val{true};
   m_reset_vehicles = SimRequest::PENDING;
+  // calcMetrics();
   // todo: export metrics
   postFlags(m_end_flags);
   m_sim_active = false;
-  return (return_val);
+  return (true);
 }
 
 
@@ -405,15 +420,33 @@ bool EvalPlanner::Iterate()
   }
   clearPendingCommands();
 
-  // if active trial has timed out, mark it a failure and start next trial
+  // update some stats each iteration trial is running
   if (isTrialOngoing()) {
+    // if active trial has timed out, mark it a failure and start next trial
     double elapsed_time{MOOSTime() - m_current_trial.start_time};
     if (elapsed_time > m_trial_timeout) {
       reportEvent("Trial " + intToString(m_current_trial.trial_num) +
                   " has timed out after " + doubleToStringX(elapsed_time, 2) +
                   " seconds! Marking trial as failed.");
       m_current_trial.trial_successful = false;
+      m_request_new_path = SimRequest::CLOSED;
       handleNextTrial();
+    }
+
+    // calc and save perpendicular deviation from path
+    // NOTE: artificially boosted by vehicle capture radius
+    // causing waypoint tracking errors
+    if ((m_prev_wpt.valid()) && (m_next_wpt.valid())) {
+      double deviation{std::abs(distPointToSeg(
+        m_prev_wpt.x(), m_prev_wpt.y(),
+        m_next_wpt.x(), m_next_wpt.y(),
+        m_vpos.x(), m_vpos.y()))
+      };
+      if (deviation > m_deviation_limit) {
+        m_current_trial.total_deviation += deviation - m_deviation_limit;
+        if (deviation > m_current_trial.max_deviation)
+          m_current_trial.max_deviation = deviation;
+      }
     }
   }
 
@@ -450,6 +483,7 @@ bool EvalPlanner::handleResetSim() {
   m_reset_vehicles = SimRequest::PENDING;
   m_reset_odometry = SimRequest::PENDING;
   m_request_new_path = SimRequest::PENDING;
+  postFlags(m_trial_flags);
 
   m_sim_active = true;
   return (true);
@@ -466,6 +500,7 @@ bool EvalPlanner::handleResetTrial() {
   m_reset_vehicles = SimRequest::PENDING;
   m_reset_odometry = SimRequest::PENDING;
   m_request_new_path = SimRequest::PENDING;
+  postFlags(m_trial_flags);
 
   return (true);
 }
@@ -482,6 +517,7 @@ bool EvalPlanner::handleSkipTrial() {
   m_reset_vehicles = SimRequest::PENDING;
   m_reset_odometry = SimRequest::PENDING;
   m_request_new_path = SimRequest::PENDING;
+  postFlags(m_trial_flags);
 
   return (true);
 }
@@ -499,7 +535,6 @@ bool EvalPlanner::handleNextTrial() {
   m_current_trial.end_time = MOOSTime();
   m_current_trial.duration = (m_current_trial.end_time - m_current_trial.start_time);
   m_current_trial.efficiency = (m_current_trial.dist_traveled/m_current_trial.path_length);
-  // calcMetrics();
   // todo: post stats, add in event?
   // Notify("TRIAL_STATS", getTrialSpec());
   m_trial_data.push_back(m_current_trial);
@@ -566,6 +601,8 @@ bool EvalPlanner::OnStartUp()
       handled = setIntOnString(m_desired_trials, value);
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
       handled = handleConfigResetVars(value);
+    } else if (param == "deviation_limit") {
+      handled = setNonNegDoubleOnString(m_deviation_limit, value);
     } else if ((param == "trial_flag") || (param == "trialflag")) {
       handled = addVarDataPairOnString(m_trial_flags, value);
     } else if ((param == "end_flag") || (param == "endflag")) {
@@ -585,7 +622,7 @@ bool EvalPlanner::OnStartUp()
   if (m_path_complete_var.empty())
     m_path_complete_var = "PATH_COMPLETE";
   if (m_path_stats_var.empty())
-    m_path_stats_var = "PATH_COMPLETE";
+    m_path_stats_var = "PATH_STATS";
 
   // if no reset vars were provided in config, only write to default var
   if (m_reset_obs_vars.empty())
@@ -696,11 +733,13 @@ void EvalPlanner::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
 
-  // high level command variables
+  // user commands
   Register("RESET_SIM_REQUESTED", 0);
   Register("END_SIM_REQUESTED", 0);
   Register("RESET_TRIAL_REQUESTED", 0);
   Register("SKIP_TRIAL_REQUESTED", 0);
+
+  // planner interface
   if (!m_path_complete_var.empty())
     Register(m_path_complete_var, 0);
   if (!m_path_stats_var.empty())
@@ -711,12 +750,11 @@ void EvalPlanner::registerVariables()
   Register("UEP_GOAL_POS");
 
   // sim request responses
-  Register("KNOWN_OBSTACLE_CLEAR");  // todo: this should be a config var
+  Register("KNOWN_OBSTACLE_CLEAR");
   Register("NODE_REPORT");
   Register("NODE_REPORT_LOCAL");
 
   // variables used to calculate metrics
-  // todo: handle these subscriptions
   // success rate
   Register("ENCOUNTER_ALERT", 0);
   Register("NEAR_MISS_ALERT", 0);
@@ -724,8 +762,7 @@ void EvalPlanner::registerVariables()
 
   // trajectory tracking
   Register("UPC_ODOMETRY_REPORT", 0);
-  // Register("UPC_SPEED_REPORT", 0);
-  // Register("WPT_EFF_SUM_ALL");
+  Register("WPT_ADVANCED", 0);
 }
 
 //------------------------------------------------------------
@@ -793,6 +830,10 @@ bool EvalPlanner::buildReport()
     doubleToStringX(m_current_trial.dist_traveled, 2) << " m" << endl;
   m_msgs << "  Path Length: " <<
     doubleToStringX(m_current_trial.path_length, 2) << " m" << endl;
+  m_msgs << "  Total Deviation > " << doubleToStringX(m_deviation_limit, 2) <<
+    " m from Path: " << doubleToStringX(m_current_trial.total_deviation) << " m" << endl;
+  m_msgs << "  Maximum Deviation > " << doubleToStringX(m_deviation_limit, 2) <<
+    " m from Path: " << doubleToStringX(m_current_trial.max_deviation) << " m" << endl;
 
   return(true);
 }

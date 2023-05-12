@@ -165,6 +165,7 @@ Behavior=BHV_Waypoint
   slip_radius = 15.0
   efficiency_measure = all
   order = normal
+  wptflag = WPT_ADVANCED="prev=$[PX],$[PY];next=$[NX],$[NY]"
 
   // points are set by planner
 

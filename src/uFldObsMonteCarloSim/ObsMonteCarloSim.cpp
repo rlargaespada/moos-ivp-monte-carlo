@@ -545,7 +545,7 @@ void ObsMonteCarloSim::updateObstaclesField()
   if (!m_reset_pending)
     return;
 
-  Notify("KNOWN_OBSTACLE_CLEAR", "all");
+  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
 
   // Seed randomness from fractional part of current moos time
   double tmp;
@@ -691,7 +691,7 @@ void ObsMonteCarloSim::updateObstaclesFromFile()
     return;
 
   // clear existing obstacles
-  Notify("KNOWN_OBSTACLE_CLEAR", "all");
+  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
   postObstaclesErase();
   m_obstacles.clear();
 

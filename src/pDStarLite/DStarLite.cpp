@@ -320,21 +320,24 @@ void DStarLite::syncObstacles()
     XYSquare grid_cell{m_grid.getElement(ix)};
     bool cell_clear_pending{false};
 
-    // if grid cell intersects with an existing obstacle that needs to be
-    // updated, mark the cell to be cleared
-    for (auto const& obs : m_obstacle_refresh_queue) {
-      if (m_obstacle_map[obs].intersects(grid_cell)) {
-        cell_clear_pending = true;
-        break;  // only need to check for a single intersection
+    // only check REFRESH/REMOVE queues if cell has an obstacle
+    if (m_grid.getVal(ix, cix)) {
+      // if grid cell intersects with an existing obstacle that needs to be
+      // updated, mark the cell to be cleared
+      for (auto const& obs : m_obstacle_refresh_queue) {
+        if (m_obstacle_map[obs].intersects(grid_cell)) {
+          cell_clear_pending = true;
+          break;  // only need to check for a single intersection
+        }
       }
-    }
 
-    // if grid cell intersects with an obstacle that is marked to remove,
-    // mark the cell to be cleared
-    for (auto const& obs : m_obstacle_remove_queue) {
-      if (m_obstacle_map[obs].intersects(grid_cell)) {
-        cell_clear_pending = true;
-        break;  // only need to check for a single intersection
+      // if grid cell intersects with an obstacle that is marked to remove,
+      // mark the cell to be cleared
+      for (auto const& obs : m_obstacle_remove_queue) {
+        if (m_obstacle_map[obs].intersects(grid_cell)) {
+          cell_clear_pending = true;
+          break;  // only need to check for a single intersection
+        }
       }
     }
 
@@ -362,12 +365,15 @@ void DStarLite::syncObstacles()
       update.addUpdate(ix, "obs", 0);
     }
 
-    // if grid cell intersects with an obstacle to add, set cell to 1
-    for (auto const& obs : m_obstacle_add_queue) {
-      if (obs.second.intersects(grid_cell)) {
-        m_grid.setVal(ix, 1, cix);
-        update.addUpdate(ix, "obs", 1);
-        break;  // only need to check for a single intersection
+    // only check ADD queue if cell doesn't have an obstacle
+    if (!m_grid.getVal(ix, cix)) {
+      // if grid cell intersects with an obstacle to add, set cell to 1
+      for (auto const& obs : m_obstacle_add_queue) {
+        if (obs.second.intersects(grid_cell)) {
+          m_grid.setVal(ix, 1, cix);
+          update.addUpdate(ix, "obs", 1);
+          break;  // only need to check for a single intersection
+        }
       }
     }
   }

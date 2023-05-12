@@ -43,11 +43,29 @@ struct TrialData
   double path_length{0};
   double efficiency{0};
 
+  double total_deviation{0};
+  double max_deviation{0};
+
+  // todo
+  double energy_efficiency{0};  // final path followed / initially planned path
+
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
   TrialData() {}  // empty constructor uses all defaults
   explicit TrialData(int num) : trial_num{num} {};  // specify trial number
 };
+
+/*
+summary metrics:
+  start/end point
+  overall success rate
+  average planning time
+  average duration
+  total collisions
+  average efficiency
+  average deviation, max deviation
+  average energy efficiency
+*/
 
 
 class EvalPlanner : public AppCastingMOOSApp
@@ -71,8 +89,8 @@ class EvalPlanner : public AppCastingMOOSApp
   // initialization routines
   void clearPendingCommands();
   void clearPendingRequests();
-  void clearCurrentTrialData() {m_current_trial = TrialData{m_current_trial.trial_num};}
-  void clearCurrentTrialData(int trial_num) {m_current_trial = TrialData{trial_num};}
+  void clearCurrentTrialData(int trial_num);
+  void clearCurrentTrialData() {clearCurrentTrialData(m_current_trial.trial_num);}
   void clearTrialHistory() {m_trial_data.clear();}
   void initialize();
 
@@ -84,7 +102,6 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // mail handling
   void handleUserCommand(std::string command, bool* pending_flag);
-  bool vehicleResetComplete(std::string node_report);
   void handlePathStats(std::string stats);
 
   // command handling
@@ -115,9 +132,14 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_vehicle_name;
   XYPoint m_start_point;
   XYPoint m_goal_point;
+  XYPoint m_vpos;
+
   double m_hdg_on_reset;
   bool m_rel_hdg_on_reset;
-  XYPoint m_vpos;
+
+  XYPoint m_prev_wpt;
+  XYPoint m_next_wpt;
+  double m_deviation_limit;
 
   // interface to vehicle
   std::string m_path_request_var;
