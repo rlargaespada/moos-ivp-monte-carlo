@@ -40,5 +40,5 @@ ProcessConfig = uFldNodeBroker
   bridge = src=NODE_MESSAGE_LOCAL, alias=NODE_MESSAGE
   bridge = src=$(PATH_COMPLETE_VAR)
   bridge = src=$(PATH_FOUND_VAR)
-  bridge = src=PLANNING_TIME
+  bridge = src=PATH_STATS
 }

@@ -194,10 +194,10 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
               m_current_trial.min_dist_to_obj = dist;
           }
         }
-    } else if (key == "PLANNING_TIME") {
+    } else if (key == m_path_stats_var) {
       std::string vname{tolower(msg.GetCommunity())};
       if ((isTrialOngoing()) && (vname == m_vehicle_name))
-        m_current_trial.planning_time += msg.GetDouble();
+        handlePathStats(msg.GetString());
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -231,6 +231,15 @@ bool EvalPlanner::vehicleResetComplete(std::string node_report)
   if (std::abs(yval - m_start_point.get_vy()) > 5)
     return (false);
   return (true);
+}
+
+
+void EvalPlanner::handlePathStats(std::string stats)
+{
+  m_current_trial.planning_time += tokDoubleParse(stats, "planning_time", ',', '=');
+  double path_len_traversed{tokDoubleParse(stats, "path_len_traversed", ',', '=')};
+  double path_len_to_go{tokDoubleParse(stats, "path_len_to_go", ',', '=')};
+  m_current_trial.path_length = (path_len_traversed + path_len_to_go);
 }
 
 
@@ -330,17 +339,6 @@ bool EvalPlanner::requestNewPath()
 }
 
 
-bool EvalPlanner::cleanupSim()
-{
-  bool return_val{true};
-  m_reset_vehicles = SimRequest::PENDING;
-  // todo: export metrics
-  postFlags(m_end_flags);
-  m_sim_active = false;
-  return (return_val);
-}
-
-
 void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
 {
   for (VarDataPair pair : flags) {
@@ -368,6 +366,17 @@ void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
     else
       Notify(moosvar, sval);
   }
+}
+
+
+bool EvalPlanner::cleanupSim()
+{
+  bool return_val{true};
+  m_reset_vehicles = SimRequest::PENDING;
+  // todo: export metrics
+  postFlags(m_end_flags);
+  m_sim_active = false;
+  return (return_val);
 }
 
 
@@ -482,11 +491,17 @@ bool EvalPlanner::handleNextTrial() {
   if (!m_sim_active)
     return (true);
 
+  // post trial complete
   Notify("TRIALS_COMPLETED", m_trial_data.size() + 1);
   reportEvent("Trial " + intToString(m_trial_data.size()) + " complete!");
+
+  // calculate and post final metrics now that trial is done
   m_current_trial.end_time = MOOSTime();
+  m_current_trial.duration = (m_current_trial.end_time - m_current_trial.start_time);
+  m_current_trial.efficiency = (m_current_trial.dist_traveled/m_current_trial.path_length);
   // calcMetrics();
   // todo: post stats, add in event?
+  // Notify("TRIAL_STATS", getTrialSpec());
   m_trial_data.push_back(m_current_trial);
 
   // if we're done, cleanup sim
@@ -545,6 +560,8 @@ bool EvalPlanner::OnStartUp()
       handled = setNonWhiteVarOnString(m_path_request_var, value);
     } else if (param == "path_complete_var") {
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
+    } else if (param == "path_stats_var") {
+      handled = setNonWhiteVarOnString(m_path_stats_var, value);
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
@@ -562,11 +579,13 @@ bool EvalPlanner::OnStartUp()
   if (m_vehicle_name.empty())  // need a vehicle name
     reportConfigWarning("Vehicle name has not been set!");
 
-  // m_path_complete_var is left unset in constructor because we don't
+  // leave these vars unset in constructor because we don't
   // want to unnecessarily register for a variable that we don't
   // actually need
   if (m_path_complete_var.empty())
     m_path_complete_var = "PATH_COMPLETE";
+  if (m_path_stats_var.empty())
+    m_path_stats_var = "PATH_COMPLETE";
 
   // if no reset vars were provided in config, only write to default var
   if (m_reset_obs_vars.empty())
@@ -617,7 +636,6 @@ bool EvalPlanner::setVPointConfig(XYPoint* point, std::string point_spec)
   bool return_val{true};
   std::string vname, xval, yval;
   point_spec = tolower(point_spec);
-  // XYPoint pt{string2Point(point_spec)};
   *point = string2Point(point_spec);
   return (point->valid());
 }
@@ -685,6 +703,8 @@ void EvalPlanner::registerVariables()
   Register("SKIP_TRIAL_REQUESTED", 0);
   if (!m_path_complete_var.empty())
     Register(m_path_complete_var, 0);
+  if (!m_path_stats_var.empty())
+    Register(m_path_stats_var, 0);
 
   // start/goal updates
   Register("UEP_START_POS");  // todo: do this for multiple vehicles
@@ -706,9 +726,6 @@ void EvalPlanner::registerVariables()
   Register("UPC_ODOMETRY_REPORT", 0);
   // Register("UPC_SPEED_REPORT", 0);
   // Register("WPT_EFF_SUM_ALL");
-
-  // planning time
-  Register("PLANNING_TIME", 0);
 }
 
 //------------------------------------------------------------
@@ -732,8 +749,9 @@ bool EvalPlanner::buildReport()
   // interface to vehicle apps
   m_msgs << header << endl;
   m_msgs << "Config (Interface to Vehicle)" << endl;
-  m_msgs << "  path_request_var: "  << m_path_request_var + "_" + upvname << endl;
-  m_msgs << "  path_complete_var: "  << m_path_complete_var << endl;
+  m_msgs << "  path_request_var: " << m_path_request_var + "_" + upvname << endl;
+  m_msgs << "  path_complete_var: " << m_path_complete_var << endl;
+  m_msgs << "  path_stats_var: " << m_path_stats_var << endl;
   m_msgs << "  reset_vehicle_var: " << m_reset_sim_var + "_" + upvname << endl;
 
   // interface to shoreside apps
@@ -745,7 +763,7 @@ bool EvalPlanner::buildReport()
   m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
   m_msgs << "Completed Trials: " << intToString(m_trial_data.size()) <<
     "/" << intToString(m_desired_trials) << endl;
-  m_msgs << "Trial Timeout Cutoff: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
+  m_msgs << "Trial Time Limit: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
 
   // global metrics over all trials
   m_msgs << header << endl;
@@ -773,6 +791,8 @@ bool EvalPlanner::buildReport()
     << doubleToStringX(m_current_trial.min_dist_to_obj, 3) << " m" << endl;
   m_msgs << "  Distance Traveled: " <<
     doubleToStringX(m_current_trial.dist_traveled, 2) << " m" << endl;
+  m_msgs << "  Path Length: " <<
+    doubleToStringX(m_current_trial.path_length, 2) << " m" << endl;
 
   return(true);
 }

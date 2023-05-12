@@ -741,7 +741,7 @@ std::string DStarLite::getPathStats()
   s = "planning_time=" + doubleToStringX(m_planning_end_time - m_planning_start_time, 2);
   stats.push_back(s);
 
-  s = "path_length=" + doubleToStringX(m_path.length(), 2);
+  s = "path_len_to_go=" + doubleToStringX(m_path.length(), 2);
   stats.push_back(s);
 
   s = "path_len_traversed=" + doubleToStringX(m_path_len_traversed, 2);

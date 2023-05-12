@@ -32,6 +32,7 @@ struct TrialData
   double start_time{0};
   double end_time{0};
   double planning_time{0};
+  double duration{0};
 
   int encounter_count{0};
   int near_miss_count{0};
@@ -39,6 +40,8 @@ struct TrialData
   double min_dist_to_obj{INFINITY};
 
   double dist_traveled{0};
+  double path_length{0};
+  double efficiency{0};
 
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
@@ -82,6 +85,7 @@ class EvalPlanner : public AppCastingMOOSApp
   // mail handling
   void handleUserCommand(std::string command, bool* pending_flag);
   bool vehicleResetComplete(std::string node_report);
+  void handlePathStats(std::string stats);
 
   // command handling
   bool handleResetSim();
@@ -98,13 +102,13 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // internal actions
   bool isTrialOngoing() {return (m_request_new_path == SimRequest::OPEN);}
-  bool cleanupSim();
-  void calcMetrics();
-  std::string getMetricsSpec();
+  std::string getTrialSpec(TrialData trial);  // turn a single trial into a string
+  void calcMetrics();  // calculate overall success rate, collisions, etc.
   // todo: export to a different file with each reset
   // todo: resetting sim while active should export current metrics
-  bool exportMetrics();
+  bool exportMetrics();  // export spec for each trial
   void postFlags(const std::vector<VarDataPair>& flags);
+  bool cleanupSim();
 
  private:  // Configuration variables
   // vehicle data
@@ -118,6 +122,7 @@ class EvalPlanner : public AppCastingMOOSApp
   // interface to vehicle
   std::string m_path_request_var;
   std::string m_path_complete_var;
+  std::string m_path_stats_var;
   std::string m_reset_sim_var;  // not set by config param
 
   // interface to obstacle sims
