@@ -9,10 +9,10 @@
 #define EvalPlanner_HEADER
 
 #include <cmath>
-#include <map>
 #include <string>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
+#include "VarDataPair.h"
 #include "XYPoint.h"
 
 
@@ -75,7 +75,6 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // config handling
   bool handleConfigResetVars(std::string var_names);
-  bool handleConfigEndflag(std::string flag);
   bool setVPoint(XYPoint* point, std::string point_spec);
   bool setVPointConfig(XYPoint* point, std::string point_spec);
   bool postVpointMarkers();
@@ -105,7 +104,7 @@ class EvalPlanner : public AppCastingMOOSApp
   // todo: export to a different file with each reset
   // todo: resetting sim while active should export current metrics
   bool exportMetrics();
-  bool postEndflags();
+  void postFlags(const std::vector<VarDataPair>& flags);
 
  private:  // Configuration variables
   // vehicle data
@@ -114,6 +113,7 @@ class EvalPlanner : public AppCastingMOOSApp
   XYPoint m_goal_point;
   double m_hdg_on_reset;
   bool m_rel_hdg_on_reset;
+  XYPoint m_vpos;
 
   // interface to vehicle
   std::string m_path_request_var;
@@ -126,7 +126,9 @@ class EvalPlanner : public AppCastingMOOSApp
   // sim parameters
   int m_desired_trials;
   double m_trial_timeout;  // seconds
-  std::map<std::string, std::string> m_endflags;
+
+  std::vector<VarDataPair> m_trial_flags;
+  std::vector<VarDataPair> m_end_flags;
 
  private:  // State variables
   bool m_sim_active;

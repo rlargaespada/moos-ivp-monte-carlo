@@ -645,44 +645,44 @@ void DStarLite::updateVertex(int grid_ix)
 bool DStarLite::computeShortestPath(int max_iters)
 {
   // initialize loop vars
-  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
-  int u{getNextCell()}; 
-  dsl_key k_old{m_dstar_queue[u]};
-  int iters{0};
-  double g_u, rhs_u;
+  // unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  // int u{getNextCell()};
+  // dsl_key k_old{m_dstar_queue[u]};
+  // int iters{0};
+  // double g_u, rhs_u;
 
-  while ((k_old < calculateKey(m_start_cell)) ||
-         (m_grid.getVal(m_start_cell, rhs_cix) != m_grid.getVal(m_start_cell, g_cix))) {
-    m_dstar_queue.erase(u);  // "pop" u from queue
+  // while ((k_old < calculateKey(m_start_cell)) ||
+  //        (m_grid.getVal(m_start_cell, rhs_cix) != m_grid.getVal(m_start_cell, g_cix))) {
+  //   m_dstar_queue.erase(u);  // "pop" u from queue
 
-    // get data for current node
-    dsl_key key_u{calculateKey(u)};
-    g_u = m_grid.getVal(u, g_cix);
-    rhs_u = m_grid.getVal(u, rhs_cix);
+  //   // get data for current node
+  //   dsl_key key_u{calculateKey(u)};
+  //   g_u = m_grid.getVal(u, g_cix);
+  //   rhs_u = m_grid.getVal(u, rhs_cix);
 
-    // update queue or update vertices as needed
-    if (k_old < key_u) {
-      m_dstar_queue[u] = key_u;
-    } else if (g_u > rhs_u) {
-      m_grid.setVal(u, rhs_u, g_cix);
-      for (const int& n : getNeighbors(u))
-        updateVertex(n);
-    } else {
-      m_grid.setVal(u, INFINITY, g_cix);
-      for (const int& n : getNeighbors(u))
-        updateVertex(n);
-      updateVertex(u);
-    }
+  //   // update queue or update vertices as needed
+  //   if (k_old < key_u) {
+  //     m_dstar_queue[u] = key_u;
+  //   } else if (g_u > rhs_u) {
+  //     m_grid.setVal(u, rhs_u, g_cix);
+  //     for (const int& n : getNeighbors(u))
+  //       updateVertex(n);
+  //   } else {
+  //     m_grid.setVal(u, INFINITY, g_cix);
+  //     for (const int& n : getNeighbors(u))
+  //       updateVertex(n);
+  //     updateVertex(u);
+  //   }
 
-    // if out of time, exit
-    iters += 1;
-    if (iters > m_max_iters)
-      return (false);  // didn't find a path within allotted iterations
+  //   // if out of time, exit
+  //   iters += 1;
+  //   if (iters > m_max_iters)
+  //     return (false);  // didn't find a path within allotted iterations
 
-    // prep for next iter
-    u = getNextCell();
-    k_old = m_dstar_queue[u];
-  }
+  //   // prep for next iter
+  //   u = getNextCell();
+  //   k_old = m_dstar_queue[u];
+  // }
 
   return (true);
 }
@@ -872,11 +872,11 @@ bool DStarLite::OnStartUp()
     // publication config
     } else if (param == "prefix") {
       handled = setNonWhiteVarOnString(m_prefix, toupper(value));
-    } else if (param == "init_plan_flag") {
+    } else if ((param == "init_plan_flag") || param == "initflag") {
       handled = addVarDataPairOnString(m_init_plan_flags, value);
-    } else if (param == "traverse_flag") {
+    } else if ((param == "traverse_flag") || param == "traverseflag") {
       handled = addVarDataPairOnString(m_traverse_flags, value);
-    } else if (param == "replan_flag") {
+    } else if ((param == "replan_flag") || param == "replanflag") {
       handled = addVarDataPairOnString(m_replan_flags, value);
     } else if ((param == "end_flag") || (param == "endflag")) {
       handled = addVarDataPairOnString(m_end_flags, value);

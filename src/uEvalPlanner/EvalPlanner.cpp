@@ -15,6 +15,7 @@
 #include "EvalPlanner.h"
 #include "AngleUtils.h"
 #include "VarDataPair.h"
+#include "VarDataPairUtils.h"
 
 
 //---------------------------------------------------------
@@ -134,11 +135,15 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
           m_obstacle_reset_responses = 0;
         }
       }
-    } else if (key == "NODE_REPORT") {
+    } else if ((key == "NODE_REPORT_LOCAL") || (key == "NODE_REPORT")) {
+      std::string report{tolower(msg.GetString())};
       if (m_reset_vehicles == SimRequest::OPEN) {
-        if (vehicleResetComplete(msg.GetString()))
+        if (vehicleResetComplete(report))
           m_reset_vehicles = SimRequest::CLOSED;
       }
+      double xval{tokDoubleParse(report, "x", ',', '=')};
+      double yval{tokDoubleParse(report, "y", ',', '=')};
+      m_vpos.set_vertex(xval, yval);
     } else if (key == "UPC_ODOMETRY_REPORT") {
       std::string odo_report{tolower(msg.GetString())};
       std::string vname{tokStringParse(odo_report, "vname", ',', '=')};
@@ -329,23 +334,39 @@ bool EvalPlanner::cleanupSim()
   bool return_val{true};
   m_reset_vehicles = SimRequest::PENDING;
   // todo: export metrics
-  return_val = postEndflags() && return_val;
+  postFlags(m_end_flags);
   m_sim_active = false;
   return (return_val);
 }
 
 
-bool EvalPlanner::postEndflags() {
-  // todo: redo this with var data pairs, macros
-  // todo: add trial flags
-  bool return_val{true};
-  std::map<std::string, std::string>::iterator v;
-  for (v = m_endflags.begin(); v != m_endflags.end(); v++) {
-    return_val = Notify(v->first, v->second) && return_val;
-    reportEvent("Posted " + v->first + " = " + v->second);
-  }
+void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
+{
+  for (VarDataPair pair : flags) {
+    std::string moosvar{pair.get_var()};
 
-  return (return_val);
+    // If posting is a double, just post. No macro expansion
+    if (!pair.is_string()) {
+      double dval = pair.get_ddata();
+      Notify(moosvar, dval);
+      continue;
+    }
+
+    // Otherwise if string posting, handle macro expansion
+    std::string sval{pair.get_sdata()};
+    sval = macroExpand(sval, "START_X", m_start_point.x(), 2);
+    sval = macroExpand(sval, "START_Y", m_start_point.y(), 2);
+    sval = macroExpand(sval, "GOAL_X", m_goal_point.x(), 2);
+    sval = macroExpand(sval, "GOAL_Y", m_goal_point.y(), 2);
+    sval = macroExpand(sval, "V_X", m_vpos.x(), 2);
+    sval = macroExpand(sval, "V_Y", m_vpos.y(), 2);
+
+    // if final val is a number, post as double
+    if (isNumber(sval))
+      Notify(moosvar, std::stod(sval));
+    else
+      Notify(moosvar, sval);
+  }
 }
 
 
@@ -479,6 +500,7 @@ bool EvalPlanner::handleNextTrial() {
   m_reset_vehicles = SimRequest::PENDING;
   m_reset_odometry = SimRequest::PENDING;
   m_request_new_path = SimRequest::PENDING;
+  postFlags(m_trial_flags);
 
   return (true);
 }
@@ -524,11 +546,12 @@ bool EvalPlanner::OnStartUp()
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
-    // todo: handle these same was as in endflags
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
       handled = handleConfigResetVars(value);
-    } else if (param == "endflag") {
-      handled = handleConfigEndflag(value);
+    } else if ((param == "trial_flag") || (param == "trialflag")) {
+      handled = addVarDataPairOnString(m_trial_flags, value);
+    } else if ((param == "end_flag") || (param == "endflag")) {
+      handled = addVarDataPairOnString(m_end_flags, value);
     }
 
     if (!handled)
@@ -636,20 +659,6 @@ bool EvalPlanner::handleConfigResetVars(std::string var_names) {
 }
 
 
-bool EvalPlanner::handleConfigEndflag(std::string flag) {
-  bool no_dupl_found{true};
-
-  std::string var{biteStringX(flag, '=')};
-
-  if (m_endflags.count(var) > 0)
-    no_dupl_found = false;
-
-  m_endflags[var] = flag;
-
-  return (no_dupl_found);
-}
-
-
 bool EvalPlanner::postVpointMarkers()
 {
   bool return_val{true};
@@ -703,6 +712,7 @@ void EvalPlanner::registerVariables()
   // sim request responses
   Register("KNOWN_OBSTACLE_CLEAR");  // todo: this should be a config var
   Register("NODE_REPORT");
+  Register("NODE_REPORT_LOCAL");
 
   // variables used to calculate metrics
   // todo: handle these subscriptions
