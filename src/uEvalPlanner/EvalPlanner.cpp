@@ -16,6 +16,7 @@
 #include "AngleUtils.h"
 #include "VarDataPair.h"
 #include "VarDataPairUtils.h"
+#include "XYFormatUtilsPoint.h"
 
 
 //---------------------------------------------------------
@@ -595,29 +596,17 @@ bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
     return (false);
   }
 
-  // parse vname, x, and y values from spec
-  bool return_val{true};
-  std::string vname, xval, yval;
+  // parse vname from spec; if vname doesn't match, ignore request
   point_spec = tolower(point_spec);
-  return_val = tokParse(point_spec, "vname", ',', '=', vname) && return_val;
-  // todo: use string2Point
-  return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
-  return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
+  std::string vname{tokStringParse(point_spec, "vname", ',', '=')};
+  if (vname != m_vehicle_name)
+    return (false);
 
-  // if spec was invalid, exit early without changing point
-  if (!return_val)
-    return (return_val);
-
-  // if vname doesn't match, ignore request
-  if (tolower(vname) != m_vehicle_name)
-    return (return_val);
-
-  // spec was good, change point
-  point->set_vertex(std::stod(xval), std::stod(yval));  // this marks point as valid
-
-  // post new markers and return
-  return_val = postVpointMarkers() && return_val;
-  return (return_val);
+  // parse point from string and return validity
+  *point = string2Point(point_spec);
+  if (point-> valid())
+    postVpointMarkers();
+  return (point->valid());
 }
 
 
@@ -628,17 +617,9 @@ bool EvalPlanner::setVPointConfig(XYPoint* point, std::string point_spec)
   bool return_val{true};
   std::string vname, xval, yval;
   point_spec = tolower(point_spec);
-  // todo: use string2Point
-  return_val = tokParse(point_spec, "x", ',', '=', xval) && return_val;
-  return_val = tokParse(point_spec, "y", ',', '=', yval) && return_val;
-
-  // if spec was invalid, exit early without changing point
-  if (!return_val)
-    return (return_val);
-
-  // spec was good, change point
-  point->set_vertex(std::stod(xval), std::stod(yval));  // this marks point as valid
-  return (return_val);
+  // XYPoint pt{string2Point(point_spec)};
+  *point = string2Point(point_spec);
+  return (point->valid());
 }
 
 
