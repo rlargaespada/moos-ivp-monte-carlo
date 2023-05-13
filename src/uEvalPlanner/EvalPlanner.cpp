@@ -137,9 +137,9 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
         }
       }
     } else if (key == "UEP_START_POS") {
-      setVPoint(&m_start_point, msg.GetString());
+      handleVPointMail(&m_start_point, msg.GetString());
     } else if (key == "UEP_GOAL_POS") {
-      setVPoint(&m_goal_point, msg.GetString());
+      handleVPointMail(&m_goal_point, msg.GetString());
     // handle responses to sim requests
     } else if (key == "KNOWN_OBSTACLE_CLEAR") {
       if (m_reset_obstacles == SimRequest::OPEN) {
@@ -254,6 +254,30 @@ void EvalPlanner::handleUserCommand(std::string command, bool* pending_flag)
   command = tolower(command);
   if ((command == "all") || (command == m_vehicle_name))
     *pending_flag = true;
+}
+
+
+void EvalPlanner::handleVPointMail(XYPoint* point, std::string point_spec)
+{
+  // only change start/goal points when sim is inactive
+  if (m_sim_active) {
+    std::string warning{"Received request to change vehicle start/goal "
+                        "point while sim was active: "};
+    warning += point_spec + ". ";
+    warning += "Can only change start/goal point when sim is inactive.";
+    reportRunWarning(warning);
+    return;
+  }
+
+  // parse vname from spec; if vname doesn't match, ignore mail
+  point_spec = tolower(point_spec);
+  std::string vname{tokStringParse(point_spec, "vname", ',', '=')};
+  if (vname != m_vehicle_name)
+    return;
+
+  // set point and post markers
+  setVPoint(point, point_spec);
+  postVpointMarkers();  // if point is invalid, this method will raise a warning
 }
 
 
@@ -688,9 +712,9 @@ bool EvalPlanner::OnStartUp()
     } else if (param == "timeout") {
       handled = setPosDoubleOnString(m_trial_timeout, value);
     } else if (param == "start_pos") {
-      handled = setVPointConfig(&m_start_point, value);
+      handled = setVPoint(&m_start_point, value);
     } else if (param == "goal_pos") {
-      handled = setVPointConfig(&m_goal_point, value);
+      handled = setVPoint(&m_goal_point, value);
     } else if (param == "heading_on_reset") {
       if (value == "relative") {
         m_rel_hdg_on_reset = true;
@@ -747,36 +771,6 @@ bool EvalPlanner::OnStartUp()
 
 bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
 {
-  // only change start/goal points when sim is inactive
-  if (m_sim_active) {
-    std::string warning{"Received request to change vehicle start/goal "
-                        "point while sim was active: "};
-    warning += point_spec + ". ";
-    warning += "Can only change start/goal point when sim is inactive.";
-    reportRunWarning(warning);
-    return (false);
-  }
-
-  // parse vname from spec; if vname doesn't match, ignore request
-  point_spec = tolower(point_spec);
-  std::string vname{tokStringParse(point_spec, "vname", ',', '=')};
-  if (vname != m_vehicle_name)
-    return (false);
-
-  // parse point from string and return validity
-  *point = string2Point(point_spec);
-  if (point-> valid())
-    postVpointMarkers();
-  return (point->valid());
-}
-
-
-bool EvalPlanner::setVPointConfig(XYPoint* point, std::string point_spec)
-{
-  // same as setVPoint but doesn't check sim inactive, vehicle name in spec
-  // parse x and y values from spec
-  bool return_val{true};
-  std::string vname, xval, yval;
   point_spec = tolower(point_spec);
   *point = string2Point(point_spec);
   return (point->valid());
@@ -851,7 +845,7 @@ void EvalPlanner::registerVariables()
     Register(m_path_stats_var, 0);
 
   // start/goal updates
-  Register("UEP_START_POS");  // todo: do this for multiple vehicles
+  Register("UEP_START_POS");
   Register("UEP_GOAL_POS");
 
   // sim request responses

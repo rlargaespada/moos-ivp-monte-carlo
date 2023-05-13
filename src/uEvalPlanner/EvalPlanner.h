@@ -111,11 +111,11 @@ class EvalPlanner : public AppCastingMOOSApp
   // config handling
   bool handleConfigResetVars(std::string var_names);
   bool setVPoint(XYPoint* point, std::string point_spec);
-  bool setVPointConfig(XYPoint* point, std::string point_spec);
   bool postVpointMarkers();
 
   // mail handling
   void handleUserCommand(std::string command, bool* pending_flag);
+  void handleVPointMail(XYPoint* point, std::string point_spec);
   void handlePathStats(std::string stats);
 
   // command handling
