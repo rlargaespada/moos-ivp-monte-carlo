@@ -66,11 +66,11 @@ struct GlobalMetrics
   double avg_min_dist_to_obs{INFINITY};
   double min_dist_to_obs{INFINITY};
 
-  double avg_dist_travelled{0};
+  double avg_dist_traveled{0};
   double avg_path_len{0};
   double avg_dist_eff{0};
 
-  double avg_deviation{0};
+  double avg_total_deviation{0};
   double max_deviation{0};
 
   double avg_energy_eff{0};
@@ -135,8 +135,6 @@ class EvalPlanner : public AppCastingMOOSApp
   bool isTrialOngoing() {return (m_request_new_path == SimRequest::OPEN);}
   std::string getTrialSpec(TrialData trial);  // turn a single trial into a string
   void calcMetrics();  // calculate overall success rate, collisions, etc.
-  // todo: export to a different file with each reset
-  // todo: resetting sim while active should export current metrics
   bool exportMetrics();  // export spec for each trial
   void postFlags(const std::vector<VarDataPair>& flags);
   bool cleanupSim();

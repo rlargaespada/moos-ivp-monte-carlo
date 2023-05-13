@@ -6,6 +6,7 @@
 /************************************************************/
 
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <string>
@@ -40,10 +41,6 @@ EvalPlanner::EvalPlanner()
   m_sim_active = false;
   m_obstacle_reset_responses = 0;
   initialize();
-
-  // todo: think about how this would work for multiple vehicles, _$V, _ALL
-  // vehicles should be saved using node reports, where to define start and goal? vehicle says so?
-  // USM_RESET could be set on a per vehicle basis (from node reports), use qbridge
 }
 
 
@@ -91,12 +88,14 @@ void EvalPlanner::initialize()
   clearGlobalMetrics();
 }
 
+
 //---------------------------------------------------------
 // Destructor
 
 EvalPlanner::~EvalPlanner()
 {
 }
+
 
 //---------------------------------------------------------
 // Procedure: OnNewMail()
@@ -343,7 +342,6 @@ bool EvalPlanner::resetVehicles()
 
   std::string reset_var{m_reset_sim_var + "_" + toupper(m_vehicle_name)};
   return_val = Notify(reset_var, reset_pose) && return_val;
-  // todo: multiple vehicles
 
   std::string event;
   event += reset_var + ": " + reset_pose;
@@ -385,8 +383,6 @@ bool EvalPlanner::requestNewPath()
   msg += "; goal=";
   msg += doubleToStringX(m_goal_point.get_vx(), 2);
   msg += ',' + doubleToStringX(m_goal_point.get_vy(), 2);
-
-  // todo: multiple vehicles
 
   // report event that new trial was requested
   std::string event;
@@ -451,23 +447,23 @@ std::string EvalPlanner::getTrialSpec(TrialData trial)
   vspec.push_back("trial_num=" + intToString(trial.trial_num));
   vspec.push_back("trial_successful=" + boolToString(trial.trial_successful));
 
-  vspec.push_back("planning_time=" + doubleToStringX(trial.planning_time));
-  vspec.push_back("duration=" + doubleToStringX(trial.duration));
+  vspec.push_back("planning_time=" + doubleToStringX(trial.planning_time, 2));
+  vspec.push_back("duration=" + doubleToStringX(trial.duration, 2));
 
-  vspec.push_back("encounter_count=" + doubleToStringX(trial.encounter_count));
-  vspec.push_back("near_miss_count=" + doubleToStringX(trial.near_miss_count));
-  vspec.push_back("collision_count=" + doubleToStringX(trial.collision_count));
-  vspec.push_back("min_dist_to_obs=" + doubleToStringX(trial.min_dist_to_obs));
+  vspec.push_back("encounter_count=" + intToString(trial.encounter_count));
+  vspec.push_back("near_miss_count=" + intToString(trial.near_miss_count));
+  vspec.push_back("collision_count=" + intToString(trial.collision_count));
+  vspec.push_back("min_dist_to_obs=" + doubleToStringX(trial.min_dist_to_obs, 2));
 
-  vspec.push_back("dist_traveled=" + doubleToStringX(trial.dist_traveled));
-  vspec.push_back("initial_path_len=" + doubleToStringX(trial.initial_path_len));
-  vspec.push_back("path_len=" + doubleToStringX(trial.path_len));
-  vspec.push_back("dist_eff=" + doubleToStringX(trial.dist_eff));
+  vspec.push_back("dist_traveled=" + doubleToStringX(trial.dist_traveled, 2));
+  vspec.push_back("initial_path_len=" + doubleToStringX(trial.initial_path_len, 2));
+  vspec.push_back("path_len=" + doubleToStringX(trial.path_len, 2));
+  vspec.push_back("dist_eff=" + doubleToStringX(trial.dist_eff, 2));
 
-  vspec.push_back("total_deviation=" + doubleToStringX(trial.total_deviation));
-  vspec.push_back("max_deviation=" + doubleToStringX(trial.max_deviation));
+  vspec.push_back("total_deviation=" + doubleToStringX(trial.total_deviation, 2));
+  vspec.push_back("max_deviation=" + doubleToStringX(trial.max_deviation, 2));
 
-  vspec.push_back("energy_eff=" + doubleToStringX(trial.energy_eff));
+  vspec.push_back("energy_eff=" + doubleToStringX(trial.energy_eff, 2));
   return (stringVectorToString(vspec));
 }
 
@@ -517,20 +513,77 @@ void EvalPlanner::calcMetrics()
   m_global_metrics.avg_min_dist_to_obs = (summed_min_dist_to_obs/num_trials);
   m_global_metrics.min_dist_to_obs = global_min_dist_to_obs;
 
-  m_global_metrics.avg_dist_travelled = (total_dist_traveled/num_trials);
+  m_global_metrics.avg_dist_traveled = (total_dist_traveled/num_trials);
   m_global_metrics.avg_path_len = (total_path_len/num_trials);
   m_global_metrics.avg_dist_eff = (summed_dist_eff/num_trials);
 
-  m_global_metrics.avg_deviation = (summed_deviation/num_trials);
+  m_global_metrics.avg_total_deviation = (summed_deviation/num_trials);
   m_global_metrics.max_deviation = global_max_deviation;
 
   m_global_metrics.avg_energy_eff = (summed_energy_eff/num_trials);
 }
 
 
-// todo
 bool EvalPlanner::exportMetrics()
-{return (true);}
+{
+  // open export file, return if failed
+  std::ofstream outf{m_export_file + ".csv"};
+  if (!outf) {
+    reportRunWarning("Unable to open " + m_export_file + "to export metrics!");
+    return (false);
+  }
+
+  // add global metrics as comments in csv
+  outf << "# start_point=" << m_start_point.get_spec() << "\n";
+  outf << "# goal_point=" << m_goal_point.get_spec() << "\n";
+  outf << "# success_rate=" << doubleToStringX(m_global_metrics.success_rate, 2) << "\n";
+  outf << "# avg_planning_time=" << doubleToStringX(m_global_metrics.avg_planning_time, 2) << "\n";
+  outf << "# avg_duration=" << doubleToStringX(m_global_metrics.avg_duration, 2) << "\n";
+  outf << "# total_collisions=" << intToString(m_global_metrics.total_collisions) << "\n";
+  outf << "# avg_min_dist_to_obs=" <<
+    doubleToStringX(m_global_metrics.avg_min_dist_to_obs, 2) << "\n";
+  outf << "# min_dist_to_obs=" << doubleToStringX(m_global_metrics.min_dist_to_obs, 2) << "\n";
+  outf << "# avg_dist_traveled=" <<
+    doubleToStringX(m_global_metrics.avg_dist_traveled, 2) << "\n";
+  outf << "# avg_path_len=" << doubleToStringX(m_global_metrics.avg_path_len, 2) << "\n";
+  outf << "# avg_dist_eff=" << doubleToStringX(m_global_metrics.avg_dist_eff, 2) << "\n";
+  outf << "# avg_total_deviation=" <<
+    doubleToStringX(m_global_metrics.avg_total_deviation, 2) << "\n";
+  outf << "# max_deviation=" << doubleToStringX(m_global_metrics.max_deviation, 2) << "\n";
+  outf << "# avg_energy_eff=" << doubleToStringX(m_global_metrics.avg_energy_eff, 2) << "\n";
+
+  // add trial data as csv items
+  outf << "trial_num,trial_successful,start_time,end_time,planning_time,duration," <<
+    "collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff," <<
+    "total_deviation,max_deviation,energy_eff\n";
+
+  std::vector<std::string> trialvec;
+  for (TrialData td : m_trial_data) {
+    trialvec.push_back(intToString(td.trial_num));
+    trialvec.push_back(td.trial_successful ? "1" : "0");  // convert bool to int
+
+    trialvec.push_back(doubleToStringX(td.planning_time, 2));
+    trialvec.push_back(doubleToStringX(td.duration, 2));
+
+    trialvec.push_back(intToString(td.collision_count));
+    trialvec.push_back(doubleToStringX(td.min_dist_to_obs, 2));
+
+    trialvec.push_back(doubleToStringX(td.dist_traveled, 2));
+    trialvec.push_back(doubleToStringX(td.initial_path_len, 2));
+    trialvec.push_back(doubleToStringX(td.path_len, 2));
+    trialvec.push_back(doubleToStringX(td.dist_eff, 2));
+
+    trialvec.push_back(doubleToStringX(td.total_deviation, 2));
+    trialvec.push_back(doubleToStringX(td.max_deviation, 2));
+
+    trialvec.push_back(doubleToStringX(td.energy_eff, 2));
+
+    outf << stringVectorToString(trialvec, ',') << "\n";
+    trialvec.clear();
+  }
+
+  return (true);
+}
 
 
 //---------------------------------------------------------
@@ -880,6 +933,7 @@ void EvalPlanner::registerVariables()
   Register("WPT_ADVANCED", 0);
 }
 
+
 //------------------------------------------------------------
 // Procedure: buildReport()
 
@@ -892,11 +946,11 @@ bool EvalPlanner::buildReport()
   std::string upvname{toupper(m_vehicle_name)};
   m_msgs << "Vehicle Name: " << upvname << endl;
   if (m_sim_active)
-    m_msgs << "Export CSV: " << m_export_file << endl;
+    m_msgs << "Export CSV: " << m_export_file << ".csv" << endl;
   else if (m_use_timestamp)  // sim inactive but filename includes timestamp
-    m_msgs << "Export CSV: " << m_export_file_base << "_<TIMESTAMP>" << endl;
+    m_msgs << "Export CSV: " << m_export_file_base << "_<TIMESTAMP>" << ".csv" << endl;
   else
-    m_msgs << "Export CSV: " << m_export_file_base << endl;
+    m_msgs << "Export CSV: " << m_export_file_base << ".csv" << endl;
   std::string start_pose{m_start_point.get_spec()};
   double heading{m_rel_hdg_on_reset ? relAng(m_start_point, m_goal_point) : m_hdg_on_reset};
   start_pose += ", heading=" + doubleToStringX(heading, 2);
