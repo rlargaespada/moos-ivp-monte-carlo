@@ -58,10 +58,7 @@ struct TrialData
 
 struct GlobalMetrics
 {
-  XYPoint start_point;
-  XYPoint goal_point;
-
-  double success_rate{0};
+  double success_rate{1};
   double avg_planning_time{0};
   double avg_duration{0};
 

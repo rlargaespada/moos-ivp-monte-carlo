@@ -440,14 +440,8 @@ std::string EvalPlanner::getTrialSpec(TrialData trial)
 
 void EvalPlanner::calcMetrics()
 {
-  // set start and goal points if not set already
-  if (!m_global_metrics.start_point.valid())
-    m_global_metrics.start_point = m_start_point;
-  if (!m_global_metrics.goal_point.valid())
-    m_global_metrics.goal_point = m_goal_point;
-
   // declare variables to track totals and extrema
-  int successes{0};
+  double successes{0};
   double summed_planning_time{0}, summed_duration{0};
   int total_collisions{0};
   double summed_min_dist_to_obs{0}, global_min_dist_to_obs{INFINITY};
@@ -480,7 +474,7 @@ void EvalPlanner::calcMetrics()
   }
 
   // calculate averages as needed and save to global metrics
-  int num_trials{m_trial_data.size()};
+  size_t num_trials{m_trial_data.size()};
   m_global_metrics.success_rate = (successes/num_trials);
   m_global_metrics.avg_planning_time = (summed_planning_time/num_trials);
   m_global_metrics.avg_duration = (summed_duration/num_trials);
@@ -916,8 +910,16 @@ bool EvalPlanner::buildReport()
   // global metrics over all trials
   m_msgs << header << endl;
   m_msgs << "Global Metrics" << endl;
-  // todo: add counters for total collisions, near misses, encounters
-  // todo: maybe these could be in a table?
+  m_msgs << "  Success Rate: " << doubleToStringX(m_global_metrics.success_rate, 2) << endl;
+  m_msgs << "  Avg. Planning Time: " <<
+    doubleToStringX(m_global_metrics.avg_planning_time, 2) << " s"<< endl;
+  m_msgs << "  Avg. Duration: " <<
+    doubleToStringX(m_global_metrics.avg_duration, 2) << " s" << endl;
+  m_msgs << "  Total Collisions: " << intToString(m_global_metrics.total_collisions) << endl;
+  m_msgs << "  Avg. Distance Efficiency: " <<
+    doubleToStringX(m_global_metrics.avg_dist_eff, 2) << endl;
+  m_msgs << "  Avg. Energy Efficiency: " <<
+    doubleToStringX(m_global_metrics.avg_energy_eff, 2) << endl;
 
   // metrics for current trial
   m_msgs << header << endl;
@@ -930,8 +932,6 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Time Spent Planning: " <<
     doubleToStringX(m_current_trial.planning_time, 2) << " sec" << endl;
   m_msgs << "  Trial Collisions: " << intToString(m_current_trial.collision_count) << endl;
-  m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
-  m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;
   m_msgs << "  Closest Approach to Any Obstacle: "
     << doubleToStringX(m_current_trial.min_dist_to_obs, 2) << " m" << endl;
   m_msgs << "  Distance Traveled: " <<
