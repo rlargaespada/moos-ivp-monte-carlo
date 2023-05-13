@@ -37,7 +37,7 @@ struct TrialData
   int encounter_count{0};  // number of encounters with obstacles
   int near_miss_count{0};  // numbrer of near misses with obstacles
   int collision_count{0};  // number of collisions with obstacles
-  double min_dist_to_obj{INFINITY};  // closest aprpach to any obstacle during a trial
+  double min_dist_to_obs{INFINITY};  // closest aprpach to any obstacle during a trial
 
   double dist_traveled{0};  // total odometry during a trial
   double initial_path_len{0};  // length of first path received from planner during a trial
@@ -55,17 +55,33 @@ struct TrialData
   explicit TrialData(int num) : trial_num{num} {};  // specify trial number
 };
 
-/*
-summary metrics:
-  start/end point
-  overall success rate
-  average planning time
-  average duration
-  total collisions
-  average efficiency
-  average deviation, max deviation
-  average energy efficiency
-*/
+
+struct GlobalMetrics
+{
+  XYPoint start_point;
+  XYPoint goal_point;
+
+  double success_rate{0};
+  double avg_planning_time{0};
+  double avg_duration{0};
+
+  int total_collisions{0};
+  double avg_min_dist_to_obs{INFINITY};
+  double min_dist_to_obs{INFINITY};
+
+  double avg_dist_travelled{0};
+  double avg_path_len{0};
+  double avg_dist_eff{0};
+
+  double avg_deviation{0};
+  double max_deviation{0};
+
+  double avg_energy_eff{0};
+
+  // in C++11, using default member initializers prevents brace initialization
+  // so add constructors to spawn these structs
+  GlobalMetrics() {}  // empty constructor uses all defaults
+};
 
 
 class EvalPlanner : public AppCastingMOOSApp
@@ -91,6 +107,7 @@ class EvalPlanner : public AppCastingMOOSApp
   void clearPendingRequests();
   void clearCurrentTrialData(int trial_num);
   void clearCurrentTrialData() {clearCurrentTrialData(m_current_trial.trial_num);}
+  void clearGlobalMetrics();
   void clearTrialHistory() {m_trial_data.clear();}
   void initialize();
 
@@ -179,6 +196,7 @@ class EvalPlanner : public AppCastingMOOSApp
   // trial data
   TrialData m_current_trial;
   std::vector<TrialData> m_trial_data;
+  GlobalMetrics m_global_metrics;
 };
 
 #endif

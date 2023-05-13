@@ -72,6 +72,13 @@ void EvalPlanner::clearCurrentTrialData(int trial_num)
 }
 
 
+void EvalPlanner::clearGlobalMetrics()
+{
+  m_trial_data.clear();
+  m_global_metrics = GlobalMetrics{};
+}
+
+
 /// @brief Initializes state variables for EvalPlanner
 void EvalPlanner::initialize()
 {
@@ -79,6 +86,7 @@ void EvalPlanner::initialize()
   clearPendingRequests();
   clearCurrentTrialData(0);
   clearTrialHistory();
+  clearGlobalMetrics();
 }
 
 //---------------------------------------------------------
@@ -181,8 +189,8 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 
           double dist;
           if (tokParse(alert, "dist", ',', '=', dist)) {
-            if (dist < m_current_trial.min_dist_to_obj)
-              m_current_trial.min_dist_to_obj = dist;
+            if (dist < m_current_trial.min_dist_to_obs)
+              m_current_trial.min_dist_to_obs = dist;
           }
         }
     } else if (key == "NEAR_MISS_ALERT") {
@@ -193,8 +201,8 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 
           double dist;
           if (tokParse(alert, "dist", ',', '=', dist)) {
-            if (dist < m_current_trial.min_dist_to_obj)
-              m_current_trial.min_dist_to_obj = dist;
+            if (dist < m_current_trial.min_dist_to_obs)
+              m_current_trial.min_dist_to_obs = dist;
           }
         }
     } else if (key == "COLLISION_ALERT") {
@@ -206,8 +214,8 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
 
           double dist;
           if (tokParse(alert, "dist", ',', '=', dist)) {
-            if (dist < m_current_trial.min_dist_to_obj)
-              m_current_trial.min_dist_to_obj = dist;
+            if (dist < m_current_trial.min_dist_to_obs)
+              m_current_trial.min_dist_to_obs = dist;
           }
         }
     } else if (key == m_path_stats_var) {
@@ -273,6 +281,7 @@ bool EvalPlanner::OnConnectToServer()
 
 
 //---------------------------------------------------------
+
 bool EvalPlanner::resetObstacles()
 {
   // no preconditions for this request
@@ -391,12 +400,109 @@ void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
 bool EvalPlanner::cleanupSim()
 {
   m_reset_vehicles = SimRequest::PENDING;
-  // calcMetrics();
-  // todo: export metrics
+  calcMetrics();
+  exportMetrics();
   postFlags(m_end_flags);
   m_sim_active = false;
   return (true);
 }
+
+
+//---------------------------------------------------------
+
+std::string EvalPlanner::getTrialSpec(TrialData trial)
+{
+  std::vector<std::string> vspec;
+
+  vspec.push_back("trial_num=" + intToString(trial.trial_num));
+  vspec.push_back("trial_successful=" + boolToString(trial.trial_successful));
+
+  vspec.push_back("planning_time=" + doubleToStringX(trial.planning_time));
+  vspec.push_back("duration=" + doubleToStringX(trial.duration));
+
+  vspec.push_back("encounter_count=" + doubleToStringX(trial.encounter_count));
+  vspec.push_back("near_miss_count=" + doubleToStringX(trial.near_miss_count));
+  vspec.push_back("collision_count=" + doubleToStringX(trial.collision_count));
+  vspec.push_back("min_dist_to_obs=" + doubleToStringX(trial.min_dist_to_obs));
+
+  vspec.push_back("dist_traveled=" + doubleToStringX(trial.dist_traveled));
+  vspec.push_back("initial_path_len=" + doubleToStringX(trial.initial_path_len));
+  vspec.push_back("path_len=" + doubleToStringX(trial.path_len));
+  vspec.push_back("dist_eff=" + doubleToStringX(trial.dist_eff));
+
+  vspec.push_back("total_deviation=" + doubleToStringX(trial.total_deviation));
+  vspec.push_back("max_deviation=" + doubleToStringX(trial.max_deviation));
+
+  vspec.push_back("energy_eff=" + doubleToStringX(trial.energy_eff));
+  return (stringVectorToString(vspec));
+}
+
+
+void EvalPlanner::calcMetrics()
+{
+  // set start and goal points if not set already
+  if (!m_global_metrics.start_point.valid())
+    m_global_metrics.start_point = m_start_point;
+  if (!m_global_metrics.goal_point.valid())
+    m_global_metrics.goal_point = m_goal_point;
+
+  // declare variables to track totals and extrema
+  int successes{0};
+  double summed_planning_time{0}, summed_duration{0};
+  int total_collisions{0};
+  double summed_min_dist_to_obs{0}, global_min_dist_to_obs{INFINITY};
+  double total_dist_traveled{0}, total_path_len{0}, summed_dist_eff{0};
+  double summed_deviation{0}, global_max_deviation{0};
+  double summed_energy_eff{0};
+
+  // iterate through trials and pull out data we need
+  for (TrialData td : m_trial_data) {
+    if (td.trial_successful)
+      successes++;
+
+    summed_planning_time += td.planning_time;
+    summed_duration += td.duration;
+
+    total_collisions += td.collision_count;
+    summed_min_dist_to_obs += td.min_dist_to_obs;
+    if (td.min_dist_to_obs < global_min_dist_to_obs)
+      global_min_dist_to_obs = td.min_dist_to_obs;
+
+    total_dist_traveled += td.dist_traveled;
+    total_path_len += td.path_len;
+    summed_dist_eff += td.dist_eff;
+
+    summed_deviation += td.total_deviation;
+    if (td.max_deviation > global_max_deviation)
+      global_max_deviation = td.max_deviation;
+
+    summed_energy_eff += td.energy_eff;
+  }
+
+  // calculate averages as needed and save to global metrics
+  int num_trials{m_trial_data.size()};
+  m_global_metrics.success_rate = (successes/num_trials);
+  m_global_metrics.avg_planning_time = (summed_planning_time/num_trials);
+  m_global_metrics.avg_duration = (summed_duration/num_trials);
+
+  m_global_metrics.total_collisions = total_collisions;
+  m_global_metrics.avg_min_dist_to_obs = (summed_min_dist_to_obs/num_trials);
+  m_global_metrics.min_dist_to_obs = global_min_dist_to_obs;
+
+  m_global_metrics.avg_dist_travelled = (total_dist_traveled/num_trials);
+  m_global_metrics.avg_path_len = (total_path_len/num_trials);
+  m_global_metrics.avg_dist_eff = (summed_dist_eff/num_trials);
+
+  m_global_metrics.avg_deviation = (summed_deviation/num_trials);
+  m_global_metrics.max_deviation = global_max_deviation;
+
+  m_global_metrics.avg_energy_eff = (summed_energy_eff/num_trials);
+}
+
+
+// todo
+bool EvalPlanner::exportMetrics()
+{return (true);}
 
 
 //---------------------------------------------------------
@@ -540,8 +646,7 @@ bool EvalPlanner::handleNextTrial() {
   m_current_trial.duration = (m_current_trial.end_time - m_current_trial.start_time);
   m_current_trial.dist_eff = (m_current_trial.dist_traveled/m_current_trial.path_len);
   m_current_trial.energy_eff = (m_current_trial.path_len/m_current_trial.initial_path_len);
-  // todo: post stats, add in event?
-  // Notify("TRIAL_STATS", getTrialSpec());
+  Notify("TRIAL_STATS", getTrialSpec(m_current_trial));
   m_trial_data.push_back(m_current_trial);
 
   // if we're done, cleanup sim
@@ -551,6 +656,7 @@ bool EvalPlanner::handleNextTrial() {
   }
 
   // more trials left to go, get ready for the next one
+  calcMetrics();  // calc global metrics so far to put in appcast
   clearCurrentTrialData(static_cast<int>(m_trial_data.size()));
   m_reset_obstacles = SimRequest::PENDING;
   m_reset_vehicles = SimRequest::PENDING;
@@ -812,9 +918,6 @@ bool EvalPlanner::buildReport()
   m_msgs << "Global Metrics" << endl;
   // todo: add counters for total collisions, near misses, encounters
   // todo: maybe these could be in a table?
-  // m_msgs << "  Total Collisions: " << intToString(m_collision_count) << endl;
-  // m_msgs << "  Total Near Misses: " << intToString(m_near_miss_count) << endl;
-  // m_msgs << "  Total Encounters: " << intToString(m_encounter_count) << endl;
 
   // metrics for current trial
   m_msgs << header << endl;
@@ -830,7 +933,7 @@ bool EvalPlanner::buildReport()
   m_msgs << "  Trial Near Misses: " << intToString(m_current_trial.near_miss_count) << endl;
   m_msgs << "  Trial Encounters: " << intToString(m_current_trial.encounter_count) << endl;
   m_msgs << "  Closest Approach to Any Obstacle: "
-    << doubleToStringX(m_current_trial.min_dist_to_obj, 3) << " m" << endl;
+    << doubleToStringX(m_current_trial.min_dist_to_obs, 2) << " m" << endl;
   m_msgs << "  Distance Traveled: " <<
     doubleToStringX(m_current_trial.dist_traveled, 2) << " m" << endl;
   m_msgs << "  Path Length: " <<
