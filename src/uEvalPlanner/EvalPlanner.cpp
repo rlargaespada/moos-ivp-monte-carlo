@@ -33,6 +33,8 @@ EvalPlanner::EvalPlanner()
   m_reset_sim_var = "USM_RESET";
   m_desired_trials = 10;
   m_trial_timeout = 300;  // seconds
+  m_export_file_base = "uEvalPlanner_Metrics";
+  m_use_timestamp = true;
 
   // state variables
   m_sim_active = false;
@@ -621,6 +623,11 @@ bool EvalPlanner::handleResetSim() {
   m_request_new_path = SimRequest::PENDING;
   postFlags(m_trial_flags);
 
+  // set file name for metrics export when all trials are done
+  m_export_file = m_export_file_base;
+  if (m_use_timestamp)
+    m_export_file += "_" + MOOSGetTimeStampString();
+
   m_sim_active = true;
   return (true);
 }
@@ -746,6 +753,10 @@ bool EvalPlanner::OnStartUp()
       handled = addVarDataPairOnString(m_trial_flags, value);
     } else if ((param == "end_flag") || (param == "endflag")) {
       handled = addVarDataPairOnString(m_end_flags, value);
+    } else if (param == "file") {
+      handled = setNonWhiteVarOnString(m_export_file_base, value);
+    } else if (param == "filetimestamp") {
+      handled = setBooleanOnString(m_use_timestamp, value);
     }
 
     if (!handled)
@@ -880,7 +891,12 @@ bool EvalPlanner::buildReport()
   // high level config
   std::string upvname{toupper(m_vehicle_name)};
   m_msgs << "Vehicle Name: " << upvname << endl;
-  // todo: add metrics export file
+  if (m_sim_active)
+    m_msgs << "Export CSV: " << m_export_file << endl;
+  else if (m_use_timestamp)  // sim inactive but filename includes timestamp
+    m_msgs << "Export CSV: " << m_export_file_base << "_<TIMESTAMP>" << endl;
+  else
+    m_msgs << "Export CSV: " << m_export_file_base << endl;
   std::string start_pose{m_start_point.get_spec()};
   double heading{m_rel_hdg_on_reset ? relAng(m_start_point, m_goal_point) : m_hdg_on_reset};
   start_pose += ", heading=" + doubleToStringX(heading, 2);

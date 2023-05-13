@@ -172,6 +172,10 @@ class EvalPlanner : public AppCastingMOOSApp
   std::vector<VarDataPair> m_trial_flags;
   std::vector<VarDataPair> m_end_flags;
 
+  // metrics export
+  std::string m_export_file_base;
+  bool m_use_timestamp;
+
  private:  // State variables
   bool m_sim_active;
 
@@ -195,6 +199,7 @@ class EvalPlanner : public AppCastingMOOSApp
   TrialData m_current_trial;
   std::vector<TrialData> m_trial_data;
   GlobalMetrics m_global_metrics;
+  std::string m_export_file;
 };
 
 #endif
