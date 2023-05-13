@@ -126,85 +126,12 @@ ProcessConfig = pLogger
   File = MOOSLog_SHORESIDE
   FileTimeStamp = false  // false while developing
 
-  // general
-  Log = DEPLOY_ALL @ 0 NOSYNC
-  Log = MOOS_MANUAL_OVERRIDE_ALL @ 0 NOSYNC
-  Log = DB_CLIENTS @ 0 NOSYNC
-  Log = DB_EVENT @ 0 NOSYNC
-  Log = REGION_INFO @ 0 NOSYNC
-  Log = VIEW_MARKER @ 0 NOSYNC
-  Log = VIEW_POLYGON @ 0 NOSYNC
-  Log = VIEW_POINT @ 0 NOSYNC
-  Log = VIEW_SEGLIST @ 0 NOSYNC
+  WildCardLogging = true
 
-  // process watch
-  Log = PROC_WATCH_ALL_OK @ 0 NOSYNC
-  Log = PROC_WATCH_FULL_SUMMARY @ 0 NOSYNC
-  Log = PROC_WATCH_SUMMARY @ 0 NOSYNC
-  Log = PROC_WATCH_EVENT @ 0 NOSYNC
-
-  // load watch
-  Log = LOAD_WARNING @ 0 NOSYNC
-  Log = ULW_BREACH @ 0 NOSYNC
-  Log = ULW_BREACH_COUNT @ 0
-  Log = ULW_BREACH_LIST @ 0 NOSYNC
-  Log = ULW_NEAR_BREACH @ 0 NOSYNC
-  Log = ULW_NEAR_BREACH_COUNT @ 0
-  Log = ULW_NEAR_BREACH_LIST @ 0 NOSYNC
-
-  // pshare and related
-  Log = PSHARE_CMD @ 0 NOSYNC
-  Log = PSHARE_INPUT_SUMMARY @ 0 NOSYNC
-  Log = PSHARE_OUTPUT_SUMMARY @ 0 NOSYNC
-  Log = PHI_HOST_INFO @ 0 NOSYNC
-  Log = PHI_HOST_IP @ 0 NOSYNC
-  Log = PHI_HOST_IP_ALL @ 0 NOSYNC
-  Log = PHI_HOST_IP_VERBOSE @ 0 NOSYNC
-  Log = PHI_HOST_PORT_DB @ 0 NOSYNC
-  Log = UFSB_BRIDGE_VARS @ 0 NOSYNC
-  Log = UFSB_NODE_COUNT @ 0
-  Log = UFSB_QBRIDGE_VARS @ 0 NOSYNC
-
-  // obstacle sim
-  Log = KNOWN_OBSTACLE @ 0 NOSYNC
-  Log = RESET_KNOWN_OBSTACLES @ 0 NOSYNC
-  Log = RESET_UNKNOWN_OBSTACLES @ 0 NOSYNC
-  Log = NEW_OBSTSACLE_FILE_KNOWN @ 0 NOSYNC
-  Log = NEW_OBSTSACLE_FILE_UNKNOWN @ 0 NOSYNC
-  Log = KNOWN_OBSTACLE_CLEAR @ 0 NOSYNC
-
-  // collision detect
-  Log = OB_ENCOUNTER @ 0 NOSYNC
-  Log = OB_NEAR_MISS @ 0 NOSYNC
-  Log = OB_COLLISION @ 0 NOSYNC
-  Log = COLLISION_COUNT @ 0
-  Log = NEAR_MISS_COUNT @ 0
-  Log = ENCOUNTER_COUNT @ 0
-
-  //  path check
-  Log = UPC_TRIP_RESET @ 0 NOSYNC
-  Log = UPC_SPEED_REPORT @ 0 NOSYNC
-  Log = UPC_ODOMETRY_REPORT @ 0 NOSYNC
-
-  // eval planner
-  Log = RESET_SIM_REQUESTED @ 0 NOSYNC
-  Log = END_SIM_REQUESTED @ 0 NOSYNC
-  Log = RESET_TRIAL_REQUESTED @ 0 NOSYNC
-  Log = SKIP_TRIAL_REQUESTED @ 0 NOSYNC
-  Log = UEP_START_POS @ 0 NOSYNC
-  Log = UEP_GOAL_POS @ 0 NOSYNC
-  Log = $(PATH_REQUEST_VAR) @ 0 NOSYNC
-  Log = $(PATH_COMPLETE_VAR) @ 0 NOSYNC
-  Log = USM_RESET @ 0 NOSYNC
-  Log = TRIALS_COMPLETED @ 0
-  // todo: add metrics postings
-
-  // WildCardLogging = true
-
-  // WildCardOmitPattern = *_STATUS
-  // WildCardOmitPattern = APPCAST
-  // WildCardOmitPattern = DB_VARSUMMARY
-  // WildCardOmitPattern = DB_RWSUMMARY
+  WildCardOmitPattern = *_STATUS
+  WildCardOmitPattern = APPCAST
+  WildCardOmitPattern = DB_VARSUMMARY
+  WildCardOmitPattern = DB_RWSUMMARY
 }
 
 
@@ -249,7 +176,6 @@ ProcessConfig = uXMS
   // todo: add metrics postings
 
   // vehicle updates
-  // todo: multiple vehicles
   // var = BHV_WARNING_%(V1_NAME)
   // var = DESIRED_HEADING_%(V1_NAME), DESIRED_SPEED_%(V1_NAME)
   // var = DIST_TO_STATION_%(V1_NAME)
@@ -262,7 +188,6 @@ ProcessConfig = uXMS
   // var = OBM_MIN_DIST_EVER_%(V1_NAME)
   // var = OUT_OF_BOUNDS_%(V1_NAME)
   // var = PROC_WATCH_ALL_OK_%(V1_NAME), PROC_WATCH_SUMMARY_%(V1_NAME)
-
 }
 
 

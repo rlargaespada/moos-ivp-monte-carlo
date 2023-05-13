@@ -28,6 +28,7 @@ ProcessConfig = uFldNodeBroker
   // bridge = src=OUT_OF_BOUNDS, alias=OUT_OF_BOUNDS_%(VNAME)
   // bridge = src=PROC_WATCH_ALL_OK, alias=PROC_WATCH_ALL_OK_%(VNAME)
   // bridge = src=PROC_WATCH_SUMMARY, alias=PROC_WATCH_SUMMARY_%(VNAME)
+
   bridge = src=VIEW_POLYGON
   bridge = src=VIEW_POINT
   bridge = src=VIEW_SEGLIST
