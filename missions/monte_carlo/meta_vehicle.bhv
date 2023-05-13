@@ -34,6 +34,11 @@ Set MODE = IDLE {
   $(PATH_COMPLETE_VAR) = true
 }
 
+Set MODE = FAILED {
+  MODE = ACTIVE
+  PATH_FAILED = true
+}
+
 
 //----------------------------------------------
 Behavior = BHV_StationKeep
@@ -75,7 +80,7 @@ Behavior = BHV_ConstantSpeed
   // ---------------------------
   name         = zero_speed_idle
   pwt          = 100                // default
-  condition    = MODE==IDLE
+  condition    = ((MODE==IDLE) or (MODE==FAILED))
   updates      = IDLE_SPD_UPDATES
 
   // Parameters specific to this behavior
@@ -95,7 +100,7 @@ Behavior = BHV_ConstantHeading
   // ---------------------------
   name         = zero_hdg_idle
   pwt          = 100                  // default
-  condition    = MODE==IDLE
+  condition    = ((MODE==IDLE) or (MODE==FAILED))
   updates      = IDLE_HDG_UPDATES    // example
 
   // Parameters specific to this behavior

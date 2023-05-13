@@ -159,6 +159,7 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_path_request_var;
   std::string m_path_complete_var;
   std::string m_path_stats_var;
+  std::string m_path_failed_var;
   std::string m_reset_sim_var;  // not set by config param
 
   // interface to obstacle sims

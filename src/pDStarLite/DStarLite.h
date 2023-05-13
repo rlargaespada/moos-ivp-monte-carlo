@@ -109,9 +109,11 @@ class DStarLite : public AppCastingMOOSApp
   // D* Lite config
   int m_max_iters;
 
-  // not set in config
+  // publications variable names, not set in config
   std::string m_path_found_var;  // PATH_FOUND
   std::string m_path_complete_var;  // PATH_COMPLETE
+  std::string m_path_stats_var;  // PATH_STATS
+  std::string m_path_failed_var;  // PATH_FAILED
 
  private:  // State variables
   // start, goal, and vehicle positions as XYPoints

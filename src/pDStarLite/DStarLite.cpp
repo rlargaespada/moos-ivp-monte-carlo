@@ -45,6 +45,8 @@ DStarLite::DStarLite()
   m_prefix = "";
   m_path_found_var = "PATH_FOUND";
   m_path_complete_var = "PATH_COMPLETE";
+  m_path_stats_var = "PATH_STATS";
+  m_path_failed_var = "PATH_FAILED";
   m_post_visuals = true;
 
   // D* Lite config
@@ -232,6 +234,7 @@ bool DStarLite::Iterate()
     // post new plan messages
     Notify(m_prefix + m_path_found_var, "false");
     Notify(m_prefix + m_path_complete_var, "false");
+    Notify(m_prefix + m_path_failed_var, "false");
     postFlags(m_init_plan_flags);
 
     // clear planning state data
@@ -460,7 +463,7 @@ void DStarLite::handlePlanningFail(std::string warning_msg)
   reportRunWarning(warning_msg);
   reportRunWarning("Planning failed!");
   m_mode = PlannerMode::PLANNING_FAILED;
-  Notify(m_prefix + "PATH_FAILED", "true");
+  Notify(m_prefix + m_path_failed_var, "true");
 }
 
 
@@ -760,7 +763,7 @@ std::string DStarLite::getPathStats()
 bool DStarLite::postPath()
 {
   Notify(m_prefix + m_path_found_var, "true");
-  Notify(m_prefix + "PATH_STATS", getPathStats());
+  Notify(m_prefix + m_path_stats_var, getPathStats());
   postFlags(m_traverse_flags);
   return (true);
 }

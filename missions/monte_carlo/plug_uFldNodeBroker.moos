@@ -41,5 +41,6 @@ ProcessConfig = uFldNodeBroker
   bridge = src=$(PATH_COMPLETE_VAR)
   bridge = src=$(PATH_FOUND_VAR)
   bridge = src=PATH_STATS
+  bridge = src=PATH_FAILED
   bridge = src=WPT_ADVANCED
 }

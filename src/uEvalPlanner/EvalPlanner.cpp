@@ -128,11 +128,19 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "SKIP_TRIAL_REQUESTED") {
       handleUserCommand(msg.GetString(), &m_skip_trial_pending);
     } else if (key == m_path_complete_var) {
-      // todo: handle path failed
       std::string vname{tolower(msg.GetCommunity())};
       if ((isTrialOngoing())  && (vname == m_vehicle_name)) {
         if (msg.GetString() == "true") {
           m_request_new_path = SimRequest::CLOSED;
+          m_next_trial_pending = true;
+        }
+      }
+    } else if (key == m_path_failed_var) {
+      std::string vname{tolower(msg.GetCommunity())};
+      if ((isTrialOngoing())  && (vname == m_vehicle_name)) {
+        if (msg.GetString() == "true") {
+          m_request_new_path = SimRequest::CLOSED;
+          m_current_trial.trial_successful = false;
           m_next_trial_pending = true;
         }
       }
@@ -726,6 +734,8 @@ bool EvalPlanner::OnStartUp()
       handled = setNonWhiteVarOnString(m_path_complete_var, value);
     } else if (param == "path_stats_var") {
       handled = setNonWhiteVarOnString(m_path_stats_var, value);
+    } else if (param == "path_failed_var") {
+      handled = setNonWhiteVarOnString(m_path_failed_var, value);
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
@@ -742,26 +752,22 @@ bool EvalPlanner::OnStartUp()
       reportUnhandledConfigWarning(orig);
   }
 
-  if (m_vehicle_name.empty())  // need a vehicle name
-    reportConfigWarning("Vehicle name has not been set!");
+  // need a vehicle name
+  if (m_vehicle_name.empty()) reportConfigWarning("Vehicle name has not been set!");
 
   // leave these vars unset in constructor because we don't
   // want to unnecessarily register for a variable that we don't
   // actually need
-  if (m_path_complete_var.empty())
-    m_path_complete_var = "PATH_COMPLETE";
-  if (m_path_stats_var.empty())
-    m_path_stats_var = "PATH_STATS";
+  if (m_path_complete_var.empty()) m_path_complete_var = "PATH_COMPLETE";
+  if (m_path_stats_var.empty()) m_path_stats_var = "PATH_STATS";
+  if (m_path_failed_var.empty())  m_path_failed_var = "PATH_FAILED";
 
   // if no reset vars were provided in config, only write to default var
-  if (m_reset_obs_vars.empty())
-    m_reset_obs_vars.push_back("UFOS_RESET");
+  if (m_reset_obs_vars.empty()) m_reset_obs_vars.push_back("UFOS_RESET");
 
   // make sure start and goal were set in config file
-  if (!m_start_point.valid())
-    reportConfigWarning("Planner start point has not been set!");
-  if (!m_goal_point.valid())
-    reportConfigWarning("Planner goal point has not been set!");
+  if (!m_start_point.valid()) reportConfigWarning("Planner start point has not been set!");
+  if (!m_goal_point.valid()) reportConfigWarning("Planner goal point has not been set!");
 
   postVpointMarkers();
   registerVariables();
@@ -839,10 +845,9 @@ void EvalPlanner::registerVariables()
   Register("SKIP_TRIAL_REQUESTED", 0);
 
   // planner interface
-  if (!m_path_complete_var.empty())
-    Register(m_path_complete_var, 0);
-  if (!m_path_stats_var.empty())
-    Register(m_path_stats_var, 0);
+  if (!m_path_complete_var.empty()) Register(m_path_complete_var, 0);
+  if (!m_path_stats_var.empty()) Register(m_path_stats_var, 0);
+  if (!m_path_failed_var.empty()) Register(m_path_failed_var, 0);
 
   // start/goal updates
   Register("UEP_START_POS");
@@ -888,6 +893,7 @@ bool EvalPlanner::buildReport()
   m_msgs << "  path_request_var: " << m_path_request_var + "_" + upvname << endl;
   m_msgs << "  path_complete_var: " << m_path_complete_var << endl;
   m_msgs << "  path_stats_var: " << m_path_stats_var << endl;
+  m_msgs << "  path_failed_var: " << m_path_failed_var << endl;
   m_msgs << "  reset_vehicle_var: " << m_reset_sim_var + "_" + upvname << endl;
 
   // interface to shoreside apps
