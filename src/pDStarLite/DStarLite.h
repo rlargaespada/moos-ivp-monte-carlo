@@ -20,6 +20,7 @@
 #include "XYPolygon.h"
 #include "XYSegList.h"
 
+
 enum class PlannerMode
 {
   IDLE,
@@ -60,7 +61,7 @@ class DStarLite : public AppCastingMOOSApp
   bool checkPlanningPreconditions();  // D* Lite, signature in base
   void syncObstacles();  // D* Lite, signature in base
   bool planPath();  // D* Lite, signature in base
-  void handlePlanningFail(std::string warning_msg);
+  void handlePlanningFail(std::string warning_msg = "");
 
   // D* Lite utils
   int findCellByPoint(XYPoint pt);
@@ -101,6 +102,12 @@ class DStarLite : public AppCastingMOOSApp
   std::vector<VarDataPair> m_end_flags;
   bool m_post_visuals;
 
+  // publications variable names, not configurable by user
+  std::string m_path_found_var;  // PATH_FOUND
+  std::string m_path_complete_var;  // PATH_COMPLETE
+  std::string m_path_stats_var;  // PATH_STATS
+  std::string m_path_failed_var;  // PATH_FAILED
+
   // grid config
   XYPolygon m_grid_bounds;
   XYConvexGrid m_grid;
@@ -108,12 +115,6 @@ class DStarLite : public AppCastingMOOSApp
 
   // D* Lite config
   int m_max_iters;
-
-  // publications variable names, not set in config
-  std::string m_path_found_var;  // PATH_FOUND
-  std::string m_path_complete_var;  // PATH_COMPLETE
-  std::string m_path_stats_var;  // PATH_STATS
-  std::string m_path_failed_var;  // PATH_FAILED
 
  private:  // State variables
   // start, goal, and vehicle positions as XYPoints

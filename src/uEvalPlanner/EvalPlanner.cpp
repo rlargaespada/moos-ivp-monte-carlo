@@ -317,6 +317,7 @@ bool EvalPlanner::OnConnectToServer()
 
 bool EvalPlanner::resetObstacles()
 {
+  // todo: support not having any obstacles to reset
   // no preconditions for this request
   bool return_val{true};
 
@@ -553,7 +554,7 @@ bool EvalPlanner::exportMetrics()
   outf << "# avg_energy_eff=" << doubleToStringX(m_global_metrics.avg_energy_eff, 2) << "\n";
 
   // add trial data as csv items
-  outf << "trial_num,trial_successful,start_time,end_time,planning_time,duration," <<
+  outf << "trial_num,trial_successful,planning_time,duration," <<
     "collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff," <<
     "total_deviation,max_deviation,energy_eff\n";
 
@@ -569,7 +570,6 @@ bool EvalPlanner::exportMetrics()
     trialvec.push_back(doubleToStringX(td.min_dist_to_obs, 2));
 
     trialvec.push_back(doubleToStringX(td.dist_traveled, 2));
-    trialvec.push_back(doubleToStringX(td.initial_path_len, 2));
     trialvec.push_back(doubleToStringX(td.path_len, 2));
     trialvec.push_back(doubleToStringX(td.dist_eff, 2));
 

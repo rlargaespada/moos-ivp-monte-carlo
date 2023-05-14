@@ -43,14 +43,15 @@ DStarLite::DStarLite()
 
   // publication config
   m_prefix = "";
+  m_post_visuals = true;
+
   m_path_found_var = "PATH_FOUND";
   m_path_complete_var = "PATH_COMPLETE";
   m_path_stats_var = "PATH_STATS";
   m_path_failed_var = "PATH_FAILED";
-  m_post_visuals = true;
 
   // D* Lite config
-  m_max_iters = 1000;
+  m_max_iters = 200;
 
   //* State Variables
   m_start_cell = -1;  // set these to -1 to signify they're invalid
@@ -113,7 +114,7 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
       if (m_mode == PlannerMode::IN_TRANSIT) {
         m_mode = PlannerMode::PATH_COMPLETE;
 
-        // add to dist travelled
+        // add final segment of path to dist traveled
         unsigned int last_idx{m_path.size() - 1};
         double x1{m_path.get_vx(last_idx)}, y1{m_path.get_vy(last_idx)};
         double x0{m_path.get_vx(last_idx - 1)}, y0{m_path.get_vy(last_idx - 1)};
@@ -125,7 +126,7 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
       double yval{tokDoubleParse(report, "y", ',', '=')};
       m_vpos.set_vertex(xval, yval);
     } else if (key == "WPT_INDEX") {
-      // add to dist travelled
+      // add just finished segment of path to dist traveled
       int prev_idx{static_cast<int>(msg.GetDouble()) - 1};
       if ((m_mode == PlannerMode::IN_TRANSIT)  && (prev_idx > 0)) {
         double x1{m_path.get_vx(prev_idx)}, y1{m_path.get_vy(prev_idx)};
@@ -224,8 +225,7 @@ bool DStarLite::Iterate()
 
   // refresh obstacle grid each iteration if we're not
   // actively planning
-  if (m_mode != PlannerMode::PLANNING_IN_PROGRESS)
-    syncObstacles();
+  if (m_mode != PlannerMode::PLANNING_IN_PROGRESS) syncObstacles();
 
   bool path_found{false};
 
@@ -399,7 +399,7 @@ void DStarLite::syncObstacles()
 bool DStarLite::planPath()
 {
   if (!checkPlanningPreconditions()) {
-    m_mode = PlannerMode::PLANNING_FAILED;
+    handlePlanningFail();  // checkPlanningPreconditions posts it's own warnings
     return (false);
   }
 
@@ -420,8 +420,7 @@ bool DStarLite::planPath()
     // initialize and compute path
     m_last_cell = m_start_cell;
     initializeDStarLite();
-    // run with fewer iters since we had to do initialization work
-    planning_complete = computeShortestPath(m_max_iters/2);
+    // end after D* Lite initialization, start planning during next Iterate() call
 
   // if we were already planning, pick up from where we left off
   } else if (m_mode == PlannerMode::PLANNING_IN_PROGRESS) {
@@ -460,7 +459,7 @@ bool DStarLite::planPath()
 
 void DStarLite::handlePlanningFail(std::string warning_msg)
 {
-  reportRunWarning(warning_msg);
+  if (!warning_msg.empty()) reportRunWarning(warning_msg);
   reportRunWarning("Planning failed!");
   m_mode = PlannerMode::PLANNING_FAILED;
   Notify(m_prefix + m_path_failed_var, "true");
@@ -567,7 +566,7 @@ std::set<int> DStarLite::getNeighbors(int grid_ix)
 
 int DStarLite::getNextCell()
 {
-  int min_cell;
+  int min_cell{-1};
   dsl_key min_key{INFINITY, INFINITY};
   for (auto const& cell : m_dstar_queue) {
     if (cell.second < min_key) {
@@ -586,17 +585,17 @@ double DStarLite::heuristic(int cell1, int cell2)
   double y1{m_grid.getElement(cell1).getCenterY()};
   double x2{m_grid.getElement(cell2).getCenterX()};
   double y2{m_grid.getElement(cell2).getCenterY()};
-  return (hypot(x2 - x1, y2 - y2));
+  return (hypot(x2 - x1, y2 - y1));
 }
 
 
-// Infinite if either cell is an obstacle, otherwise Euclidean dist
+// Infinite if either cell is an obstacle or cells are not neigbhors, Euclidean dist
 double DStarLite::cost(int cell1, int cell2)
 {
   unsigned int obs_cix{m_grid.getCellVarIX("obs")};
-  if ((m_grid.getVal(cell1, obs_cix)) || m_grid.getVal(cell2, obs_cix))
-    return (INFINITY);
-
+  if (m_grid.getVal(cell1, obs_cix)) return (INFINITY);
+  if (m_grid.getVal(cell2, obs_cix)) return (INFINITY);
+  if (!getNeighbors(cell1).count(cell2)) return (INFINITY);
   return (heuristic(cell1, cell2));
 }
 
@@ -607,7 +606,7 @@ dsl_key DStarLite::calculateKey(int grid_ix)
   double g{m_grid.getVal(grid_ix, g_cix)}, rhs{m_grid.getVal(grid_ix, rhs_cix)};
   double first{std::min(g, rhs) + heuristic(m_start_cell, grid_ix) + m_k_m};
   double second{std::min(g, rhs)};
-  return (dsl_key {first, second});
+  return (dsl_key{first, second});
 }
 
 
@@ -637,9 +636,9 @@ void DStarLite::updateVertex(int grid_ix)
 
   if (grid_ix != m_goal_cell) {
     double rhs{INFINITY};
-    std::set<int> neighbors{getNeighbors(grid_ix)};
-    for (const int& i : neighbors)
-      rhs = std::min(rhs, cost(grid_ix, i) + m_grid.getVal(i, g_cix));
+    for (const int& n : getNeighbors(grid_ix))
+      rhs = std::min(rhs, cost(grid_ix, n) + m_grid.getVal(n, g_cix));
+    m_grid.setVal(grid_ix, rhs, rhs_cix);
   }
 
   if (m_dstar_queue.count(grid_ix))
@@ -654,44 +653,46 @@ void DStarLite::updateVertex(int grid_ix)
 bool DStarLite::computeShortestPath(int max_iters)
 {
   // initialize loop vars
-  // unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
-  // int u{getNextCell()};
-  // dsl_key k_old{m_dstar_queue[u]};
-  // int iters{0};
-  // double g_u, rhs_u;
+  max_iters /= m_time_warp;  // preserve performance at higher time warps
+  unsigned int g_cix{m_grid.getCellVarIX("g")}, rhs_cix{m_grid.getCellVarIX("rhs")};
+  int iters{0};
 
-  // while ((k_old < calculateKey(m_start_cell)) ||
-  //        (m_grid.getVal(m_start_cell, rhs_cix) != m_grid.getVal(m_start_cell, g_cix))) {
-  //   m_dstar_queue.erase(u);  // "pop" u from queue
+  int u{getNextCell()};
+  dsl_key k_old{m_dstar_queue[u]};
+  double g_u, rhs_u;
 
-  //   // get data for current node
-  //   dsl_key key_u{calculateKey(u)};
-  //   g_u = m_grid.getVal(u, g_cix);
-  //   rhs_u = m_grid.getVal(u, rhs_cix);
+  while ((k_old < calculateKey(m_start_cell)) ||
+         (m_grid.getVal(m_start_cell, rhs_cix) != m_grid.getVal(m_start_cell, g_cix))) {
+    m_dstar_queue.erase(u);  // "pop" u from queue
 
-  //   // update queue or update vertices as needed
-  //   if (k_old < key_u) {
-  //     m_dstar_queue[u] = key_u;
-  //   } else if (g_u > rhs_u) {
-  //     m_grid.setVal(u, rhs_u, g_cix);
-  //     for (const int& n : getNeighbors(u))
-  //       updateVertex(n);
-  //   } else {
-  //     m_grid.setVal(u, INFINITY, g_cix);
-  //     for (const int& n : getNeighbors(u))
-  //       updateVertex(n);
-  //     updateVertex(u);
-  //   }
+    // get data for current node
+    dsl_key key_u{calculateKey(u)};
+    g_u = m_grid.getVal(u, g_cix);
+    rhs_u = m_grid.getVal(u, rhs_cix);
 
-  //   // if out of time, exit
-  //   iters += 1;
-  //   if (iters > m_max_iters)
-  //     return (false);  // didn't find a path within allotted iterations
+    // update queue or update vertices as needed
+    if (k_old < key_u) {
+      m_dstar_queue[u] = key_u;
+    } else if (g_u > rhs_u) {
+      m_grid.setVal(u, rhs_u, g_cix);
+      for (const int& n : getNeighbors(u))
+        updateVertex(n);
+    } else {
+      m_grid.setVal(u, INFINITY, g_cix);
+      for (const int& n : getNeighbors(u))
+        updateVertex(n);
+      updateVertex(u);
+    }
 
-  //   // prep for next iter
-  //   u = getNextCell();
-  //   k_old = m_dstar_queue[u];
-  // }
+    // if out of time, exit
+    iters += 1;
+    if (iters > m_max_iters)
+      return (false);  // didn't find a path within allotted iterations
+
+    // prep for next loop
+    u = getNextCell();
+    k_old = m_dstar_queue[u];
+  }
 
   return (true);
 }
@@ -701,39 +702,38 @@ XYSegList DStarLite::parsePathFromGrid()
 {
   XYSegList path;
   path.set_label("D* Lite");
-  // unsigned int g_cix{m_grid.getCellVarIX("g")};
+  unsigned int g_cix{m_grid.getCellVarIX("g")};
 
-  // // check no path found condition
-  // if (std::isinf(m_grid.getVal(m_start_cell, g_cix)))
-  //   return (path);
+  int current_cell{m_start_cell}, next_cell;
+  double wpt_x, wpt_y, min_cost, neighbor_cost;
+  while (current_cell != m_goal_cell) {
+    // check no path found condition, return empty path if not found
+    if (std::isinf(m_grid.getVal(current_cell, g_cix))) {
+      path.clear();  // anything we found so far isn't helpful
+      return (path);
+    }
 
-  // int current_cell{m_start_cell}, next_cell;
-  // double wpt_x, wpt_y, min_cost, neighbor_cost;
-  // while (current_cell != m_goal_cell) {
-  //   // add current cell to path
-  //   wpt_x = m_grid.getElement(current_cell).getCenterX();
-  //   wpt_y = m_grid.getElement(current_cell).getCenterY();
-  //   path.add_vertex(wpt_x, wpt_y);
+    // add current cell to path
+    wpt_x = m_grid.getElement(current_cell).getCenterX();
+    wpt_y = m_grid.getElement(current_cell).getCenterY();
+    path.add_vertex(wpt_x, wpt_y);
 
-  //   // determine next cell on the path
-  //   next_cell = -1;
-  //   min_cost = INFINITY;
-  //   for (const int& n : getNeighbors(current_cell)) {
-  //     neighbor_cost = cost(current_cell, n) + m_grid.getVal(n, g_cix);
-  //     if (neighbor_cost < min_cost) {
-  //       next_cell = n;
-  //       min_cost = neighbor_cost;
-  //     }
-  //   }
-  //   current_cell = next_cell;
-  // }
+    // determine next cell on the path
+    next_cell = -1;
+    min_cost = INFINITY;
+    for (const int& n : getNeighbors(current_cell)) {
+      neighbor_cost = cost(current_cell, n) + m_grid.getVal(n, g_cix);
+      if (neighbor_cost < min_cost) {
+        next_cell = n;
+        min_cost = neighbor_cost;
+      }
+    }
+    current_cell = next_cell;
+  }
 
-  // path.add_vertex(m_goal_point);
-  // path.set_label("D* Lite");
-  // return (path);
-
-  path.add_vertex(m_start_point);
-  path.add_vertex(55, -95);
+  wpt_x = m_grid.getElement(current_cell).getCenterX();
+  wpt_y = m_grid.getElement(current_cell).getCenterY();
+  path.add_vertex(wpt_x, wpt_y);
   path.add_vertex(m_goal_point);
   return (path);
 }
@@ -744,15 +744,13 @@ XYSegList DStarLite::parsePathFromGrid()
 std::string DStarLite::getPathStats()
 {
   std::vector<std::string> stats;
+
   std::string s{"algorithm=D* Lite"};
   stats.push_back(s);
-
   s = "planning_time=" + doubleToStringX(m_planning_end_time - m_planning_start_time, 2);
   stats.push_back(s);
-
   s = "path_len_to_go=" + doubleToStringX(m_path.length(), 2);
   stats.push_back(s);
-
   s = "path_len_traversed=" + doubleToStringX(m_path_len_traversed, 2);
   stats.push_back(s);
 
@@ -919,12 +917,9 @@ bool DStarLite::OnStartUp()
   // fill in subscription variables with defaults if they weren't set in config
   // leave these variables empty in constructor so that we don't register for
   // variables we don't need
-  if (m_path_request_var.empty())
-    m_path_request_var = "PLAN_PATH_REQUESTED";
-  if (m_obs_alert_var.empty())
-    m_obs_alert_var = "OBSTACLE_ALERT";
-  if (m_wpt_complete_var.empty())
-    m_wpt_complete_var = "WAYPOINTS_COMPLETE";
+  if (m_path_request_var.empty()) m_path_request_var = "PLAN_PATH_REQUESTED";
+  if (m_obs_alert_var.empty()) m_obs_alert_var = "OBSTACLE_ALERT";
+  if (m_wpt_complete_var.empty()) m_wpt_complete_var = "WAYPOINTS_COMPLETE";
 
   // create grid based on parameters
   m_grid_bounds = string2Poly(grid_bounds);
@@ -955,12 +950,9 @@ void DStarLite::registerVariables()
   Register("NODE_REPORT_LOCAL", 0);
   Register("OBM_RESOLVED", 0);
   Register("WPT_INDEX", 0);
-  if (!m_path_request_var.empty())
-    Register(m_path_request_var, 0);
-  if (!m_obs_alert_var.empty())
-    Register(m_obs_alert_var, 0);
-  if (!m_wpt_complete_var.empty())
-    Register(m_wpt_complete_var, 0);
+  if (!m_path_request_var.empty()) Register(m_path_request_var, 0);
+  if (!m_obs_alert_var.empty()) Register(m_obs_alert_var, 0);
+  if (!m_wpt_complete_var.empty()) Register(m_wpt_complete_var, 0);
 }
 
 
