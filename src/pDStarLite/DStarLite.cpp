@@ -443,7 +443,6 @@ bool DStarLite::planPath()
     }
 
     m_k_m += heuristic(m_last_cell, m_start_cell);
-    // todo: how to find which nodes to update? call update vertex in sync obs?
     // run with fewer iters since we had to do replanning work
     planning_complete = computeShortestPath(m_max_iters/2);
   }

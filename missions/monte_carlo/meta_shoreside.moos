@@ -171,9 +171,9 @@ ProcessConfig = uXMS
   var = TRIALS_COMPLETED
   var = RESET_SIM_REQUESTED, END_SIM_REQUESTED
   var = RESET_TRIAL_REQUESTED, SKIP_TRIAL_REQUESTED
-  var = $(PATH_REQUEST_VAR), $(PATH_COMPLETE_VAR), PATH_FOUND
+  var = $(PATH_REQUEST_VAR), $(PATH_COMPLETE_VAR)
   var = UEP_START_POS, UEP_GOAL_POS
-  // todo: add metrics postings
+  var = TRIAL_STATS
 
   // vehicle updates
   // var = BHV_WARNING_%(V1_NAME)
@@ -245,7 +245,6 @@ ProcessConfig = uFldShoreBroker
   qbridge = $(PATH_REQUEST_VAR)
   qbridge = STATION_START_UPDATES
   bridge = src=GIVEN_OBSTACLE
-  //todo: work with multiple vehicles
 }
 
 

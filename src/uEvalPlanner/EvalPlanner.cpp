@@ -581,6 +581,7 @@ bool EvalPlanner::exportMetrics()
     outf << stringVectorToString(trialvec, ',') << "\n";
     trialvec.clear();
   }
+  // todo: report event or mae a posting
 
   return (true);
 }

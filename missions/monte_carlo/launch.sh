@@ -137,7 +137,6 @@ nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE\
        START_POS=$V1_START_SPEC    GOAL_POS=$V1_GOAL_SPEC            \
        PATH_REQUEST_VAR=$PATH_REQUEST_VAR    PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
-# todo: work with multiple vehicles
 
 # todo: vehicle start/goal positions should be sent from uEvalPlanner
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
