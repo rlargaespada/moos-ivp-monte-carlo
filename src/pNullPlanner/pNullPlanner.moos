@@ -1,0 +1,9 @@
+//------------------------------------------------
+// pNullPlanner config block
+
+ProcessConfig = pNullPlanner
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+

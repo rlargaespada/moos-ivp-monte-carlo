@@ -10,7 +10,7 @@ TIME_WARP=1
 JUST_MAKE="false"
 GUI="true"
 
-PLANNER="lpastar"; PLANNER_OPTIONS=($PLANNER "dstar_lite" "gcs" "gcs_r")
+PLANNER="dstarlite"; PLANNER_OPTIONS=("nullplanner" $PLANNER  "gcs" "gcsr")
 NUM_TRIALS=3
 
 USE_OBS_AVOID="true"

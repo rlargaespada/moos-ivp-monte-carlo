@@ -33,7 +33,11 @@ Processconfig = ANTLER
 
   Run = pObstacleMgr     @ NewConsole = false
 
-  Run = pDStarLite         @ NewConsole = false
+#ifdef PLANNER nullplanner
+  Run = pNullPlanner     @ NewConsole = false
+#elseifdef PLANNER dstarlite
+  Run = pDStarLite       @ NewConsole = false
+#endif
 }
 
 
@@ -260,7 +264,25 @@ ProcessConfig = uTimerScript_RANDOM_DRIFTS
 
 
 //------------------------------------------
-// pLPAStar config block
+// pNullPlanner config block
+ProcessConfig = pNullPlanner
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  path_request_var = $(PATH_REQUEST_VAR)
+  obs_alert_var = GENERAL_OBSTACLE_ALERT
+  wpt_complete_var = WAYPOINTS_COMPLETE
+
+  // publication config
+  init_plan_flag = STATION_UPDATES = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = PATH_UPDATE = points=$[PATH_PTS]
+}
+
+
+//------------------------------------------
+// pDstarLite config block
 ProcessConfig = pDStarLite
 {
   AppTick    = 4

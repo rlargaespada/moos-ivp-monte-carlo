@@ -1,22 +1,20 @@
 /************************************************************/
 /*    NAME: Raul Largaespada                                              */
 /*    ORGN: MIT, Cambridge MA                               */
-/*    FILE: DStarLite.h                                          */
+/*    FILE: NullPlanner.h                                          */
 /*    DATE: December 29th, 1963                             */
 /************************************************************/
 
-#ifndef DStarLite_HEADER
-#define DStarLite_HEADER
+#ifndef NullPlanner_HEADER
+#define NullPlanner_HEADER
 
 #include <map>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
-#include "VarDataPair.h"
-#include "XYConvexGrid.h"
 #include "XYPoint.h"
+#include "VarDataPair.h"
 #include "XYPolygon.h"
 #include "XYSegList.h"
 
@@ -31,14 +29,12 @@ enum class PlannerMode
   PATH_COMPLETE,
 };
 
-typedef std::pair<double, double> dsl_key;  // keys in D* Lite consist of two doubles
 
-
-class DStarLite : public AppCastingMOOSApp
+class NullPlanner : public AppCastingMOOSApp
 {
  public:
-  DStarLite();
-  ~DStarLite();
+  NullPlanner();
+  ~NullPlanner();
 
  protected:  // Standard MOOSApp functions to overload
   bool OnNewMail(MOOSMSG_LIST &NewMail);
@@ -58,31 +54,14 @@ class DStarLite : public AppCastingMOOSApp
   bool handleObstacleResolved(std::string obs_label);
 
   // path planning
-  bool checkPlanningPreconditions();  // D* Lite, signature in base
-  void syncObstacles();  // D* Lite, signature in base
-  bool planPath();  // D* Lite, signature in base
+  bool checkPlanningPreconditions();  // LPA*, signature in base
+  void syncObstacles();  // LPA*, signature in base
+  bool planPath();  // LPA*, signature in base
   void handlePlanningFail(std::string warning_msg = "");
-
-  // D* Lite utils
-  int findCellByPoint(XYPoint pt);
-  std::set<int> getNeighbors(int grid_ix);
-  int getNextCell();
-
-  double heuristic(int cell1, int cell2);
-  double cost(int cell1, int cell2);
-  dsl_key calculateKey(int grid_ix);
-  void initializeDStarLite();
-  void updateVertex(int grid_ix);
-
-  bool computeShortestPath(int max_iters);
-  XYSegList parsePathFromGrid();
 
   // path publishing
   std::string getPathStats();
   bool postPath();
-
-  // replanning
-  bool checkObstacles();
 
   // state publishing
   std::string printPlannerMode();
@@ -98,7 +77,6 @@ class DStarLite : public AppCastingMOOSApp
   std::string m_prefix;
   std::vector<VarDataPair> m_init_plan_flags;
   std::vector<VarDataPair> m_traverse_flags;
-  std::vector<VarDataPair> m_replan_flags;
   std::vector<VarDataPair> m_end_flags;
   bool m_post_visuals;
 
@@ -108,23 +86,11 @@ class DStarLite : public AppCastingMOOSApp
   std::string m_path_stats_var;  // PATH_STATS
   std::string m_path_failed_var;  // PATH_FAILED
 
-  // grid config
-  XYPolygon m_grid_bounds;
-  XYConvexGrid m_grid;
-  std::map<int, std::set<int>> m_neighbors;
-
-  // D* Lite config
-  int m_max_iters;
-
  private:  // State variables
   // start, goal, and vehicle positions as XYPoints
   XYPoint m_start_point;
   XYPoint m_goal_point;
   XYPoint m_vpos;
-
-  // index of cell in graph that contains start, goal, and vehicle positions
-  int m_start_cell;
-  int m_goal_cell;
 
   // containers for obstacles we know about
   std::map<std::string, XYPolygon> m_obstacle_map;
@@ -137,11 +103,6 @@ class DStarLite : public AppCastingMOOSApp
   double m_planning_end_time;
   double m_path_len_traversed;
   XYSegList m_path;
-
-  // D* Lite state
-  int m_last_cell;  // last cell planned from, used for replanning
-  double m_k_m;
-  std::map<int, dsl_key> m_dstar_queue;
 };
 
 #endif

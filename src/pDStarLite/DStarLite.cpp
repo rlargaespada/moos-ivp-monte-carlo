@@ -179,11 +179,10 @@ bool DStarLite::handleObstacleAlert(std::string obs_alert)
   m_obstacle_add_queue[key] = new_obs;
 
   // if this is an obstacle with a label we've seen before,
-  // add it to the REFRESH queue so we can remove the old
-  // obstacle in the iterate loop
-  // REFRESH queue is a subset of the ADD queue
+  // add it to the REMOVE queue so we can remove the old
+  // version of the obstacle in the iterate loop
   if (m_obstacle_map.count(key))
-    m_obstacle_refresh_queue.insert(key);
+    m_obstacle_remove_queue.insert(key);
 
   return (true);
 }
@@ -191,9 +190,8 @@ bool DStarLite::handleObstacleAlert(std::string obs_alert)
 
 bool DStarLite::handleObstacleResolved(const std::string obs_label)
 {
-  // if obs is in ADD/REFRESH queue for some reason, remove it
+  // if obs is in ADD queue for some reason, remove it
   m_obstacle_add_queue.erase(obs_label);
-  m_obstacle_refresh_queue.erase(obs_label);
 
   // if obstacle is in obstacle map, add to REMOVE queue
   if (m_obstacle_map.count(obs_label)) {
@@ -322,17 +320,8 @@ void DStarLite::syncObstacles()
     XYSquare grid_cell{m_grid.getElement(ix)};
     bool cell_clear_pending{false};
 
-    // only check REFRESH/REMOVE queues if cell has an obstacle
+    // only check REMOVE queues if cell has an obstacle
     if (m_grid.getVal(ix, cix)) {
-      // if grid cell intersects with an existing obstacle that needs to be
-      // updated, mark the cell to be cleared
-      for (auto const& obs : m_obstacle_refresh_queue) {
-        if (m_obstacle_map[obs].intersects(grid_cell)) {
-          cell_clear_pending = true;
-          break;  // only need to check for a single intersection
-        }
-      }
-
       // if grid cell intersects with an obstacle that is marked to remove,
       // mark the cell to be cleared
       for (auto const& obs : m_obstacle_remove_queue) {
@@ -344,13 +333,10 @@ void DStarLite::syncObstacles()
     }
 
     // if cell is marked to be cleared, check if it intersects with any
-    // obstacle that should NOT be removed/refreshed.
-    // if so, don't clear the cell
+    // obstacle that should NOT be removed. if so, don't clear the cell
     if (cell_clear_pending) {
       for (auto const& obs : m_obstacle_map) {
-        // if obstacle is on REFRESH/REMOVED queue, we don't need to check again
-        if (m_obstacle_refresh_queue.count(obs.first))
-          continue;
+        // if obstacle is on REMOVE queue, we don't need to check again
         if (m_obstacle_remove_queue.count(obs.first))
           continue;
 
@@ -386,7 +372,6 @@ void DStarLite::syncObstacles()
   for (auto const& obs : m_obstacle_add_queue)
     m_obstacle_map[obs.first] = obs.second;
   m_obstacle_add_queue.clear();
-  m_obstacle_refresh_queue.clear();
   m_obstacle_remove_queue.clear();
 
   if (update.size() == 0)
@@ -406,7 +391,7 @@ void DStarLite::syncObstacles()
 bool DStarLite::planPath()
 {
   if (!checkPlanningPreconditions()) {
-    handlePlanningFail();  // checkPlanningPreconditions posts it's own warnings
+    handlePlanningFail();  // checkPlanningPreconditions posts its own warnings
     return (false);
   }
 
