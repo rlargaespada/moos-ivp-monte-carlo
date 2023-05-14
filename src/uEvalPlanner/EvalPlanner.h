@@ -165,7 +165,7 @@ class EvalPlanner : public AppCastingMOOSApp
 
   // sim parameters
   int m_desired_trials;
-  double m_trial_timeout;  // seconds  // todo: set to -1 for no timeout
+  double m_trial_timeout;  // seconds
 
   std::vector<VarDataPair> m_trial_flags;
   std::vector<VarDataPair> m_end_flags;

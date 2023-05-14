@@ -737,9 +737,10 @@ XYSegList DStarLite::parsePathFromGrid()
     current_cell = next_cell;
   }
 
-  wpt_x = m_grid.getElement(current_cell).getCenterX();
-  wpt_y = m_grid.getElement(current_cell).getCenterY();
-  path.add_vertex(wpt_x, wpt_y);
+  if (m_path.size() == 0)  // when jnitially planning, change first point to be start point
+    path.mod_vertex(0, m_start_point.x(), m_start_point.y());
+
+  // add goal point and return
   path.add_vertex(m_goal_point);
   return (path);
 }

@@ -151,7 +151,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
       handleVPointMail(&m_goal_point, msg.GetString());
     // handle responses to sim requests
     } else if (key == "KNOWN_OBSTACLE_CLEAR") {
-      if (m_reset_obstacles == SimRequest::OPEN) {
+      if ((!m_reset_obs_vars.empty()) && (m_reset_obstacles == SimRequest::OPEN)) {
         m_obstacle_reset_responses += 1;
         // if we got a response from all our obstacle sims, close reset obs request
         if (m_obstacle_reset_responses == m_reset_obs_vars.size()) {
@@ -317,7 +317,12 @@ bool EvalPlanner::OnConnectToServer()
 
 bool EvalPlanner::resetObstacles()
 {
-  // todo: support not having any obstacles to reset
+  // nothing to send if there's nothing to reset
+  if (m_reset_obs_vars.empty()) {
+    m_reset_obstacles = SimRequest::CLOSED;
+    return (true);
+  }
+
   // no preconditions for this request
   bool return_val{true};
 
@@ -581,7 +586,8 @@ bool EvalPlanner::exportMetrics()
     outf << stringVectorToString(trialvec, ',') << "\n";
     trialvec.clear();
   }
-  // todo: report event or mae a posting
+  Notify(toupper(GetAppName()) + "_METRICS_EXPORTED", m_export_file);
+  reportEvent("Exported " + GetAppName() + " metrics to: " + m_export_file);
 
   return (true);
 }
@@ -616,7 +622,7 @@ bool EvalPlanner::Iterate()
   if (isTrialOngoing()) {
     // if active trial has timed out, mark it a failure and start next trial
     double elapsed_time{MOOSTime() - m_current_trial.start_time};
-    if (elapsed_time > m_trial_timeout) {
+    if ((m_trial_timeout > 0) && (elapsed_time > m_trial_timeout)) {
       reportEvent("Trial " + intToString(m_current_trial.trial_num) +
                   " has timed out after " + doubleToStringX(elapsed_time, 2) +
                   " seconds! Marking trial as failed.");
@@ -768,6 +774,8 @@ bool EvalPlanner::OnStartUp()
   if (!m_MissionReader.GetConfiguration(GetAppName(), sParams))
     reportConfigWarning("No config block found for " + GetAppName());
 
+  bool no_obstacle_resets{false};
+
   STRING_LIST::iterator p;
   for (p=sParams.begin(); p != sParams.end(); p++) {
     std::string orig  = *p;
@@ -777,9 +785,10 @@ bool EvalPlanner::OnStartUp()
 
     bool handled{false};
     if (param == "vehicle_name") {
-      handled = setNonWhiteVarOnString(m_vehicle_name, value);
+      handled = setNonWhiteVarOnString(m_vehicle_name, tolower(value));
     } else if (param == "timeout") {
-      handled = setPosDoubleOnString(m_trial_timeout, value);
+      reportEvent(value);
+      handled = setNonNegDoubleOnString(m_trial_timeout, value);
     } else if (param == "start_pos") {
       handled = setVPoint(&m_start_point, value);
     } else if (param == "goal_pos") {
@@ -790,17 +799,20 @@ bool EvalPlanner::OnStartUp()
         handled = true;
       } else {handled = setDoubleOnString(m_hdg_on_reset, value);}
     } else if (param == "path_request_var") {
-      handled = setNonWhiteVarOnString(m_path_request_var, value);
+      handled = setNonWhiteVarOnString(m_path_request_var, toupper(value));
     } else if (param == "path_complete_var") {
-      handled = setNonWhiteVarOnString(m_path_complete_var, value);
+      handled = setNonWhiteVarOnString(m_path_complete_var, toupper(value));
     } else if (param == "path_stats_var") {
-      handled = setNonWhiteVarOnString(m_path_stats_var, value);
+      handled = setNonWhiteVarOnString(m_path_stats_var, toupper(value));
     } else if (param == "path_failed_var") {
-      handled = setNonWhiteVarOnString(m_path_failed_var, value);
+      handled = setNonWhiteVarOnString(m_path_failed_var, toupper(value));
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
     } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
-      handled = handleConfigResetVars(value);
+      if (tolower(value) == "none") {
+        no_obstacle_resets = true;
+        handled = true;
+      } else {handled = handleConfigResetVars(toupper(value));}
     } else if (param == "deviation_limit") {
       handled = setNonNegDoubleOnString(m_deviation_limit, value);
     } else if ((param == "trial_flag") || (param == "trialflag")) {
@@ -828,7 +840,8 @@ bool EvalPlanner::OnStartUp()
   if (m_path_failed_var.empty())  m_path_failed_var = "PATH_FAILED";
 
   // if no reset vars were provided in config, only write to default var
-  if (m_reset_obs_vars.empty()) m_reset_obs_vars.push_back("UFOS_RESET");
+  if ((!no_obstacle_resets) && (m_reset_obs_vars.empty()))
+    m_reset_obs_vars.push_back("UFOS_RESET");
 
   // make sure start and goal were set in config file
   if (!m_start_point.valid()) reportConfigWarning("Planner start point has not been set!");
@@ -854,7 +867,7 @@ bool EvalPlanner::handleConfigResetVars(std::string var_names) {
   var_names = stripBlankEnds(var_names);
   std::vector<std::string> svector{parseString(var_names, ',')};
   for (std::string var_name : svector) {
-    var_name = stripBlankEnds(var_name);
+    var_name = stripBlankEnds((var_name));
     if (vectorContains(m_reset_obs_vars, var_name))
       no_dupl_found = false;
     else
@@ -969,14 +982,20 @@ bool EvalPlanner::buildReport()
 
   // interface to shoreside apps
   m_msgs << "Config (Interface to Obstacle Sims)" << endl;
-  m_msgs << "  reset_obs_vars: " << stringVectorToString(m_reset_obs_vars, ',') << endl;
+  if (m_reset_obs_vars.empty())
+  m_msgs << "  reset_obs_vars: NONE" << endl;
+  else
+    m_msgs << "  reset_obs_vars: " << stringVectorToString(m_reset_obs_vars, ',') << endl;
 
   // high level sim state
   m_msgs << header << endl;
   m_msgs << "Sim Active: " << boolToString(m_sim_active) << endl;
   m_msgs << "Completed Trials: " << intToString(m_trial_data.size()) <<
     "/" << intToString(m_desired_trials) << endl;
-  m_msgs << "Trial Time Limit: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
+  if (m_trial_timeout == 0)
+    m_msgs << "Trial Timeout: DISABLED" << endl;
+  else
+    m_msgs << "Trial Timeout: " << doubleToStringX(m_trial_timeout, 2) << " sec" << endl;
 
   // global metrics over all trials
   m_msgs << header << endl;

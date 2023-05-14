@@ -279,7 +279,7 @@ ProcessConfig = uFldObsMonteCarloSim_CONSTANT
 
   // obstacle reset configuration
   // for constant obstacles, don't want obstacles to reset
-  reset_requests_enabled = false  // disable reset requests
+  reset_var = none  // disable reset requests
 }
 
 

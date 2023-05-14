@@ -57,7 +57,6 @@ ObsMonteCarloSim::ObsMonteCarloSim()
 
   m_reset_interval = -1;
   m_reset_range = 10;
-  m_reset_requests_enabled = true;
 
   m_post_visuals = true;
 
@@ -118,7 +117,7 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "OBM_CONNECT") {
       m_obs_refresh_needed = true;
     } else if (key == m_reset_var) {
-      if (m_reset_requests_enabled)  // ignore if requests disabled
+      if (m_reset_var != "NONE")  // ignore if requests disabled
         m_reset_request = true;
     } else if (key == m_obstacle_file_var) {
       m_new_obstacle_file = sval;
@@ -242,10 +241,7 @@ bool ObsMonteCarloSim::OnStartUp()
     else if (param == "reset_range")
       handled = setNonNegDoubleOnString(m_reset_range, value);
     else if (param == "reset_var")
-      handled = setNonWhiteVarOnString(m_reset_var, value);
-    // todo: replace this config var with setting reset_var to "silent", sets reset_var = "";
-    else if (param == "reset_requests_enabled")
-      handled = setBooleanOnString(m_reset_requests_enabled, value);
+      handled = setNonWhiteVarOnString(m_reset_var, toupper(value));
     else if (param == "reuse_ids")
       handled = setBooleanOnString(m_reuse_ids, value);
 
@@ -295,7 +291,7 @@ void ObsMonteCarloSim::registerVariables()
   AppCastingMOOSApp::RegisterVariables();
   Register("PMV_CONNECT", 0);
   Register("VEHICLE_CONNECT", 0);
-  if (!m_reset_var.empty())
+  if (!m_reset_var.empty() && (m_reset_var != "NONE"))
     Register(m_reset_var, 0);
   if (!m_obstacle_file_var.empty())
     Register(m_obstacle_file_var, 0);
@@ -885,7 +881,7 @@ bool ObsMonteCarloSim::buildReport()
   m_msgs << "  Max Duration:  " << max_dur_str << endl;
   m_msgs << "  Refresh Intrv: " << refresh_interval_str << endl;
   m_msgs << "Config (Reset)   " << endl;
-  if (m_reset_requests_enabled)
+  if (m_reset_var != "NONE")
     m_msgs << "  Reset Var:     " << m_reset_var << endl;
   else
     m_msgs << "  RESET REQUESTS DISABLED" << endl;
