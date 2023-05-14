@@ -250,15 +250,14 @@ bool DStarLite::Iterate()
     path_found = planPath();
   // if transiting, check if we need to replan and replan if needed
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
-    // ! temporarily disable
-    // if (!checkObstacles()) {
-    //   Notify(m_prefix + m_path_found_var, "false");
-    //   postFlags(m_replan_flags);
+    if (!checkObstacles()) {
+      Notify(m_prefix + m_path_found_var, "false");
+      postFlags(m_replan_flags);
 
-    //   // plan path until we reach max number of iterations
-    //   m_planning_start_time = MOOSTime();
-    //   path_found = planPath();
-    // }
+      // plan path until we reach max number of iterations
+      m_planning_start_time = MOOSTime();
+      path_found = planPath();
+    }
   }
 
   // notify that path has been found
@@ -390,9 +389,17 @@ void DStarLite::syncObstacles()
   m_obstacle_refresh_queue.clear();
   m_obstacle_remove_queue.clear();
 
+  if (update.size() == 0)
+    return;
+
   // post visuals
-  if ((m_post_visuals) && (update.size() > 0))
-    Notify("VIEW_GRID_DELTA", update.get_spec());
+  if (m_post_visuals) Notify("VIEW_GRID_DELTA", update.get_spec());
+
+  // update vertices when in transit
+  if (m_mode == PlannerMode::IN_TRANSIT) {
+    for (int i = 0; i < update.size(); i++)
+      updateVertex(update.getCellIX(i));
+  }
 }
 
 
