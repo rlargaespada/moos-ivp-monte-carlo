@@ -47,6 +47,7 @@
 *._bhv
 .LastOpenedMOOSLogDirectory
 MOOSLog*/
+missions/**/METRICS*.csv
 
 # Build dirs
 build/

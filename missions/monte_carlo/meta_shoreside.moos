@@ -422,5 +422,6 @@ ProcessConfig = uEvalPlanner
   obs_reset_vars = RESET_KNOWN_OBSTACLES,RESET_UNKNOWN_OBSTACLES
   endflag = DEPLOY_%(V1_NAME)=false
 
+  file = METRICS_%(PLANNER)
   filetimestamp = false
 }
