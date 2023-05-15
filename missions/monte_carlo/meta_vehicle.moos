@@ -16,7 +16,7 @@ Processconfig = ANTLER
   Run = pRealm           @ NewConsole = false
   Run = pHelmIvP         @ NewConsole = false
 
-  Run = pLogger          @ NewConsole = false
+  // Run = pLogger          @ NewConsole = false
   Run = uProcessWatch    @ NewConsole = false
   Run = uLoadWatch       @ NewConsole = false
 

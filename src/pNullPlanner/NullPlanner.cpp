@@ -411,6 +411,7 @@ bool NullPlanner::OnStartUp()
     std::string value = line;
 
     bool handled = false;
+    // todo: include intermediate points as a config var
     // vars to subscribe to
     if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, toupper(value));

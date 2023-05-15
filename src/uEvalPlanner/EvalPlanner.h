@@ -62,6 +62,7 @@ struct GlobalMetrics
   double avg_planning_time{0};
   double avg_duration{0};
 
+  // todo: timeout count, plan failed count, add to report
   int total_collisions{0};
   double avg_min_dist_to_obs{INFINITY};
   double min_dist_to_obs{INFINITY};

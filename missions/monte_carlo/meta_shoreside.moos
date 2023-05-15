@@ -25,7 +25,7 @@ Processconfig = ANTLER
 #endif
   // Run = uXMS                  @ NewConsole = true
 
-  Run = pLogger               @ NewConsole = false
+  // Run = pLogger               @ NewConsole = false
   Run = uProcessWatch         @ NewConsole = false
   Run = uLoadWatch            @ NewConsole = false
 
@@ -378,7 +378,7 @@ ProcessConfig = uFldCollObDetect
   AppTick   = 4
   CommsTick = 4
 
-  collision_dist   = 5
+  collision_dist   = 1
   near_miss_dist   = 10
   encounter_dist   = 20
 
@@ -404,8 +404,8 @@ ProcessConfig = uFldPathCheck
 
 ProcessConfig = uEvalPlanner
 {
-  AppTick       = 2
-  CommsTick     = 2
+  AppTick       = 4
+  CommsTick     = 4
 
   vehicle_name = $(V1_NAME)
   timeout = 300

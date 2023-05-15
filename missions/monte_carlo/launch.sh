@@ -27,6 +27,7 @@ RANDOM_OBS_AMT=7
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
 #----------------------------------------------------------
+# todo: export file should be an arg
 for ARGI; do
     if [ "${ARGI}" = "--help" -o "${ARGI}" = "-h" ] ; then
         echo "launch.sh [SWITCHES] [time_warp]                   "

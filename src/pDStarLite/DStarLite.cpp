@@ -427,6 +427,11 @@ bool DStarLite::planPath()
       return (false);
     }
 
+    // if vehicle position has an obstacle, which can happen when skirting a newly
+    // detected obstacle, clear the current cell;
+    unsigned int obs_cix{m_grid.getCellVarIX("obs")};
+    m_grid.setVal(m_start_cell, 0, obs_cix);
+
     m_k_m += heuristic(m_last_cell, m_start_cell);
     // run with fewer iters since we had to do replanning work
     planning_complete = computeShortestPath(m_max_iters/2);
@@ -679,6 +684,10 @@ bool DStarLite::computeShortestPath(int max_iters)
     iters += 1;
     if (iters > m_max_iters)
       return (false);  // didn't find a path within allotted iterations
+
+    // if queue is empty, planning has failed; return true so other functions handle it
+    if (m_dstar_queue.empty())
+      return (true);
 
     // prep for next loop
     u = getNextCell();
