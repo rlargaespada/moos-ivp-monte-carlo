@@ -34,7 +34,7 @@ EvalPlanner::EvalPlanner()
   m_reset_sim_var = "USM_RESET";
   m_desired_trials = 10;
   m_trial_timeout = 300;  // seconds
-  m_export_file_base = "uEvalPlanner_Metrics";
+  m_export_file_base = GetAppName() + "_Metrics";
   m_use_timestamp = true;
 
   // state variables
@@ -537,9 +537,12 @@ void EvalPlanner::calcMetrics()
 
 bool EvalPlanner::exportMetrics()
 {
-  // todo: only if size of trial data > 0
+  // return early if exports disabled or there's no trial data
+  if (m_export_file_base.empty()) return (true);
+  if (m_trial_data.size() == 0) return (true);
+
   // open export file, return if failed
-  std::ofstream outf{m_export_file + ".csv"};
+  std::ofstream outf{m_export_file};
   if (!outf) {
     reportRunWarning("Unable to open " + m_export_file + "to export metrics!");
     return (false);
@@ -690,9 +693,11 @@ bool EvalPlanner::handleResetSim() {
   postFlags(m_trial_flags);
 
   // set file name for metrics export when all trials are done
-  m_export_file = m_export_file_base;
-  if (m_use_timestamp)
-    m_export_file += "_" + MOOSGetTimeStampString();
+  if (!m_export_file_base.empty()) {
+    m_export_file = m_export_file_base;
+    if (m_use_timestamp) m_export_file += "_" + MOOSGetTimeStampString();
+    m_export_file += ".csv";
+  }
 
   m_sim_active = true;
   return (true);
@@ -825,9 +830,20 @@ bool EvalPlanner::OnStartUp()
       handled = addVarDataPairOnString(m_trial_flags, value);
     } else if ((param == "end_flag") || (param == "endflag")) {
       handled = addVarDataPairOnString(m_end_flags, value);
-    } else if (param == "file") {
-      handled = setNonWhiteVarOnString(m_export_file_base, value);
-    } else if (param == "filetimestamp") {
+    } else if ((param == "exportfile") || (param == "export") || (param == "file")) {
+      // if param value is false/off/no, disable exports
+      bool use_export{true};
+      setBooleanOnString(use_export, value);  // doesn't change arg if can't parse string
+      if (!use_export) {
+        m_export_file_base = "";  // exports are disabled
+        handled = true;
+      // otherwise set export file based on parameter
+      } else {
+        value = stripQuotes(value);
+        if (strEnds(value, ".csv")) rbiteStringX(value, '.');  // remove suffix if included
+        handled = setNonWhiteVarOnString(m_export_file_base, value);
+      }
+    } else if ((param == "use_timestamp") || (param == "filetimestamp")) {
       handled = setBooleanOnString(m_use_timestamp, value);
     }
 
@@ -965,12 +981,16 @@ bool EvalPlanner::buildReport()
   // high level config
   std::string upvname{toupper(m_vehicle_name)};
   m_msgs << "Vehicle Name: " << upvname << endl;
-  if (m_sim_active)
-    m_msgs << "Export CSV: " << m_export_file << ".csv" << endl;
+
+  if (m_export_file_base.empty())
+    m_msgs << "METRICS EXPORTS DISABLED" << endl;
+  else if (m_sim_active)
+    m_msgs << "Export CSV: " << m_export_file << endl;
   else if (m_use_timestamp)  // sim inactive but filename includes timestamp
-    m_msgs << "Export CSV: " << m_export_file_base << "_<TIMESTAMP>" << ".csv" << endl;
+    m_msgs << "Export CSV: " << m_export_file_base << "_<TIMESTAMP>.csv" << endl;
   else
     m_msgs << "Export CSV: " << m_export_file_base << ".csv" << endl;
+
   std::string start_pose{m_start_point.get_spec()};
   double heading{m_rel_hdg_on_reset ? relAng(m_start_point, m_goal_point) : m_hdg_on_reset};
   start_pose += ", heading=" + doubleToStringX(heading, 2);

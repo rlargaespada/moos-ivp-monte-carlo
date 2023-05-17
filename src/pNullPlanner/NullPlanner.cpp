@@ -20,6 +20,7 @@
 #include "VarDataPairUtils.h"
 #include "XYFormatUtilsPoint.h"
 #include "XYFormatUtilsPoly.h"
+#include "XYFormatUtilsSegl.h"
 #include "XYPoint.h"
 #include "XYPolygon.h"
 
@@ -285,8 +286,13 @@ bool NullPlanner::planPath()
     return (false);
   }
 
-  // path is just start and goal point
+  // path is just start point, any intermediate points, and goal point
   m_path.add_vertex(m_start_point);
+
+  for (int i = 0; i < m_intermediate_pts.size(); i ++)
+    m_path.add_vertex(m_intermediate_pts.get_vx(i),
+                      m_intermediate_pts.get_vy(i));
+
   m_path.add_vertex(m_goal_point);
 
   return (true);
@@ -411,7 +417,6 @@ bool NullPlanner::OnStartUp()
     std::string value = line;
 
     bool handled = false;
-    // todo: include intermediate points as a config var
     // vars to subscribe to
     if (param == "path_request_var") {
       handled = setNonWhiteVarOnString(m_path_request_var, toupper(value));
@@ -422,6 +427,9 @@ bool NullPlanner::OnStartUp()
     // publication config
     } else if (param == "prefix") {
       handled = setNonWhiteVarOnString(m_prefix, toupper(value));
+    } else if ((param == "itermediate_pts") || param == "itermediate_points") {
+      m_intermediate_pts = string2SegList(value);
+      handled = (m_intermediate_pts.size() != 0);
     } else if ((param == "init_plan_flag") || param == "initflag") {
       handled = addVarDataPairOnString(m_init_plan_flags, value);
     } else if ((param == "traverse_flag") || param == "traverseflag") {

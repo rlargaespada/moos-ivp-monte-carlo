@@ -12,6 +12,7 @@ GUI="true"
 
 PLANNER="dstarlite"; PLANNER_OPTIONS=("nullplanner" $PLANNER  "gcs" "gcsr")
 NUM_TRIALS=3
+EXPORT_FILE="default"
 
 USE_OBS_AVOID="true"
 DRIFT_STRENGTH=0
@@ -27,7 +28,6 @@ RANDOM_OBS_AMT=7
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
 #----------------------------------------------------------
-# todo: export file should be an arg
 for ARGI; do
     if [ "${ARGI}" = "--help" -o "${ARGI}" = "-h" ] ; then
         echo "launch.sh [SWITCHES] [time_warp]                   "
@@ -42,6 +42,9 @@ for ARGI; do
         echo "    Default is \"$PLANNER\".                       "
         echo "  --num_trials=<num>, -n=<num>                     "
         echo "    Number of Monte Carlo trials to run, must be an integer."
+        echo "  --export=<filestem>, -e=<filestem>               "
+        echo "    CSV file to export simulation results to, without"
+        echo "    the \".csv\" suffix. Defaults to \"METRICS_<PLANNER>.\""
         echo "  --no_obs_avoid                                   "
         echo "    Do not use pObstacleMgr obstacle avoidance behaviors during trials."
         echo "  --drift_strength=<strength>                      "
@@ -71,6 +74,8 @@ for ARGI; do
         fi
     elif [ "${ARGI::13}" = "--num_trials=" -o "${ARGI::3}" = "-n=" ] ; then
         NUM_TRIALS="${ARGI#*=}"
+    elif [ "${ARGI::9}" = "--export=" -o "${ARGI::3}" = "-e=" ] ; then
+        EXPORT_FILE="${ARGI#*=}"
 
     elif [ "${ARGI}" = "--no_obs_avoid" ] ; then
         USE_OBS_AVOID="false"
@@ -136,7 +141,7 @@ nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
        OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE\
        START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
        PATH_REQUEST_VAR=$PATH_REQUEST_VAR    PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR\
-       PLANNER=$PLANNER
+       PLANNER=$PLANNER  EXPORT_FILE=$EXPORT_FILE
 
 nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
        IP_ADDR="localhost"    VNAME=$V1_NAME                       \

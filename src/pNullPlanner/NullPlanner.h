@@ -103,6 +103,9 @@ class NullPlanner : public AppCastingMOOSApp
   double m_planning_end_time;
   double m_path_len_traversed;
   XYSegList m_path;
+
+  // nullplanner state
+  XYSegList m_intermediate_pts;
 };
 
 #endif
