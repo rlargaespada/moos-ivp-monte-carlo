@@ -452,6 +452,8 @@ std::string EvalPlanner::getTrialSpec(TrialData trial)
 
   vspec.push_back("trial_num=" + intToString(trial.trial_num));
   vspec.push_back("trial_successful=" + boolToString(trial.trial_successful));
+  vspec.push_back("timed_out=" + boolToString(trial.timed_out));
+  vspec.push_back("planning_failed=" + boolToString(trial.planning_failed));
 
   vspec.push_back("planning_time=" + doubleToStringX(trial.planning_time, 2));
   vspec.push_back("duration=" + doubleToStringX(trial.duration, 2));
@@ -479,7 +481,7 @@ void EvalPlanner::calcMetrics()
   // declare variables to track totals and extrema
   double successes{0};
   double summed_planning_time{0}, summed_duration{0};
-  int total_collisions{0};
+  int total_timeouts{0}, total_collisions{0}, total_plan_fails{0};
   double summed_min_dist_to_obs{0}, global_min_dist_to_obs{INFINITY};
   double total_dist_traveled{0}, total_path_len{0}, summed_dist_eff{0};
   double summed_deviation{0}, global_max_deviation{0};
@@ -488,13 +490,15 @@ void EvalPlanner::calcMetrics()
 
   // iterate through trials and pull out data we need
   for (TrialData td : m_trial_data) {
-    if (td.trial_successful)
-      successes++;
+    if (td.trial_successful) successes++;
 
     summed_planning_time += td.planning_time;
     summed_duration += td.duration;
 
+    if (td.timed_out) total_timeouts++;
     total_collisions += td.collision_count;
+    if (td.planning_failed) total_plan_fails++;
+
     if (!std::isinf(td.min_dist_to_obs))
       summed_min_dist_to_obs += td.min_dist_to_obs;
     else
@@ -519,7 +523,10 @@ void EvalPlanner::calcMetrics()
   m_global_metrics.avg_planning_time = (summed_planning_time/num_trials);
   m_global_metrics.avg_duration = (summed_duration/num_trials);
 
+  m_global_metrics.total_timeouts = total_timeouts;
   m_global_metrics.total_collisions = total_collisions;
+  m_global_metrics.total_planning_fails = total_plan_fails;
+
   m_global_metrics.avg_min_dist_to_obs =
     (summed_min_dist_to_obs/(num_trials - num_inf_dist_to_obs));
   m_global_metrics.min_dist_to_obs = global_min_dist_to_obs;
@@ -549,33 +556,45 @@ bool EvalPlanner::exportMetrics()
   }
 
   // add global metrics as comments in csv
+  outf << "# vehicle_name=" << m_vehicle_name << "\n";
   outf << "# start_point=" << m_start_point.get_spec() << "\n";
   outf << "# goal_point=" << m_goal_point.get_spec() << "\n";
+  outf << "# timeout=" << doubleToStringX(m_trial_timeout, 3)  << "\n";
+
   outf << "# success_rate=" << doubleToStringX(m_global_metrics.success_rate, 3) << "\n";
   outf << "# avg_planning_time=" << doubleToStringX(m_global_metrics.avg_planning_time, 3) << "\n";
   outf << "# avg_duration=" << doubleToStringX(m_global_metrics.avg_duration, 3) << "\n";
+  outf << "# total_timeouts=" << intToString(m_global_metrics.total_timeouts) << "\n";
   outf << "# total_collisions=" << intToString(m_global_metrics.total_collisions) << "\n";
+  outf << "# total_planning_fails=" << intToString(m_global_metrics.total_planning_fails) << "\n";
+
   outf << "# avg_min_dist_to_obs=" <<
     doubleToStringX(m_global_metrics.avg_min_dist_to_obs, 3) << "\n";
   outf << "# min_dist_to_obs=" << doubleToStringX(m_global_metrics.min_dist_to_obs, 3) << "\n";
+
   outf << "# avg_dist_traveled=" <<
     doubleToStringX(m_global_metrics.avg_dist_traveled, 3) << "\n";
   outf << "# avg_path_len=" << doubleToStringX(m_global_metrics.avg_path_len, 3) << "\n";
   outf << "# avg_dist_eff=" << doubleToStringX(m_global_metrics.avg_dist_eff, 3) << "\n";
+
+  outf << "# deviation_limit=" << doubleToStringX(m_deviation_limit, 3) << "\n";
   outf << "# avg_total_deviation=" <<
     doubleToStringX(m_global_metrics.avg_total_deviation, 3) << "\n";
   outf << "# max_deviation=" << doubleToStringX(m_global_metrics.max_deviation, 3) << "\n";
+
   outf << "# avg_energy_eff=" << doubleToStringX(m_global_metrics.avg_energy_eff, 3) << "\n";
 
   // add trial data as csv items
-  outf << "trial_num,trial_successful,planning_time,duration," <<
-    "collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff," <<
+  outf << "trial_num,trial_successful,timed_out, planning_failed,planning_time," <<
+    "duration,collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff," <<
     "total_deviation,max_deviation,energy_eff\n";
 
   std::vector<std::string> trialvec;
   for (TrialData td : m_trial_data) {
     trialvec.push_back(intToString(td.trial_num));
     trialvec.push_back(td.trial_successful ? "1" : "0");  // convert bool to int
+    trialvec.push_back(td.timed_out ? "1" : "0");  // convert bool to int
+    trialvec.push_back(td.planning_failed ? "1" : "0");  // convert bool to int
 
     trialvec.push_back(doubleToStringX(td.planning_time, 3));
     trialvec.push_back(doubleToStringX(td.duration, 3));
@@ -1031,7 +1050,10 @@ bool EvalPlanner::buildReport()
     doubleToStringX(m_global_metrics.avg_planning_time, 2) << " s"<< endl;
   m_msgs << "  Avg. Duration: " <<
     doubleToStringX(m_global_metrics.avg_duration, 2) << " s" << endl;
+  m_msgs << "  Total Timeouts: " << intToString(m_global_metrics.total_timeouts) << endl;
   m_msgs << "  Total Collisions: " << intToString(m_global_metrics.total_collisions) << endl;
+  m_msgs << "  Total Planning Fails: " <<
+    intToString(m_global_metrics.total_planning_fails) << endl;
   m_msgs << "  Avg. Distance Efficiency: " <<
     doubleToStringX(m_global_metrics.avg_dist_eff, 2) << endl;
   m_msgs << "  Avg. Energy Efficiency: " <<

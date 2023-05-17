@@ -27,7 +27,9 @@ enum class SimRequest
 struct TrialData
 {
   int trial_num{0};  // trial index out of all trials completed
-  bool trial_successful{true};  // collision or timeout indicates failure
+  bool trial_successful{true};  // collision, timeout, or planning failed indicates failure
+  bool timed_out{false};  // trial timed out
+  bool planning_failed{false};  // path planning failed
 
   double start_time{0};  // start time of trial
   double end_time{0};  // end time of trial
@@ -62,8 +64,10 @@ struct GlobalMetrics
   double avg_planning_time{0};
   double avg_duration{0};
 
-  // todo: timeout count, plan failed count, add to report
+  int total_timeouts{0};
   int total_collisions{0};
+  int total_planning_fails{0};
+
   double avg_min_dist_to_obs{INFINITY};
   double min_dist_to_obs{INFINITY};
 
