@@ -1,0 +1,30 @@
+ProcessConfig = pObstacleMgr
+{
+  AppTick   = 4
+  CommsTick = 4
+
+  post_dist_to_polys = close
+  alert_range = 30   //? set by OBM_ALERT_REQUEST?
+  given_max_duration = 180
+
+  general_alert = name=gen_alert, update_var=GENERAL_OBSTACLE_ALERT, alert_range=2000
+
+  // parameters for handling unknown obstacles
+  point_var = TRACKED_FEATURE
+  max_pts_per_cluster = 20   // default is 20
+  max_age_per_point = 20     // (secs)  default is 20
+  ignore_range = 40          // (meters) default is -1, (off)
+
+  // laso option configuration
+  lasso = false
+//   lasso_points = 8
+//   lasso_radius = 5
+
+  // visualization configuration
+  post_view_polys = false  //handled by obstacle avoidance behaviors
+
+  // To squeeze more viewer efficiency when large # of obstacles:
+  poly_label_thresh = 25     // Set label color=off if amt>25
+  poly_shade_thresh = 100    // Set shade color=off if amt>100
+  poly_vertex_thresh = 150   // Set vertex size=0 if amt>150
+}

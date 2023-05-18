@@ -551,7 +551,7 @@ bool EvalPlanner::exportMetrics()
   // open export file, return if failed
   std::ofstream outf{m_export_file};
   if (!outf) {
-    reportRunWarning("Unable to open " + m_export_file + "to export metrics!");
+    reportRunWarning("Unable to open " + m_export_file + " to export metrics!");
     return (false);
   }
 

@@ -1,0 +1,245 @@
+//*******************************************************
+// Vehicle behavior configuration file
+
+// turn off obstacle avoidance if user requests
+#ifdef USE_OBS_AVOID true
+initialize USE_OBS_AVOID = true
+#else
+initialize USE_OBS_AVOID = false
+#endif
+
+// define vehicle modes for simulation
+initialize DEPLOY = false
+initialize $(PATH_FOUND_VAR) = false
+initialize $(PATH_COMPLETE_VAR) = false
+
+Set MODE = ACTIVE {
+  DEPLOY = true
+} INACTIVE
+
+Set MODE = PLAN {
+  MODE = ACTIVE
+  $(PATH_FOUND_VAR) != true
+  $(PATH_COMPLETE_VAR) != true
+}
+
+Set MODE = TRAVERSE {
+  MODE = ACTIVE
+  $(PATH_FOUND_VAR) = true
+  $(PATH_COMPLETE_VAR) != true
+}
+
+Set MODE = IDLE {
+  MODE = ACTIVE
+  $(PATH_COMPLETE_VAR) = true
+}
+
+Set MODE = FAILED {
+  MODE = ACTIVE
+  PATH_FAILED = true
+}
+
+
+//----------------------------------------------
+Behavior = BHV_StationKeep
+{
+  // General Behavior Parameters
+  // ---------------------------
+  name         = station_keep_at_start
+  pwt          = 100
+  condition    = (MODE == INACTIVE)
+  perpetual  = true
+  updates = STATION_START_UPDATES
+  inactiveflag = STATIONING = false
+  activeflag   = STATIONING = true
+
+
+  // Parameters specific to this behavior
+  // ------------------------------------
+  hibernation_radius = -1      // default
+  inner_radius = 8       // default
+  outer_radius = 15      // default
+  outer_speed  = 1.2     // default
+  transit_speed  = 2.5     // default
+  station_pt = $(START_POS)
+  center_activate = false
+  swing_time = 2
+
+  visual_hints = vertex_size  = 1           // default
+  visual_hints = edge_color   = light_blue  // default
+  visual_hints = edge_size    = 1           // default
+  visual_hints = label_color  = invisible
+  visual_hints = vertex_color = red         // default
+}
+
+
+//----------------------------------------------
+Behavior = BHV_ConstantSpeed
+{
+  // General Behavior Parameters
+  // ---------------------------
+  name         = zero_speed_idle
+  pwt          = 100                // default
+  condition    = ((MODE==IDLE) or (MODE==FAILED))
+  updates      = IDLE_SPD_UPDATES
+
+  // Parameters specific to this behavior
+  // ------------------------------------
+  basewidth = 0.2          // default
+  duration = no-time-limit
+  speed = 0            // default
+  speed_mismatch_var = SPEED_DIFF   // example
+  peakwidth = 0            // default
+  summitdelta = 0            // default
+}
+
+
+Behavior = BHV_ConstantHeading
+{
+  // General Behavior Parameters
+  // ---------------------------
+  name         = zero_hdg_idle
+  pwt          = 100                  // default
+  condition    = ((MODE==IDLE) or (MODE==FAILED))
+  updates      = IDLE_HDG_UPDATES    // example
+
+  // Parameters specific to this behavior
+  // ------------------------------------
+  basewidth = 10           // default
+  duration = no-time-limit
+  heading = 0            // default
+  heading_mismatch_var = HDG_DIFF     // example
+  peakwidth = 10           // default
+  summitdelta = 25           // default
+}
+
+
+//----------------------------------------------
+Behavior = BHV_StationKeep
+{
+  // General Behavior Parameters
+  // ---------------------------
+  name         = station_keep_planning
+  pwt          = 100
+  condition    = MODE == PLAN
+  perpetual  = true
+  updates = STATION_UPDATES
+  inactiveflag = STATIONING = false
+  activeflag   = STATIONING = true
+
+
+  // Parameters specific to this behavior
+  // ------------------------------------
+  hibernation_radius = -1      // default
+  inner_radius = 8       // default
+  outer_radius = 15      // default
+  outer_speed  = 1.2     // default
+  transit_speed  = 2.5     // default
+  station_pt = $(START_POS)
+  // center_activate = false
+  center_activate = true
+  swing_time = 5
+
+  visual_hints = vertex_size  = 1           // default
+  visual_hints = edge_color   = light_blue  // default
+  visual_hints = edge_size    = 1           // default
+  visual_hints = label_color  = invisible
+  visual_hints = vertex_color = red         // default
+}
+
+
+//----------------------------------------------
+Behavior=BHV_Waypoint
+{ 
+  name      = waypt_monte_carlo
+  pwt       = 100
+  condition = MODE == TRAVERSE
+  endflag = WAYPOINTS_COMPLETE = true
+  updates   = PATH_UPDATE
+  perpetual = true
+
+
+  speed_alt = 1.2
+  use_alt_speed = true
+  lead = 8
+  lead_damper = 1
+  lead_to_start = true
+  speed = 12  // meters per second
+  capture_line = true
+  capture_radius = 5.0
+  slip_radius = 15.0
+  efficiency_measure = all
+  order = normal
+  wptflag = WPT_ADVANCED="prev=$[PX],$[PY];next=$[NX],$[NY]"
+
+  // points are set by planner
+
+  visual_hints = nextpt_color=yellow
+  visual_hints = nextpt_vertex_size=8
+  visual_hints = nextpt_lcolor=gray70
+  visual_hints = vertex_color=dodger_blue, edge_color=white
+  visual_hints = vertex_size=5, edge_size=1
+}
+
+
+//----------------------------------------------
+Behavior=BHV_AvoidObstacleV21
+{
+  name       = avd_obstacles_
+  pwt        = 500
+  condition  = USE_OBS_AVOID = true
+  templating = spawn
+  updates    = OBSTACLE_ALERT
+
+  use_refinery = true
+
+  allowable_ttc = 10
+  pwt_outer_dist = 16  // sets alert range
+  pwt_inner_dist = 5
+  min_util_cpa_dist = 5
+  max_util_cpa_dist = 16
+  completed_dist = 25
+
+  visual_hints = obstacle_edge_color = white
+  visual_hints = obstacle_vertex_color = gray60
+  visual_hints = obstacle_fill_color = gray60
+  visual_hints = obstacle_fill_transparency = 0.5
+
+  visual_hints = buffer_min_edge_color = gray60
+  visual_hints = buffer_min_vertex_color = dodger_blue
+  visual_hints = buffer_min_vertex_size = 1
+  visual_hints = buffer_min_fill_color = gray70
+  visual_hints = buffer_min_fill_transparency = 0.25
+
+  visual_hints = buffer_max_edge_color = gray60
+  visual_hints = buffer_max_vertex_color = dodger_blue
+  visual_hints = buffer_max_vertex_size = 0
+  visual_hints = buffer_max_fill_color = gray80
+  visual_hints = buffer_max_fill_transparency = 0.1
+}
+
+
+//----------------------------------------------
+Behavior = BHV_OpRegion
+{
+  // General Behavior Parameters
+  // ---------------------------
+  name         = op_region_forest_lake
+  pwt          = 100
+  condition    = (MODE == INACTIVE) or (MODE == ACTIVE)
+  updates      = OPREGION_UPDATES
+
+  // Parameters specific to this behavior
+  // ------------------------------------
+  reset_var = OPREGION_RESET
+  trigger_entry_time = 1
+  trigger_exit_time = 0.5
+
+  polygon = pts={-159,91:-159,-357:276,-357:276,91}, label=forest_lake
+  breached_poly_flag = OUT_OF_BOUNDS = $(VNAME) is out of bounds
+
+  visual_hints = vertex_color = brown  // default
+  visual_hints = vertex_size  = 3      // default
+  visual_hints = edge_color   = aqua   // default
+  visual_hints = edge_size    = 1      // default
+}
