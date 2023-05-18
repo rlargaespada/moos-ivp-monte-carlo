@@ -116,6 +116,8 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
       m_obs_refresh_needed = true;
     } else if (key == "OBM_CONNECT") {
       m_obs_refresh_needed = true;
+    } else if (key == "VEHICLE_CONNECT") {
+      m_obs_refresh_needed = true;
     } else if (key == m_reset_var) {
       if (m_reset_var != "NONE")  // ignore if requests disabled
         m_reset_request = true;
@@ -290,6 +292,7 @@ void ObsMonteCarloSim::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
   Register("PMV_CONNECT", 0);
+  Register("OBM_CONNECT", 0);
   Register("VEHICLE_CONNECT", 0);
   if (!m_reset_var.empty() && (m_reset_var != "NONE"))
     Register(m_reset_var, 0);
@@ -588,7 +591,6 @@ void ObsMonteCarloSim::updateObstaclesField()
 // ------------------------------------------------------------
 bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int tries)
 {
-  // todo: look into <random> number generation instead of rand()
   if (!m_poly_region.is_convex())
     return (false);
 

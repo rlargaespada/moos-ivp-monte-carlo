@@ -427,7 +427,7 @@ bool NullPlanner::OnStartUp()
     // publication config
     } else if (param == "prefix") {
       handled = setNonWhiteVarOnString(m_prefix, toupper(value));
-    } else if ((param == "itermediate_pts") || param == "itermediate_points") {
+    } else if ((param == "intermediate_pts") || param == "intermediate_points") {
       m_intermediate_pts = string2SegList(value);
       handled = (m_intermediate_pts.size() != 0);
     } else if ((param == "init_plan_flag") || param == "initflag") {

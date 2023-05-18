@@ -3,7 +3,26 @@
 
 ProcessConfig = pDStarLite
 {
-   AppTick   = 4
-   CommsTick = 4
+  AppTick   = 4
+  CommsTick = 4
+
+  path_request_var = PLAN_PATH_REQUESTED  // default is PLAN_PATH_REQUESTED
+  obs_alert_var = OBSTACLE_ALERT  // default is OBSTACLE_ALERT
+  wpt_complete_var = WAYPOINTS_COMPLETE  // default is WAYPOINTS_COMPLETE
+
+  prefix = alpha  // default is no prefix
+  init_flag = DEPLOY=true  // example, any number of flags are supported
+                           // through separate init_flag config lines
+  traverse_flag = TRAVERSE=true  // example, any number of flags are supported
+                                 // through separate traverse_flag config lines
+  replan_flag = TRAVERSE=false  // example, any number of flags are supported
+                                // through separate replan_flag config lines
+  end_flag = DEPLOY=false  // example, any number of flags are supported
+                           // through separate end_flag config lines
+  post_visuals = true  // default is true
+
+  grid_bounds = {-150, 50:-150,-250:250,-250:250,50}  // mandatory
+  grid_cell_size = 5  // default is 5 m
+  max_planning_iters = 200  // default is 200
 }
 

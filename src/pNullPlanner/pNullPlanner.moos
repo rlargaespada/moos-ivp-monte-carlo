@@ -5,5 +5,18 @@ ProcessConfig = pNullPlanner
 {
    AppTick   = 4
    CommsTick = 4
+
+  path_request_var = PLAN_PATH_REQUESTED  // default is PLAN_PATH_REQUESTED
+  obs_alert_var = OBSTACLE_ALERT  // default is OBSTACLE_ALERT
+  wpt_complete_var = WAYPOINTS_COMPLETE  // default is WAYPOINTS_COMPLETE
+
+  prefix = alpha  // default is no prefix
+  init_flag = DEPLOY=true  // example, any number of flags are supported
+                           // through separate init_flag config lines
+  traverse_flag = TRAVERSE=true  // example, any number of flags are supported
+                                 // through separate traverse_flag config lines
+  end_flag = DEPLOY=false  // example, any number of flags are supported
+                           // through separate end_flag config lines
+  post_visuals = true  // default is true
 }
 

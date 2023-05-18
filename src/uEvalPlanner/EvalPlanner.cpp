@@ -614,7 +614,7 @@ bool EvalPlanner::exportMetrics()
     outf << stringVectorToString(trialvec, ',') << "\n";
     trialvec.clear();
   }
-  Notify(toupper(GetAppName()) + "_METRICS_EXPORTED", m_export_file);
+  Notify("METRICS_EXPORTED", m_export_file);
   reportEvent("Exported " + GetAppName() + " metrics to: " + m_export_file);
 
   return (true);
@@ -883,6 +883,7 @@ bool EvalPlanner::OnStartUp()
   // if no reset vars were provided in config, only write to default var
   if ((!no_obstacle_resets) && (m_reset_obs_vars.empty()))
     m_reset_obs_vars.push_back("UFOS_RESET");
+  if (no_obstacle_resets) m_reset_obs_vars.clear();  // clear for safety
 
   // make sure start and goal were set in config file
   if (!m_start_point.valid()) reportConfigWarning("Planner start point has not been set!");

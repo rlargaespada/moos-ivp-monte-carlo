@@ -11,7 +11,6 @@
 #include "ColorParse.h"
 #include "ReleaseInfo.h"
 
-using namespace std;
 
 //----------------------------------------------------------------
 // Procedure: showSynopsis
@@ -20,11 +19,11 @@ void showSynopsis()
 {
   blk("SYNOPSIS:                                                       ");
   blk("------------------------------------                            ");
-  blk("  The uFldObsMonteCarloSim application is used for               ");
-  blk("                                                                ");
-  blk("                                                                ");
-  blk("                                                                ");
-  blk("                                                                ");
+  blk("  The uFldObsMonteCarloSim app will simulate the posting of     ");
+  blk("  obstacles loaded from a text file, to be shared to all        ");
+  blk("  vehicles in the uField environment. It features additional    ");
+  blk("  configuration parameters and functionality compared to the    ");
+  blk("  original uFldObstacleSim app.                                 ");
 }
 
 //----------------------------------------------------------------
@@ -40,7 +39,7 @@ void showHelpAndExit()
   showSynopsis();
   blk("                                                                ");
   blk("Options:                                                        ");
-  mag("  --alias","=<ProcessName>                                      ");
+  mag("  --alias", "=<ProcessName>                                      ");
   blk("      Launch uFldObsMonteCarloSim with the given process name         ");
   blk("      rather than uFldObsMonteCarloSim.                           ");
   mag("  --example, -e                                                 ");
@@ -74,6 +73,42 @@ void showExampleConfigAndExit()
   blk("  AppTick   = 4                                                 ");
   blk("  CommsTick = 4                                                 ");
   blk("                                                                ");
+  blk("  obstacle_file     = obstacles.txt                             ");
+  blk("  obstacle_file_var = NEW_OBSTACLE_FILE  (default is NEW_OBSTACLE_FILE)");
+  blk("  label_prefix      = known   (default is no prefix)            ");
+  blk("                                                                ");
+  blk("  poly_vert_color  = color    (default is gray50)               ");
+  blk("  poly_edge_color  = color    (default is gray50)               ");
+  blk("  poly_fill_color  = color    (default is white)                ");
+  blk("  poly_label_color = color    (default is invisible)            ");
+  blk("                                                                ");
+  blk("  poly_vert_size    = 1       (default is 1)                    ");
+  blk("  poly_edge_size    = 1       (default is 1)                    ");
+  blk("  poly_transparency = 0.15    (default is 0.15)                 ");
+  blk("                                                                ");
+  blk("  draw_region       = true    (default is true)                 ");
+  blk("  region_edge_color = color   (default is gray50)               ");
+  blk("  region_vert_color = color   (default is white)                ");
+  blk("                                                                ");
+  blk("  post_points      = true     (default is false)                ");
+  blk("  rate_points      = 5        (default is 5)                    ");
+  blk("  point_size       = 5        (default is 2)                    ");
+  blk("                                                                ");
+  blk("  min_duration     = 10       (default is -1)                   ");
+  blk("  max_duration     = 15       (default is -1)                   ");
+  blk("  refresh_interval = 8        (default is -1)                   ");
+  blk("                                                                ");
+  blk("  reset_interval   = -1       (default is -1)                   ");
+  blk("  reset_range      = 10       (default is 10)                   ");
+  blk("  reset_var        = UFOS_RESET  (default is UFOS_RESET, set to \"none\"");
+  blk("                                  to disable resets from variable postings)");
+  blk("                                                                ");
+  blk("  reuse_ids        = true     (default is true)                 ");
+  blk("  sensor_range     = 50       (default is 50)                   ");
+  blk("                                                                ");
+  blk("  app_logging  = true  // {true or file} By default disabled    ");
+  blk("                                                                ");
+  blk("  post_visuals = true  // {true or false} By default true       ");
   blk("}                                                               ");
   blk("                                                                ");
   exit(0);
@@ -94,13 +129,23 @@ void showInterfaceAndExit()
   blk("                                                                ");
   blk("SUBSCRIPTIONS:                                                  ");
   blk("------------------------------------                            ");
-  blk("  NODE_MESSAGE = src_node=alpha,dest_node=bravo,var_name=FOO,   ");
-  blk("                 string_val=BAR                                 ");
+  blk("  PMV_CONNECT      = true                                       ");
+  blk("  OBM_CONNECT      = true                                       ");
+  blk("  VEHICLE_CONNECT  = true                                       ");
+  blk("  <reset_var>      = now  // set in config, default is UFOS_RESET");
+  blk("  UFOS_POINT_SIZE  = <double>  // \"smaller\" and \"bigger\" are also acceptable values");
+  blk("  <obstacle_file_var> = obstacles.txt  // set in config, default is NEW_OBSTACLE_FILE");
+
+  blk("  NODE_REPORT                                                   ");
   blk("                                                                ");
   blk("PUBLICATIONS:                                                   ");
   blk("------------------------------------                            ");
-  blk("  Publications are determined by the node message content.      ");
-  blk("                                                                ");
+  blk("  VIEW_POLYGON= <polygon_spec>                                  ");
+  blk("  VIEW_POINT = <point_spec>                                     ");
+  blk("  KNOWN_OBSTACLE = <polygon_spec>                               ");
+  blk("  KNOWN_OBSTACLE_CLEAR = <app_name>                             ");
+  blk("  GIVEN_OBSTACLE = <polygon_spec>                               ");
+  blk("  TRACKED_FEATURE_<VNAME> = <point_spec>  // vehicle names sourced from node reports");
   exit(0);
 }
 

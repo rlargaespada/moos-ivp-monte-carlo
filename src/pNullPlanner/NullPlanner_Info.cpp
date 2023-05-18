@@ -20,11 +20,10 @@ void showSynopsis()
 {
   blk("SYNOPSIS:                                                       ");
   blk("------------------------------------                            ");
-  blk("  The pNullPlanner application is used for               ");
-  blk("                                                                ");
-  blk("                                                                ");
-  blk("                                                                ");
-  blk("                                                                ");
+  blk("  The pNullPlanner application plans a path from a given start point");
+  blk("  to a given goal point by returning a waypoint to the start followed");
+  blk("  by a waypoint to the goal, with configurable intermediate points");
+  blk("  added as waypoints in between.                                ");
 }
 
 //----------------------------------------------------------------
@@ -69,11 +68,24 @@ void showExampleConfigAndExit()
   blu("pNullPlanner Example MOOS Configuration                   ");
   blu("=============================================================== ");
   blk("                                                                ");
-  blk("ProcessConfig = pNullPlanner                              ");
+  blk("ProcessConfig = pNullPlanner                                    ");
   blk("{                                                               ");
   blk("  AppTick   = 4                                                 ");
   blk("  CommsTick = 4                                                 ");
   blk("                                                                ");
+  blk("  path_request_var = PLAN_PATH_REQUESTED  // default is PLAN_PATH_REQUESTED");
+  blk("  obs_alert_var = OBSTACLE_ALERT  // default is OBSTACLE_ALERT  ");
+  blk("  wpt_complete_var = WAYPOINTS_COMPLETE  // default is WAYPOINTS_COMPLETE");
+  blk("                                                                ");
+  blk("  prefix = alpha  // default is no prefix                       ");
+  blk("  intermediate_pts = 0,0:200,-150:100,100                       ");
+  blk("  init_flag = DEPLOY=true  // example, any number of flags are supported");
+  blk("                           // through separate init_flag config lines");
+  blk("  traverse_flag = TRAVERSE=true  // example, any number of flags are supported");
+  blk("                                 // through separate traverse_flag config lines");
+  blk("  end_flag = DEPLOY=false  // example, any number of flags are supported");
+  blk("                           // through separate end_flag config lines");
+  blk("  post_visuals = true  // default is true                       ");
   blk("}                                                               ");
   blk("                                                                ");
   exit(0);
@@ -94,12 +106,27 @@ void showInterfaceAndExit()
   blk("                                                                ");
   blk("SUBSCRIPTIONS:                                                  ");
   blk("------------------------------------                            ");
-  blk("  NODE_MESSAGE = src_node=alpha,dest_node=bravo,var_name=FOO,   ");
-  blk("                 string_val=BAR                                 ");
+  blk("  NODE_REPORT                                                   ");
+  blk("  OBM_RESOLVED = obs_key                                        ");
+  blk("  WPT_INDEX = 0                                                 ");
+  blk("  <path_request_var> = start=100,220;goal=210,30  // set in config");
+  blk("  <obs_alert_var> = name=d#poly  // set in config               ");
+  blk("                    poly={32,-100:38,-98:40,-100:32,-104}       ");
+  blk("                    label=obs_key                               ");
+  blk("  <wpt_complete_var>  // set in config                          ");
   blk("                                                                ");
   blk("PUBLICATIONS:                                                   ");
   blk("------------------------------------                            ");
-  blk("  Publications are determined by the node message content.      ");
+  blk("  <prefix>_PATH_FOUND = true  // prefix set in config           ");
+  blk("  <prefix>_PATH_COMPLETE = true  // prefix set in config        ");
+  blk("  <prefix>_PATH_FAILED = false  // prefix set in config         ");
+  blk("  <prefix>_PATH_STATS = algorithm=none,  // prefix set in config");
+  blk("                        planning_time=1,                        ");
+  blk("                        path_len_to_go=100,                     ");
+  blk("                        path_len_traversed=200,                 ");
+  blk("  <init_flag>  // set in config                                 ");
+  blk("  <traverse_flag>  // set in config                             ");
+  blk("  <end_flag>  // set in config                                  ");
   blk("                                                                ");
   exit(0);
 }

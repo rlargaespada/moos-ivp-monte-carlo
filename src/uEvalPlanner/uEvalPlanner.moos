@@ -5,5 +5,31 @@ ProcessConfig = uEvalPlanner
 {
    AppTick   = 4
    CommsTick = 4
+
+  vehicle_name = alpha  // required, must match name of MOOS community on vehicle
+  timeout = 300  // default is 300 seconds
+  start_pos = x=100,y=220  // any XYPoint spec format is valid
+  goal_pos = x=210,y=30  // any XYPoint spec format is valid
+  heading_on_reset = 0  // "relative" is also valid, for the relative
+                        // angle between the start and goal points
+
+  path_request_var = PLAN_PATH_REQUESTED  // default is PLAN_PATH_REQUESTED
+  path_complete_var = PATH_COMPLETE  // default is PATH_COMPLETE
+  path_stats_var = PATH_STATS  // default is PATH_STATS
+  path_failed_var = PATH_FAILED  // default is PATH_FAILED
+
+  num_trials = 10  // default is 10
+  obs_reset_var = UFOS_RESET  // default is UFOS_RESET. Any number
+                              // of variables is supported. Set to
+                              // "none" to not reset any obstacles.
+  deviation_limit = 5  // default is 5 meters
+
+  trial_flag = DEPLOY=true  // example, any number of flags are supported
+                            // through separate trial_flag config lines
+  end_flag = DEPLOY=true  // example, any number of flags are supported
+                          // through separate end_flag config lines
+
+  exportfile = uEvalPlanner_Metrics  // default is uEvalPlanner_Metrics
+  use_timestamp = true  // default is true
 }
 
