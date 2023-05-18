@@ -11,7 +11,6 @@
 #include "ColorParse.h"
 #include "ReleaseInfo.h"
 
-using namespace std;
 
 //----------------------------------------------------------------
 // Procedure: showSynopsis
@@ -39,7 +38,7 @@ void showHelpAndExit()
   showSynopsis();
   blk("                                                                ");
   blk("Options:                                                        ");
-  mag("  --alias","=<ProcessName>                                      ");
+  mag("  --alias", "=<ProcessName>                                      ");
   blk("      Launch pNullPlanner with the given process name         ");
   blk("      rather than pNullPlanner.                           ");
   mag("  --example, -e                                                 ");
