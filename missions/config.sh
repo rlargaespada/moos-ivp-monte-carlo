@@ -18,7 +18,7 @@ SHORE_MOOSDB="9000"
 SHORE_PSHARE="9200"
 
 META_OBS_CONST_FILE="meta_obstacles_const.txt"
-TARG_OBS_CONST_FILE="targ_obstacles_const.txt"
+OBS_CONST_FILE="targ_obstacles_const.txt"
 OBS_KNOWN_FILE="targ_obstacles_known.txt"
 OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 

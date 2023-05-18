@@ -1,1 +1,5 @@
 #!/bin/bash
+
+TIFF_FILE="forrest19.tif"
+LAT_ORIGIN="43.825300"
+LONG_ORIGIN="-70.330400"

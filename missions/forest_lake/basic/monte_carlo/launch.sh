@@ -94,7 +94,7 @@ done
 #-------------------------------------------------------
 
 # generate obstacle files
-nsplug  ${MAP_DIR}/${META_OBS_CONST_FILE} $TARG_OBS_CONST_FILE -i -f
+nsplug  ${MAP_DIR}/${META_OBS_CONST_FILE} $OBS_CONST_FILE -i -f
 gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
               --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
               --amt=$RANDOM_OBS_AMT > $OBS_KNOWN_FILE
@@ -104,28 +104,60 @@ gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
               --amt=$RANDOM_OBS_AMT > $OBS_UNKNOWN_FILE
 
 
-nsplug meta_shoreside.moos targ_shoreside.moos -i -f WARP=$TIME_WARP \
-       IP_ADDR="localhost"    SHORE_MOOSDB=$SHORE_MOOSDB             \
-       PSHARE_PORT=$SHORE_PSHARE    V1_NAME=$V1_NAME    GUI=$GUI      \
-       NUM_TRIALS=$NUM_TRIALS    OBS_CONST_FILE=$OBS_CONST_FILE      \
-       OBS_KNOWN_FILE=$OBS_KNOWN_FILE    OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE\
-       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
-       PATH_REQUEST_VAR=$PATH_REQUEST_VAR    PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR\
-       PLANNER=$PLANNER  EXPORT_FILE=$EXPORT_FILE
+nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
+       --path=$LAYOUT_DIR:$MAP_DIR:$MISSIONS_DIR \
+       WARP=$TIME_WARP \
+       LAT_ORIGIN=$LAT_ORIGIN \
+       LONG_ORIGIN=$LONG_ORIGIN \
+       IP_ADDR="localhost" \
+       SHORE_MOOSDB=$SHORE_MOOSDB \
+       PSHARE_PORT=$SHORE_PSHARE \
+       GUI=$GUI \
+       TIFF_FILE=$TIFF_FILE \
+       PMV_PAN_X=$PMV_PAN_X \
+       PMV_PAN_Y=$PMV_PAN_Y \
+       PMV_ZOOM=$PMV_ZOOM \
+       OBS_CONST_FILE=$OBS_CONST_FILE \
+       OBS_KNOWN_FILE=$OBS_KNOWN_FILE \
+       OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE \
+       V1_NAME=$V1_NAME \
+       NUM_TRIALS=$NUM_TRIALS \
+       START_POS=$V1_START_POS \
+       GOAL_POS=$V1_GOAL_POS \
+       PATH_REQUEST_VAR=$PATH_REQUEST_VAR \
+       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR \
+       EXPORT_FILE=$EXPORT_FILE \
+       PLANNER=$PLANNER
 
-nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f WARP=$TIME_WARP  \
-       IP_ADDR="localhost"    VNAME=$V1_NAME                       \
-       V_MOOSDB=$V1_MOOSDB    PSHARE_PORT=$V1_PSHARE               \
-       SHORE_IP="localhost"    SHORE_PSHARE=$SHORE_PSHARE          \
-       START_POS=$V1_START_POS    GOAL_POS=$V1_GOAL_POS            \
-       VCOLOR=$V1_COLOR    PLANNER=$PLANNER    DRIFT_DIR=$DRIFT_DIR\
-       DRIFT_STRENGTH=$DRIFT_STRENGTH                              \
-       PATH_REQUEST_VAR=$PATH_REQUEST_VAR    PATH_FOUND_VAR=$PATH_FOUND_VAR\
-       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
+nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f \
+       --path=$LAYOUT_DIR:$MAP_DIR:$MISSIONS_DIR \
+       WARP=$TIME_WARP \
+       LAT_ORIGIN=$LAT_ORIGIN \
+       LONG_ORIGIN=$LONG_ORIGIN \
+       IP_ADDR="localhost" \
+       V_MOOSDB=$V1_MOOSDB \
+       PSHARE_PORT=$V1_PSHARE \
+       SHORE_IP="localhost" \
+       SHORE_PSHARE=$SHORE_PSHARE \
+       VNAME=$V1_NAME \
+       VCOLOR=$V1_COLOR \
+       START_POS=$V1_START_POS \
+       GOAL_POS=$V1_GOAL_POS \
+       PLANNER=$PLANNER \
+       PATH_REQUEST_VAR=$PATH_REQUEST_VAR \
+       PATH_FOUND_VAR=$PATH_FOUND_VAR \
+       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR \
+       DRIFT_DIR=$DRIFT_DIR \
+       DRIFT_STRENGTH=$DRIFT_STRENGTH
 
-nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f VNAME=$V1_NAME    \
-       START_POS=$V1_START_POS    USE_OBS_AVOID=$USE_OBS_AVOID    \
-       PATH_FOUND_VAR=$PATH_FOUND_VAR    PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR
+nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
+       --path=$LAYOUT_DIR:$MAP_DIR:$MISSIONS_DIR \
+       VNAME=$V1_NAME \
+       START_POS=$V1_START_POS \
+       PATH_FOUND_VAR=$PATH_FOUND_VAR \
+       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR \
+       USE_OBS_AVOID=$USE_OBS_AVOID
+
 
 
 if [ ${JUST_MAKE} = "true" ] ; then

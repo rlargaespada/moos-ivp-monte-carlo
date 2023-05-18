@@ -7,6 +7,13 @@ RANDOM_OBS_MIN_SIZE=8
 RANDOM_OBS_MAX_SIZE=15
 RANDOM_OBS_AMT=7
 
+
+# pMarineViewer initial window location
+PMV_PAN_X="10"
+PMV_PAN_Y="-140"
+PMV_ZOOM="0.65"
+
+
 # vehicle 1 app config parameters
 V1_START_X="-100"; V1_START_Y="-220"
 V1_START_POS="$V1_START_X,$V1_START_Y"

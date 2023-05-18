@@ -1,7 +1,7 @@
 MOOSTimeWarp = $(WARP)
 
-LatOrigin  = 43.825300
-LongOrigin = -70.330400
+LatOrigin  = $(LAT_ORIGIN)
+LongOrigin = $(LONG_ORIGIN)
 
 // pavlab
 // LatOrigin  = 42.358456 

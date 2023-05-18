@@ -54,10 +54,10 @@ ProcessConfig = pMarineViewer
 
   // BackView Options
   // tiff_file            = MIT_SP.tif
-  tiff_file            = forrest19.tif
-  set_pan_x            = -90
-  set_pan_y            = -280
-  zoom                 = 0.65
+  tiff_file            = $(TIFF_FILE)
+  set_pan_x            = $(PMV_PAN_X)
+  set_pan_y            = $(PMV_PAN_Y)
+  zoom                 = $(PMV_ZOOM)
   vehicle_shape_scale  = 1.5
 
   // BackView Pull-Down Menu
@@ -122,7 +122,6 @@ ProcessConfig = pLogger
   SyncLog       = true @ 0.2
   AsyncLog      = true
 
-  // File = MOOSLog_FORESTLAKE_BASIC_MONTECARLO
   File = MOOSLog_SHORESIDE
   FileTimeStamp = false  // false while developing
 
