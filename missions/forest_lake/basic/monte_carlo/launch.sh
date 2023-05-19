@@ -129,7 +129,7 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        EXPORT_FILE=$EXPORT_FILE \
        PLANNER=$PLANNER
 
-nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f \
+nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        --path=$LAYOUT_DIR:$MAP_DIR:$MISSIONS_DIR \
        WARP=$TIME_WARP \
        LAT_ORIGIN=$LAT_ORIGIN \
@@ -150,7 +150,7 @@ nsplug meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        DRIFT_DIR=$DRIFT_DIR \
        DRIFT_STRENGTH=$DRIFT_STRENGTH
 
-nsplug meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
+nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
        --path=$LAYOUT_DIR:$MAP_DIR:$MISSIONS_DIR \
        VNAME=$V1_NAME \
        START_POS=$V1_START_POS \

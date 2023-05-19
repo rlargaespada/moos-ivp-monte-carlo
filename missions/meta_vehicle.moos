@@ -67,7 +67,6 @@ ProcessConfig = pLogger
   SyncLog       = true @ 0.2
   AsyncLog      = true
 
-  // File = MOOSLog_FORESTLAKE_BASIC_MONTECARLO
   File = MOOSLog_%(VNAME)
   FileTimeStamp = false  // false while developing
 
