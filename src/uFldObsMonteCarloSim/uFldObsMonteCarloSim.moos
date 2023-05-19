@@ -7,7 +7,7 @@ ProcessConfig = uFldObsMonteCarloSim
   CommsTick = 4
 
   obstacle_file     = obstacles.txt
-  obstacle_file_var = NEW_OBSTACLE_FILE  //default is NEW_OBSTACLE_FILE
+  obstacle_file_var = NEW_OBSTACLE_FILE  //default is no variable
   label_prefix      = known   // default is no prefix
 
   poly_vert_color  = color    // default is gray50

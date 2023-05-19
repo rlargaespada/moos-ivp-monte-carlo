@@ -260,9 +260,6 @@ bool ObsMonteCarloSim::OnStartUp()
   // actually need
   if (m_reset_var.empty())
     m_reset_var = "UFOS_RESET";
-  // same reasoning for m_obstacle_file_var
-  if (m_obstacle_file_var.empty())
-    m_obstacle_file_var = "NEW_OBSTACLE_FILE";
 
   // Pass 2: Process obstacle file last so all color settings can be
   // configured first, and applied as the obstacles are being created.

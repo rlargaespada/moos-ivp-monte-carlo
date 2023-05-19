@@ -417,6 +417,7 @@ void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
 
     // Otherwise if string posting, handle macro expansion
     std::string sval{pair.get_sdata()};
+    sval = macroExpand(sval, "IX", static_cast<unsigned int>(m_trial_data.size()));
     sval = macroExpand(sval, "START_X", m_start_point.x(), 2);
     sval = macroExpand(sval, "START_Y", m_start_point.y(), 2);
     sval = macroExpand(sval, "GOAL_X", m_goal_point.x(), 2);

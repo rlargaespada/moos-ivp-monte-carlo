@@ -74,7 +74,7 @@ void showExampleConfigAndExit()
   blk("  CommsTick = 4                                                 ");
   blk("                                                                ");
   blk("  obstacle_file     = obstacles.txt                             ");
-  blk("  obstacle_file_var = NEW_OBSTACLE_FILE  (default is NEW_OBSTACLE_FILE)");
+  blk("  obstacle_file_var = NEW_OBSTACLE_FILE  (default is no variable)");
   blk("  label_prefix      = known   (default is no prefix)            ");
   blk("                                                                ");
   blk("  poly_vert_color  = color    (default is gray50)               ");
