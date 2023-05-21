@@ -141,6 +141,7 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string getTrialSpec(TrialData trial);  // turn a single trial into a string
   void calcMetrics();  // calculate overall success rate, collisions, etc.
   bool exportMetrics();  // export spec for each trial
+  std::string expandMacros(std::string sval);
   void postFlags(const std::vector<VarDataPair>& flags);
   bool cleanupSim();
 
@@ -166,7 +167,7 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_reset_sim_var;  // not set by config param
 
   // interface to obstacle sims
-  std::vector<std::string> m_reset_obs_vars;
+  std::vector<VarDataPair> m_reset_obs_vars;
 
   // sim parameters
   int m_desired_trials;

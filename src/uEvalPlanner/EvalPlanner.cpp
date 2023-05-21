@@ -324,15 +324,10 @@ bool EvalPlanner::resetObstacles()
   }
 
   // no preconditions for this request
-  bool return_val{true};
 
-  for (std::string var_name : m_reset_obs_vars) {
-    return_val = Notify(var_name, "now") && return_val;
-    reportEvent("Sent " + var_name);
-  }
-
+  postFlags(m_reset_obs_vars);  // reuse this method
   m_reset_obstacles = SimRequest::OPEN;
-  return (return_val);
+  return (true);
 }
 
 
@@ -403,6 +398,21 @@ bool EvalPlanner::requestNewPath()
 }
 
 
+//---------------------------------------------------------
+std::string EvalPlanner::expandMacros(std::string sval)
+{
+  sval = macroExpand(sval, "IX", static_cast<unsigned int>(m_trial_data.size()));
+  sval = macroExpand(sval, "START_X", m_start_point.x(), 2);
+  sval = macroExpand(sval, "START_Y", m_start_point.y(), 2);
+  sval = macroExpand(sval, "GOAL_X", m_goal_point.x(), 2);
+  sval = macroExpand(sval, "GOAL_Y", m_goal_point.y(), 2);
+  sval = macroExpand(sval, "V_X", m_vpos.x(), 2);
+  sval = macroExpand(sval, "V_Y", m_vpos.y(), 2);
+
+  return (sval);
+}
+
+
 void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
 {
   for (VarDataPair pair : flags) {
@@ -417,19 +427,15 @@ void EvalPlanner::postFlags(const std::vector<VarDataPair>& flags)
 
     // Otherwise if string posting, handle macro expansion
     std::string sval{pair.get_sdata()};
-    sval = macroExpand(sval, "IX", static_cast<unsigned int>(m_trial_data.size()));
-    sval = macroExpand(sval, "START_X", m_start_point.x(), 2);
-    sval = macroExpand(sval, "START_Y", m_start_point.y(), 2);
-    sval = macroExpand(sval, "GOAL_X", m_goal_point.x(), 2);
-    sval = macroExpand(sval, "GOAL_Y", m_goal_point.y(), 2);
-    sval = macroExpand(sval, "V_X", m_vpos.x(), 2);
-    sval = macroExpand(sval, "V_Y", m_vpos.y(), 2);
+    sval = expandMacros(sval);
 
     // if final val is a number, post as double
     if (isNumber(sval))
       Notify(moosvar, std::stod(sval));
     else
       Notify(moosvar, sval);
+
+    reportEvent("Posted " + pair.getPrintable());
   }
 }
 
@@ -839,11 +845,15 @@ bool EvalPlanner::OnStartUp()
       handled = setNonWhiteVarOnString(m_path_failed_var, toupper(value));
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
-    } else if ((param == "obs_reset_var") || (param == "obs_reset_vars")) {
+    } else if (param == "obs_reset_var") {
       if (tolower(value) == "none") {
         no_obstacle_resets = true;
         handled = true;
-      } else {handled = handleConfigResetVars(toupper(value));}
+      } else if (strContains(value, '=')) {
+        handled = addVarDataPairOnString(m_reset_obs_vars, value);
+      } else {  // add default value of "now" if we just got a variable name
+        handled = addVarDataPairOnString(m_reset_obs_vars, value + "=now");
+      }
     } else if (param == "deviation_limit") {
       handled = setNonNegDoubleOnString(m_deviation_limit, value);
     } else if ((param == "trial_flag") || (param == "trialflag")) {
@@ -883,7 +893,7 @@ bool EvalPlanner::OnStartUp()
 
   // if no reset vars were provided in config, only write to default var
   if ((!no_obstacle_resets) && (m_reset_obs_vars.empty()))
-    m_reset_obs_vars.push_back("UFOS_RESET");
+    m_reset_obs_vars.push_back(VarDataPair("UFOS_RESET", "now"));
   if (no_obstacle_resets) m_reset_obs_vars.clear();  // clear for safety
 
   // make sure start and goal were set in config file
@@ -901,23 +911,6 @@ bool EvalPlanner::setVPoint(XYPoint* point, std::string point_spec)
   point_spec = tolower(point_spec);
   *point = string2Point(point_spec);
   return (point->valid());
-}
-
-
-bool EvalPlanner::handleConfigResetVars(std::string var_names) {
-  bool no_dupl_found{true};
-
-  var_names = stripBlankEnds(var_names);
-  std::vector<std::string> svector{parseString(var_names, ',')};
-  for (std::string var_name : svector) {
-    var_name = stripBlankEnds((var_name));
-    if (vectorContains(m_reset_obs_vars, var_name))
-      no_dupl_found = false;
-    else
-      m_reset_obs_vars.push_back(var_name);
-  }
-
-  return (no_dupl_found);
 }
 
 
@@ -1029,10 +1022,14 @@ bool EvalPlanner::buildReport()
 
   // interface to shoreside apps
   m_msgs << "Config (Interface to Obstacle Sims)" << endl;
-  if (m_reset_obs_vars.empty())
-  m_msgs << "  reset_obs_vars: NONE" << endl;
-  else
-    m_msgs << "  reset_obs_vars: " << stringVectorToString(m_reset_obs_vars, ',') << endl;
+  if (m_reset_obs_vars.empty()) {
+    m_msgs << "  reset_obs_vars: NONE" << endl;
+  } else {
+    m_msgs << "  reset_obs_vars: ";
+    for (VarDataPair pair : m_reset_obs_vars)
+      m_msgs << pair.getPrintable() << ";";
+    m_msgs << endl;
+  }
 
   // high level sim state
   m_msgs << header << endl;

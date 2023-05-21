@@ -435,7 +435,8 @@ ProcessConfig = uEvalPlanner
 
   num_trials = $(NUM_TRIALS)
 
-  obs_reset_vars = RESET_KNOWN_OBSTACLES,RESET_UNKNOWN_OBSTACLES
+  obs_reset_var = RESET_KNOWN_OBSTACLES
+  obs_reset_var = RESET_UNKNOWN_OBSTACLES
   endflag = DEPLOY_%(V1_NAME)=false
 
 #ifdef EXPORT_FILE default
