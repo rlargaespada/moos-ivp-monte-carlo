@@ -4,7 +4,7 @@
 #  Author: Raul Largaespada
 #  LastEd: Apr 13th 2023
 #----------------------------------------------------------
-#  Part 1: Set global var defaults
+#  Part 1: Pull global var defaults from config files
 #----------------------------------------------------------
 # define upper level param directories
 LAYOUT_DIR=$(dirname $PWD)  # layout directory is one level up
@@ -94,6 +94,9 @@ done
 #  Part 3: Create the .moos and .bhv files
 #-------------------------------------------------------
 
+# make metrics directory if it doesn't exist
+mkdir -p "${METRICS_DIR}"
+
 # generate obstacle files
 nsplug "${MAP_DIR}/${OBS_MAP_FILE}" "${OBS_CONST_FILE}" -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
@@ -127,6 +130,7 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        NUM_TRIALS=$NUM_TRIALS \
        START_POS="${V1_START_POS}" \
        GOAL_POS="${V1_GOAL_POS}" \
+       EXPORT_DIR=${METRICS_DIR} \
        EXPORT_FILE="${EXPORT_FILE}" \
        PLANNER=$PLANNER
 

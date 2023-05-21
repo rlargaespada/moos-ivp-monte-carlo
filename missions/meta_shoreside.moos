@@ -440,9 +440,9 @@ ProcessConfig = uEvalPlanner
   endflag = DEPLOY_%(V1_NAME)=false
 
 #ifdef EXPORT_FILE default
-  file = METRICS_%(PLANNER)
+  file = $(EXPORT_DIR)/METRICS_%(PLANNER)
 #else
-  file = $(EXPORT_FILE)
+  file = $(EXPORT_DIR)/$(EXPORT_FILE)
 #endif
   use_timestamp = false
 }
