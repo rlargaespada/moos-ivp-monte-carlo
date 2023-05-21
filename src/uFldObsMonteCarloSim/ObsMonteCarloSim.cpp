@@ -390,7 +390,7 @@ bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
 
   for (i = 0; i < vsize; i++) {
     string line = stripBlankEnds(lines[i]);
-    if ((line == "") || strBegins(line, "//"))
+    if ((line == "") || strBegins(line, "//") || strBegins(line, "#"))
       continue;
 
     string left  = biteStringX(line, '=');

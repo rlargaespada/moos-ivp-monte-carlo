@@ -317,6 +317,6 @@ ProcessConfig = pDStarLite
   replan_flag = $(STATION_UPDATES_VAR) = center_activate=true
 
   // grid_bounds = {-159,91:-159,-357:276,-357:276,91}
-  grid_bounds = $(DSL_GRID_BOUNDS)
+  grid_bounds = $(SEARCH_BOUNDS)
   grid_cell_size = 5
 }
