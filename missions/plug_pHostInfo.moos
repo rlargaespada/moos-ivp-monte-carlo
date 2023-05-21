@@ -6,4 +6,3 @@ ProcessConfig = pHostInfo
   AppTick    = 1
   CommsTick  = 1
 }
-

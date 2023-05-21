@@ -1,3 +1,6 @@
+//--------------------------------------------------
+// pObstacleMgr config block (created from plugin)
+
 ProcessConfig = pObstacleMgr
 {
   AppTick   = 4
@@ -7,12 +10,12 @@ ProcessConfig = pObstacleMgr
   alert_range = 30   //? set by OBM_ALERT_REQUEST?
   given_max_duration = 180
 
-  general_alert = name=gen_alert, update_var=GENERAL_OBSTACLE_ALERT, alert_range=2000
+  general_alert = name=gen_alert, update_var=$(PLANNER_OBS_ALERT_VAR), alert_range=2000
 
   // parameters for handling unknown obstacles
   point_var = TRACKED_FEATURE
   max_pts_per_cluster = 20   // default is 20
-  max_age_per_point = 20     // (secs)  default is 20
+  max_age_per_point = 10     // (secs)  default is 20
   ignore_range = 40          // (meters) default is -1, (off)
 
   // laso option configuration

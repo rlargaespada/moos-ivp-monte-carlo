@@ -109,6 +109,7 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        WARP=$TIME_WARP \
        LAT_ORIGIN=$LAT_ORIGIN \
        LONG_ORIGIN=$LONG_ORIGIN \
+       V1_NAME=$V1_NAME \
        IP_ADDR="localhost" \
        SHORE_MOOSDB=$SHORE_MOOSDB \
        PSHARE_PORT=$SHORE_PSHARE \
@@ -120,12 +121,9 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        OBS_CONST_FILE=$OBS_CONST_FILE \
        OBS_KNOWN_FILE=$OBS_KNOWN_FILE \
        OBS_UNKNOWN_FILE=$OBS_UNKNOWN_FILE \
-       V1_NAME=$V1_NAME \
        NUM_TRIALS=$NUM_TRIALS \
        START_POS=$V1_START_POS \
        GOAL_POS=$V1_GOAL_POS \
-       PATH_REQUEST_VAR=$PATH_REQUEST_VAR \
-       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR \
        EXPORT_FILE=$EXPORT_FILE \
        PLANNER=$PLANNER
 
@@ -134,19 +132,17 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        WARP=$TIME_WARP \
        LAT_ORIGIN=$LAT_ORIGIN \
        LONG_ORIGIN=$LONG_ORIGIN \
+       VNAME=$V1_NAME \
        IP_ADDR="localhost" \
        V_MOOSDB=$V1_MOOSDB \
        PSHARE_PORT=$V1_PSHARE \
        SHORE_IP="localhost" \
        SHORE_PSHARE=$SHORE_PSHARE \
-       VNAME=$V1_NAME \
        VCOLOR=$V1_COLOR \
        START_POS=$V1_START_POS \
        GOAL_POS=$V1_GOAL_POS \
        PLANNER=$PLANNER \
-       PATH_REQUEST_VAR=$PATH_REQUEST_VAR \
-       PATH_FOUND_VAR=$PATH_FOUND_VAR \
-       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR \
+       DSL_GRID_BOUNDS="$DSL_GRID_BOUNDS" \
        DRIFT_DIR=$DRIFT_DIR \
        DRIFT_STRENGTH=$DRIFT_STRENGTH
 
@@ -154,8 +150,6 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
        --path=$LAYOUT_DIR:$MAP_DIR:$MISSIONS_DIR \
        VNAME=$V1_NAME \
        START_POS=$V1_START_POS \
-       PATH_FOUND_VAR=$PATH_FOUND_VAR \
-       PATH_COMPLETE_VAR=$PATH_COMPLETE_VAR \
        USE_OBS_AVOID=$USE_OBS_AVOID
 
 

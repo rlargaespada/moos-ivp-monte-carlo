@@ -1,8 +1,20 @@
 //*******************************************************
 // definitions
+
+// uEvalPlanner - Planner interface
+#define PATH_REQUEST_VAR PLAN_PATH_REQUESTED
+#define PATH_STATS_VAR PATH_STATS
+#define PATH_COMPLETE_VAR PATH_COMPLETE
+#define PATH_FAILED_VAR PATH_FAILED
+
+// Shoreside - Helm Interface
+#define STATION_START_UPDATES_VAR STATION_START_UPDATES
+
+// obstacle sim refresh config
 #define OBS_REFRESH_INTERVAL 100
 #define OBS_MIN_DURATION 120
 #define OBS_MAX_DURATION 180
+
 
 //*******************************************************
 // ShoreSide Configuration File
@@ -46,7 +58,6 @@ Processconfig = ANTLER
 
 //------------------------------------------
 // pMarineViewer config block
-
 ProcessConfig = pMarineViewer
 {
   AppTick = 4
@@ -82,7 +93,7 @@ ProcessConfig = pMarineViewer
 
   // Context Pull-Down Menu
   left_context[$(V1_NAME)] = UEP_START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
-  left_context[$(V1_NAME)] = STATION_START_UPDATES_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
+  left_context[$(V1_NAME)] = $(STATION_START_UPDATES_VAR)_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
   right_context[$(V1_NAME)] = UEP_GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
 
   // Exclusion Filter
@@ -113,7 +124,6 @@ ProcessConfig = pMarineViewer
 
 //------------------------------------------
 // pLogger config block
-
 ProcessConfig = pLogger
 {
   AppTick       = 5
@@ -160,8 +170,7 @@ ProcessConfig = uXMS
   // var = NEW_OBSTSACLE_FILE_KNOWN, NEW_OBSTSACLE_FILE_UNKNOWN
 
   //collision detection
-  var = COLLISION_COUNT, NEAR_MISS_COUNT, ENCOUNTER_COUNT
-  var = OB_COLLISION, OB_NEAR_MISS, OB_ENCOUNTER
+  var = COLLISION_ALERT, NEAR_MISS_ALERT, ENCOUNTER_ALERT
 
   // path check
   var = UPC_ODOMETRY_REPORT
@@ -222,10 +231,11 @@ ProcessConfig = uLoadWatch
 
 
 #include plug_pShare.moos
+
 #include plug_pHostInfo.moos
+
 //------------------------------------------
 // uFldShoreBroker config block
-
 ProcessConfig = uFldShoreBroker
 {
   AppTick       = 4
@@ -242,11 +252,13 @@ ProcessConfig = uFldShoreBroker
 
   qbridge = USM_RESET
   qbridge = $(PATH_REQUEST_VAR)
-  qbridge = STATION_START_UPDATES
+  qbridge = $(STATION_START_UPDATES_VAR)
   bridge = src=GIVEN_OBSTACLE
 }
 
 
+//--------------------------------------------------
+// uFldObsMonteCarloSim_CONSTANT config block
 ProcessConfig = uFldObsMonteCarloSim_CONSTANT
 {
   AppTick       = 1
@@ -282,6 +294,8 @@ ProcessConfig = uFldObsMonteCarloSim_CONSTANT
 }
 
 
+//--------------------------------------------------
+// uFldObsMonteCarloSim_KNOWN config block
 ProcessConfig = uFldObsMonteCarloSim_KNOWN
 {
   AppTick       = 1
@@ -324,6 +338,8 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
 }
 
 
+//--------------------------------------------------
+// uFldObsMonteCarloSim_UNKNOWN config block
 ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
 {
   AppTick       = 1
@@ -413,8 +429,9 @@ ProcessConfig = uEvalPlanner
   heading_on_reset = relative
 
   path_request_var = $(PATH_REQUEST_VAR)
-  path_stats_var = PATH_STATS
+  path_stats_var = $(PATH_STATS_VAR)
   path_complete_var = $(PATH_COMPLETE_VAR)
+  path_failed_var = $(PATH_FAILED_VAR)
 
   num_trials = $(NUM_TRIALS)
 

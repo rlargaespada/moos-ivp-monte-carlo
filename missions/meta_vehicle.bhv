@@ -1,4 +1,17 @@
 //*******************************************************
+// definitions
+// Planner - Helm Interface
+#define PATH_FOUND_VAR PATH_FOUND
+#define PATH_COMPLETE_VAR PATH_COMPLETE
+#define PATH_FAILED_VAR PATH_FAILED
+#define PATH_UPDATES_VAR PATH_UPDATES
+#define STATION_UPDATES_VAR STATION_UPDATES
+
+// Shoreside - Helm Interface
+#define STATION_START_UPDATES_VAR STATION_START_UPDATES
+
+
+//*******************************************************
 // Vehicle behavior configuration file
 
 // turn off obstacle avoidance if user requests
@@ -36,7 +49,7 @@ Set MODE = IDLE {
 
 Set MODE = FAILED {
   MODE = ACTIVE
-  PATH_FAILED = true
+  $(PATH_FAILED_VAR) = true
 }
 
 
@@ -49,7 +62,7 @@ Behavior = BHV_StationKeep
   pwt          = 100
   condition    = (MODE == INACTIVE)
   perpetual  = true
-  updates = STATION_START_UPDATES
+  updates = $(STATION_START_UPDATES_VAR)
   inactiveflag = STATIONING = false
   activeflag   = STATIONING = true
 
@@ -123,7 +136,7 @@ Behavior = BHV_StationKeep
   pwt          = 100
   condition    = MODE == PLAN
   perpetual  = true
-  updates = STATION_UPDATES
+  updates = $(STATION_UPDATES_VAR)
   inactiveflag = STATIONING = false
   activeflag   = STATIONING = true
 
@@ -155,7 +168,7 @@ Behavior=BHV_Waypoint
   pwt       = 100
   condition = MODE == TRAVERSE
   endflag = WAYPOINTS_COMPLETE = true
-  updates   = PATH_UPDATE
+  updates   = $(PATH_UPDATES_VAR)
   perpetual = true
 
 

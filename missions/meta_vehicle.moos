@@ -1,5 +1,20 @@
 //*******************************************************
-// ShoreSide Configuration File
+// definitions
+// uEvalPlanner - Planner interface
+#define PATH_REQUEST_VAR PLAN_PATH_REQUESTED
+#define PATH_STATS_VAR PATH_STATS
+#define PATH_COMPLETE_VAR PATH_COMPLETE
+#define PATH_FAILED_VAR PATH_FAILED
+
+// Planner - helm interface
+#define PATH_UPDATES_VAR PATH_UPDATES
+#define STATION_UPDATES_VAR STATION_UPDATES
+
+#define PLANNER_OBS_ALERT_VAR GENERAL_OBSTACLE_ALERT
+
+
+//*******************************************************
+// Vehicle Configuration File
 
 ServerHost = $(IP_ADDR)
 ServerPort = $(V_MOOSDB)
@@ -77,6 +92,7 @@ ProcessConfig = pLogger
   WildCardOmitPattern = DB_VARSUMMARY
   WildCardOmitPattern = DB_RWSUMMARY
 }
+
 
 //------------------------------------------
 // uProcessWatch config block
@@ -257,8 +273,11 @@ ProcessConfig = uTimerScript_RANDOM_DRIFTS
 
 
 #include plug_pShare.moos
+
 #include plug_pHostInfo.moos
+
 #include plug_uFldNodeBroker.moos
+
 #include plug_pObstacleMgr.moos
 
 
@@ -271,12 +290,12 @@ ProcessConfig = pNullPlanner
 
   // vars to subscribe for
   path_request_var = $(PATH_REQUEST_VAR)
-  obs_alert_var = GENERAL_OBSTACLE_ALERT
+  obs_alert_var = $(PLANNER_OBS_ALERT_VAR)
   wpt_complete_var = WAYPOINTS_COMPLETE
 
   // publication config
-  init_plan_flag = STATION_UPDATES = station_pt=$[START_X],$[START_Y] # center_activate=false
-  traverse_flag = PATH_UPDATE = points=$[PATH_PTS]
+  init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS]
 }
 
 
@@ -289,15 +308,15 @@ ProcessConfig = pDStarLite
 
   // vars to subscribe for
   path_request_var = $(PATH_REQUEST_VAR)
-  obs_alert_var = GENERAL_OBSTACLE_ALERT
+  obs_alert_var = $(PLANNER_OBS_ALERT_VAR)
   wpt_complete_var = WAYPOINTS_COMPLETE
 
   // publication config
-  init_plan_flag = STATION_UPDATES = station_pt=$[START_X],$[START_Y] # center_activate=false
-  traverse_flag = PATH_UPDATE = points=$[PATH_PTS]
-  replan_flag = STATION_UPDATES = center_activate=true
+  init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS]
+  replan_flag = $(STATION_UPDATES_VAR) = center_activate=true
 
   // grid_bounds = {-159,91:-159,-357:276,-357:276,91}
-  grid_bounds = {-150, 50:-150,-250:250,-250:250,50}  // todo: should set per map/layout
+  grid_bounds = $(DSL_GRID_BOUNDS)
   grid_cell_size = 5
 }

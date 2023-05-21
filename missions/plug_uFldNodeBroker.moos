@@ -39,9 +39,8 @@ ProcessConfig = uFldNodeBroker
   bridge = src=NODE_PSHARE_VARS
   bridge = src=NODE_REPORT_LOCAL,  alias=NODE_REPORT
   bridge = src=NODE_MESSAGE_LOCAL, alias=NODE_MESSAGE
+  bridge = src=$(PATH_STATS_VAR)
   bridge = src=$(PATH_COMPLETE_VAR)
-  bridge = src=$(PATH_FOUND_VAR)
-  bridge = src=PATH_STATS
-  bridge = src=PATH_FAILED
+  bridge = src=$(PATH_FAILED_VAR)
   bridge = src=WPT_ADVANCED
 }

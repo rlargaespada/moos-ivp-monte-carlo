@@ -22,10 +22,6 @@ OBS_CONST_FILE="targ_obstacles_const.txt"
 OBS_KNOWN_FILE="targ_obstacles_known.txt"
 OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
-PATH_REQUEST_VAR="PLAN_PATH_REQUESTED"
-PATH_FOUND_VAR="PATH_FOUND"
-PATH_COMPLETE_VAR="PATH_COMPLETE"
-
 # vehicle 1 app config parameters
 V1_NAME="artemis"
 #? where do i list what goes where? declare everything here, leave values unset? high level defaults?
