@@ -16,6 +16,12 @@ source ${MISSIONS_DIR}/config.sh
 source ${MAP_DIR}/config.sh
 source ${LAYOUT_DIR}/config.sh
 
+# overwrites for benchmarking
+USE_BENCHMARK="true"
+OBS_KNOWN_FILE="tmp/benchmark_obstacles_known"  # suffix and extension are included in .moos file
+OBS_UNKNOWN_FILE="tmp/benchmark_obstacles_unknown"  # suffix and extension are included in .moos file
+NUM_TRIALS=100
+
 
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
@@ -32,8 +38,6 @@ for ARGI; do
         echo "  --planner=<planner>, -p=<planner>                "
         echo "    Planner to run, must be one of [${PLANNER_OPTIONS[@]}]."
         echo "    Default is \"$PLANNER\".                       "
-        echo "  --num_trials=<num>, -n=<num>                     "
-        echo "    Number of Monte Carlo trials to run, must be an integer."
         echo "  --export=<filestem>, -e=<filestem>               "
         echo "    CSV file to export simulation results to, without"
         echo "    the \".csv\" suffix. Defaults to \"METRICS_<PLANNER>.\""
@@ -64,8 +68,6 @@ for ARGI; do
             echo "Exiting with code: 1"
             exit 1;
         fi
-    elif [ "${ARGI::13}" = "--num_trials=" -o "${ARGI::3}" = "-n=" ] ; then
-        NUM_TRIALS="${ARGI#*=}"
     elif [ "${ARGI::9}" = "--export=" -o "${ARGI::3}" = "-e=" ] ; then
         EXPORT_FILE="${ARGI#*=}"
         EXPORT_FILE=${EXPORT_FILE%.*}  # remove file extension if it exists
@@ -94,20 +96,19 @@ done
 #  Part 3: Create the .moos and .bhv files
 #-------------------------------------------------------
 
+# unzip out benchmark files and save total number
+mkdir -p tmp
+unzip -q -d tmp benchmark_obstacles.zip
+NUM_TRIALS=$(ls tmp | wc -l)  # count number of files unzipped
+NUM_TRIALS=$(($NUM_TRIALS/2))  # divide by 2 since files are in known/unknown pairs
+
 # make metrics directory if it doesn't exist
 mkdir -p "${METRICS_DIR}"
 
-# generate obstacle files
+# generate constant obstacle file
 nsplug "${MAP_DIR}/${OBS_MAP_FILE}" "${OBS_CONST_FILE}" -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
        LAYOUT_OBSTACLES="${OBS_LAYOUT_FILE}"
-gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
-              --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
-              --amt=$RANDOM_OBS_AMT > "${OBS_KNOWN_FILE}"
-sleep 1  # sleep for a bit so gen_obstacles gets a new random seed (based on sys time)
-gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
-              --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
-              --amt=$RANDOM_OBS_AMT > "${OBS_UNKNOWN_FILE}"
 
 
 # genrate moos files
@@ -165,6 +166,7 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
 
 if [ ${JUST_MAKE} = "true" ] ; then
     echo "Files assembled; nothing launched; exiting per request."
+    rm -rf tmp
     exit 0
 fi
 
@@ -190,5 +192,7 @@ if [ $GUI = "false" ] ; then
     sleep 5
     ktm  # kill any stragglers, seems to happen without the gui
 fi
+
+rm -rf tmp  # cleanup unzipped benchmark files
 
 kill -- -$$

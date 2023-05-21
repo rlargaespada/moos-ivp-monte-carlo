@@ -85,9 +85,9 @@ void showExampleConfigAndExit()
   blk("  path_failed_var = PATH_FAILED  // default is PATH_FAILED      ");
   blk("                                                                ");
   blk("  num_trials = 10  // default is 10                             ");
-  blk("  obs_reset_var = UFOS_RESET  // default is UFOS_RESET. Any number");
-  blk("                              // of variables is supported. Set to");
-  blk("                              // \"none\" to not reset any obstacles.");
+  blk("  obs_reset_var = UFOS_RESET=now  // default is UFOS_RESET=now. Any number");
+  blk("                                  // of variable-data pairs is supported. Set to");
+  blk("                                  // \"none\" to not reset any obstacles.");
   blk("  deviation_limit = 5  // default is 5 meters                   ");
   blk("                                                                ");
   blk("  trial_flag = DEPLOY=true  // example, any number of flags are supported");
@@ -143,7 +143,7 @@ void showInterfaceAndExit()
   blk("                                                                ");
   blk("PUBLICATIONS:                                                   ");
   blk("------------------------------------                            ");
-  blk("  <obs_reset_var> = now  // set in config                       ");
+  blk("  <obs_reset_var>  // set in config                       ");
   blk("  USM_RESET_<vehicle_name> = x=100,y=220,speed=0,heading=10,depth=10");
   blk("  UPC_TRIP_RESET = <vehicle_name                                ");
   blk("  <path_request_var> = start=100,220;goal=210,30  // set in config");

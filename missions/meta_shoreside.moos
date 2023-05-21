@@ -301,7 +301,12 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
   AppTick       = 1
   CommsTick     = 1
 
+#ifdef USE_BENCHMARK true
+  obstacle_file = $(OBS_KNOWN_FILE)_0.txt
+#else
   obstacle_file = $(OBS_KNOWN_FILE)
+#endif
+
   post_visuals = $(GUI)
   label_prefix = known
   obstacle_file_var = NEW_OBSTACLE_FILE_KNOWN
@@ -345,7 +350,12 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
   AppTick       = 1
   CommsTick     = 1
 
+#ifdef USE_BENCHMARK true
+  obstacle_file = $(OBS_UNKNOWN_FILE)_0.txt
+#else
   obstacle_file = $(OBS_UNKNOWN_FILE)
+#endif
+
   post_visuals = $(GUI)
   label_prefix = unknown
   obstacle_file_var = NEW_OBSTACLE_FILE_UNKNOWN
@@ -435,8 +445,17 @@ ProcessConfig = uEvalPlanner
 
   num_trials = $(NUM_TRIALS)
 
+#ifdef USE_BENCHMARK true
+  obs_reset_var = NEW_OBSTACLE_FILE_KNOWN=$(OBS_KNOWN_FILE)_$[IX].txt
+  obs_reset_var = NEW_OBSTACLE_FILE_UNKNOWN=$(OBS_UNKNOWN_FILE)_$[IX].txt
+
+  endflag = NEW_OBSTACLE_FILE_KNOWN=$(OBS_KNOWN_FILE)_0.txt  // reset to first file
+  endflag = NEW_OBSTACLE_FILE_UNKNOWN=$(OBS_UNKNOWN_FILE)_0.txt  // reset to first file
+#else
   obs_reset_var = RESET_KNOWN_OBSTACLES
   obs_reset_var = RESET_UNKNOWN_OBSTACLES
+#endif
+
   endflag = DEPLOY_%(V1_NAME)=false
 
 #ifdef EXPORT_FILE default
