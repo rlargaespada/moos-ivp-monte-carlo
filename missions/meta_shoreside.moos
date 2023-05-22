@@ -64,7 +64,6 @@ ProcessConfig = pMarineViewer
   CommsTick = 4
 
   // BackView Options
-  // tiff_file            = MIT_SP.tif
   tiff_file            = $(TIFF_FILE)
   set_pan_x            = $(PMV_PAN_X)
   set_pan_y            = $(PMV_PAN_Y)
@@ -167,7 +166,7 @@ ProcessConfig = uXMS
 
   // obstacle sims
   var = RESET_KNOWN_OBSTACLES, RESET_UNKNOWN_OBSTACLES
-  // var = NEW_OBSTSACLE_FILE_KNOWN, NEW_OBSTSACLE_FILE_UNKNOWN
+  var = NEW_OBSTSACLE_FILE_KNOWN, NEW_OBSTSACLE_FILE_UNKNOWN
 
   //collision detection
   var = COLLISION_ALERT, NEAR_MISS_ALERT, ENCOUNTER_ALERT
