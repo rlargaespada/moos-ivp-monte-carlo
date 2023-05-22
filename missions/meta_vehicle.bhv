@@ -237,7 +237,7 @@ Behavior = BHV_OpRegion
 {
   // General Behavior Parameters
   // ---------------------------
-  name         = op_region_forest_lake
+  name         = op_region
   pwt          = 100
   condition    = (MODE == INACTIVE) or (MODE == ACTIVE)
   updates      = OPREGION_UPDATES
@@ -248,7 +248,7 @@ Behavior = BHV_OpRegion
   trigger_entry_time = 1
   trigger_exit_time = 0.5
 
-  polygon = pts={-159,91:-159,-357:276,-357:276,91}, label=forest_lake
+  polygon = pts=$(OPREGION_BOUNDS), label=op_region
   breached_poly_flag = OUT_OF_BOUNDS = $(VNAME) is out of bounds
 
   visual_hints = vertex_color = brown  // default

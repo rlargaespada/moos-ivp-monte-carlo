@@ -100,7 +100,8 @@ mkdir -p "${METRICS_DIR}"
 # generate obstacle files
 nsplug "${MAP_DIR}/${OBS_MAP_FILE}" "${OBS_CONST_FILE}" -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
-       LAYOUT_OBSTACLES="${OBS_LAYOUT_FILE}"
+       MAP_BOUNDS="${MAP_BOUNDS}" \
+       LAYOUT_OBSTACLES_FILE="${OBS_LAYOUT_FILE}"
 gen_obstacles --poly=$RANDOM_OBS_REGION  --min_range=$RANDOM_OBS_MIN_RANGE    \
               --max_size=$RANDOM_OBS_MAX_SIZE --min_size=$RANDOM_OBS_MIN_SIZE \
               --amt=$RANDOM_OBS_AMT > "${OBS_KNOWN_FILE}"
@@ -161,7 +162,8 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
        VNAME=$V1_NAME \
        START_POS="${V1_START_POS}" \
-       USE_OBS_AVOID=$USE_OBS_AVOID
+       USE_OBS_AVOID=$USE_OBS_AVOID \
+       OPREGION_BOUNDS="${OPREGION_BOUNDS}"
 
 
 

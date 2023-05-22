@@ -1,7 +1,7 @@
 # gen_obstacles
 
 # region is entire forest_lake map
-region    = pts={-159,91:-159,-357:276,-357:276,91}
+region    = pts=$(MAP_BOUNDS)
 # additional settings are unused since these obstacles aren't regenerated,
 # but are required for proper parsing
 min_range = 2
@@ -14,4 +14,4 @@ poly = pts={-159,91:-159,-215:-145,-200:-110,-150:-90,-50}, label=landmass_0a
 poly = pts={-159,91:-90,-50:45,17:35,91}, label=landmass_0b
 poly = pts={276,0:195,-125:260,-357:276,-357}, label=landmass_1
 
-#include $(LAYOUT_OBSTACLES)
+#include $(LAYOUT_OBSTACLES_FILE)
