@@ -440,6 +440,8 @@ ProcessConfig = uEvalPlanner
   heading_on_reset = relative
 #elseifdef LAYOUT uturn
   heading_on_reset = 0
+#elseifdef LAYOUT sturn
+  heading_on_reset = 90
 #endif
 
   path_request_var = $(PATH_REQUEST_VAR)

@@ -299,6 +299,8 @@ ProcessConfig = pNullPlanner
 
 #ifdef LAYOUT uturn
   intermediate_pts = 50,-125
+#elseifdef LAYOUT sturn
+  intermediate_pts = 150,-185:20,-60
 #endif
 }
 
