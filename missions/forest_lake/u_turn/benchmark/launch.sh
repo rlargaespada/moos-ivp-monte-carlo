@@ -20,7 +20,7 @@ source ${LAYOUT_DIR}/config.sh
 USE_BENCHMARK="true"
 OBS_KNOWN_FILE="tmp/benchmark_obstacles_known"  # suffix and extension are included in .moos file
 OBS_UNKNOWN_FILE="tmp/benchmark_obstacles_unknown"  # suffix and extension are included in .moos file
-
+LAYOUT="uturn"
 
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
