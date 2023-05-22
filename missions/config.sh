@@ -17,7 +17,6 @@ DRIFT_DIR="x"; DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
 
 METRICS_DIR="metrics"
 USE_BENCHMARK="false"
-LAYOUT="basic"
 
 #----------------------------------------------------------
 #  Part 2: Set Shoreside app config defaults
@@ -51,6 +50,9 @@ OBS_CONST_FILE="targ_obstacles_const.txt"
 OBS_KNOWN_FILE="targ_obstacles_known.txt"
 OBS_UNKNOWN_FILE="targ_obstacles_unknown.txt"
 
+# sim reset config
+HDG_ON_RESET="relative"
+
 #----------------------------------------------------------
 #  Part 3: Set vehicle app config defaults
 #----------------------------------------------------------
@@ -68,3 +70,4 @@ V1_GOAL_X="210"; V1_GOAL_Y="30"
 V1_GOAL_POS="$V1_GOAL_X,$V1_GOAL_Y"
 
 OPREGION_BOUNDS="${MAP_BOUNDS}"
+NULL_PLANNER_PTS=""

@@ -135,11 +135,11 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        NUM_TRIALS=$NUM_TRIALS \
        START_POS="${V1_START_POS}" \
        GOAL_POS="${V1_GOAL_POS}" \
-       EXPORT_DIR=${METRICS_DIR} \
+       HDG_ON_RESET=$HDG_ON_RESET \
+       EXPORT_DIR="${METRICS_DIR}" \
        EXPORT_FILE="${EXPORT_FILE}" \
        PLANNER=$PLANNER \
-       USE_BENCHMARK=$USE_BENCHMARK \
-       LAYOUT=$LAYOUT
+       USE_BENCHMARK=$USE_BENCHMARK
 
 nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
@@ -157,7 +157,6 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        GOAL_POS="${V1_GOAL_POS}" \
        PLANNER=$PLANNER \
        SEARCH_BOUNDS="${SEARCH_BOUNDS}" \
-       LAYOUT=$LAYOUT \
        DRIFT_DIR=$DRIFT_DIR \
        DRIFT_STRENGTH=$DRIFT_STRENGTH
 
@@ -166,7 +165,8 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
        VNAME=$V1_NAME \
        START_POS="${V1_START_POS}" \
        USE_OBS_AVOID=$USE_OBS_AVOID \
-       OPREGION_BOUNDS="${OPREGION_BOUNDS}"
+       OPREGION_BOUNDS="${OPREGION_BOUNDS}" \
+       INTERMEDIATE_PTS="${NULL_PLANNER_PTS}"
 
 
 

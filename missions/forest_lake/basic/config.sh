@@ -15,6 +15,9 @@ RANDOM_OBS_MIN_SIZE=8
 RANDOM_OBS_MAX_SIZE=15
 RANDOM_OBS_AMT=7
 
+# sim reset config
+HDG_ON_RESET="relative"
+
 #----------------------------------------------------------
 #  Part 2: Set vehicle app config overwrites
 #----------------------------------------------------------
@@ -25,3 +28,5 @@ V1_START_X="-100"; V1_START_Y="-220"
 V1_START_POS="$V1_START_X,$V1_START_Y"
 V1_GOAL_X="210"; V1_GOAL_Y="30"
 V1_GOAL_POS="$V1_GOAL_X,$V1_GOAL_Y"
+
+NULL_PLANNER_PTS=""

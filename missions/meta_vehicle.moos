@@ -296,11 +296,9 @@ ProcessConfig = pNullPlanner
   // publication config
   init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
   traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS]
+#ifdef INTERMEDIATE_PTS
 
-#ifdef LAYOUT uturn
-  intermediate_pts = 50,-125
-#elseifdef LAYOUT sturn
-  intermediate_pts = 150,-185:20,-60
+  intermediate_pts = $(INTERMEDIATE_PTS)
 #endif
 }
 
