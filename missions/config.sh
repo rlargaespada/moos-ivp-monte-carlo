@@ -17,6 +17,7 @@ DRIFT_DIR="x"; DRIFT_DIR_OPTIONS=($DRIFT_DIR "y" "random")
 
 METRICS_DIR="metrics"
 USE_BENCHMARK="false"
+LAYOUT="basic"
 
 #----------------------------------------------------------
 #  Part 2: Set Shoreside app config defaults

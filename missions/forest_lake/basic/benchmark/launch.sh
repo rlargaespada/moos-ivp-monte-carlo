@@ -16,7 +16,7 @@ source ${MISSIONS_DIR}/config.sh
 source ${MAP_DIR}/config.sh
 source ${LAYOUT_DIR}/config.sh
 
-# overwrites for benchmarking
+# variable overwrites
 USE_BENCHMARK="true"
 OBS_KNOWN_FILE="tmp/benchmark_obstacles_known"  # suffix and extension are included in .moos file
 OBS_UNKNOWN_FILE="tmp/benchmark_obstacles_unknown"  # suffix and extension are included in .moos file
@@ -135,7 +135,8 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        EXPORT_DIR=${METRICS_DIR} \
        EXPORT_FILE="${EXPORT_FILE}" \
        PLANNER=$PLANNER \
-       USE_BENCHMARK=$USE_BENCHMARK
+       USE_BENCHMARK=$USE_BENCHMARK \
+       LAYOUT=$LAYOUT
 
 nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
@@ -153,6 +154,7 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        GOAL_POS="${V1_GOAL_POS}" \
        PLANNER=$PLANNER \
        SEARCH_BOUNDS="${SEARCH_BOUNDS}" \
+       LAYOUT=$LAYOUT \
        DRIFT_DIR=$DRIFT_DIR \
        DRIFT_STRENGTH=$DRIFT_STRENGTH
 

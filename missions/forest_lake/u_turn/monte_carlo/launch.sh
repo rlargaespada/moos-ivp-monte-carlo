@@ -16,6 +16,9 @@ source ${MISSIONS_DIR}/config.sh
 source ${MAP_DIR}/config.sh
 source ${LAYOUT_DIR}/config.sh
 
+# variable overwrites
+LAYOUT="uturn"
+
 
 #----------------------------------------------------------
 #  Part 2: Check for and handle command-line arguments
