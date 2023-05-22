@@ -1,37 +1,9 @@
-#!/bin/bash
-#--------------------------------------------------------------
-#   Script: clean.sh                                    
-#   Author: Michael Benjamin  
-#     Date: June 2020     
-#----------------------------------------------------------
-#  Part 1: Declare global var defaults
-#----------------------------------------------------------
-VERBOSE=""
+#!/bin/bash -e
 
-#-------------------------------------------------------
-#  Part 2: Check for and handle command-line arguments
-#-------------------------------------------------------
-for ARGI; do
-    if [ "${ARGI}" = "--help" -o "${ARGI}" = "-h" ] ; then
-	echo "clean.sh [SWITCHES]        "
-	echo "  --verbose                " 
-	echo "  --help, -h               " 
-	exit 0;	
-    elif [ "${ARGI}" = "--verbose" -o "${ARGI}" = "-v" ] ; then
-	VERBOSE="-v"
-    else 
-	echo "clean.sh: Bad Arg:" $ARGI
-	exit 1
-    fi
-done
+# define upper level param directories
+LAYOUT_DIR=$(dirname $PWD)  # layout directory is one level up
+MAP_DIR=$(dirname $LAYOUT_DIR)  # map directory is two levels up
+MISSIONS_DIR=$(dirname $MAP_DIR)  # missions directory is three levels up
 
-#-------------------------------------------------------
-#  Part 2: Do the cleaning!
-#-------------------------------------------------------
-if [ "${VERBOSE}" = "-v" ]; then
-    echo "Cleaning: $PWD"
-fi
-rm -rf  $VERBOSE   MOOSLog_*  XLOG_* LOG_* 
-rm -f   $VERBOSE   *~  *.moos++
-rm -f   $VERBOSE   targ_*
-rm -f   $VERBOSE   .LastOpenedMOOSLogDirectory
+# call template launch script from missions dir
+source ${MISSIONS_DIR}/run_clean.sh
