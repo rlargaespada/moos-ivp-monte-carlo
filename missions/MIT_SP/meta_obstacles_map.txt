@@ -1,0 +1,18 @@
+# gen_obstacles
+
+# region is entire MIT SP map
+region    = pts=$(MAP_BOUNDS)
+# additional settings are unused since these obstacles aren't regenerated,
+# but are required for proper parsing
+min_range = 2
+min_size  = 6
+max_size  = 10
+
+# landmasses
+poly = pts={-377,-133:350,212:350,190:-377,-155}, label=MIT
+poly = pts={-377,-155:-364,-149:-250,-495:-264,-495}, label=harvard_bridge
+poly = pts={-98,-22:50,48:60,25:-89,-46}, label=SP
+poly = pts={120,82:321,177:344,118:140,34}, label=boats
+# poly = pts={350,212:350,190:390,-300:400,-300:360,212}, label=east_bound
+
+#include $(LAYOUT_OBSTACLES_FILE)
