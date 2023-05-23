@@ -158,6 +158,7 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        START_POS="${V1_START_POS}" \
        GOAL_POS="${V1_GOAL_POS}" \
        PLANNER=$PLANNER \
+       INTERMEDIATE_PTS="${NULL_PLANNER_PTS}" \
        SEARCH_BOUNDS="${SEARCH_BOUNDS}" \
        DRIFT_DIR=$DRIFT_DIR \
        DRIFT_STRENGTH=$DRIFT_STRENGTH
@@ -167,8 +168,7 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
        VNAME=$V1_NAME \
        START_POS="${V1_START_POS}" \
        USE_OBS_AVOID=$USE_OBS_AVOID \
-       OPREGION_BOUNDS="${OPREGION_BOUNDS}" \
-       INTERMEDIATE_PTS="${NULL_PLANNER_PTS}"
+       OPREGION_BOUNDS="${OPREGION_BOUNDS}"
 
 
 if [ ${JUST_MAKE} = "true" ] ; then

@@ -142,6 +142,7 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
         if (msg.GetString() == "true") {
           m_request_new_path = SimRequest::CLOSED;
           m_current_trial.trial_successful = false;
+          m_current_trial.planning_failed = true;
           m_next_trial_pending = true;
         }
       }
@@ -662,6 +663,7 @@ bool EvalPlanner::Iterate()
                   " has timed out after " + doubleToStringX(elapsed_time, 2) +
                   " seconds! Marking trial as failed.");
       m_current_trial.trial_successful = false;
+      m_current_trial.timed_out = true;
       m_request_new_path = SimRequest::CLOSED;
       handleNextTrial();
     }

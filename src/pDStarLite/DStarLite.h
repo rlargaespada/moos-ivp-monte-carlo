@@ -142,6 +142,7 @@ class DStarLite : public AppCastingMOOSApp
   int m_last_cell;  // last cell planned from, used for replanning
   double m_k_m;
   std::map<int, dsl_key> m_dstar_queue;
+  int m_next_path_idx;
 };
 
 #endif

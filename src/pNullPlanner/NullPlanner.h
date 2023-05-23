@@ -9,6 +9,7 @@
 #define NullPlanner_HEADER
 
 #include <map>
+#include <random>
 #include <set>
 #include <string>
 #include <vector>
@@ -106,6 +107,8 @@ class NullPlanner : public AppCastingMOOSApp
 
   // nullplanner state
   XYSegList m_intermediate_pts;
+  std::default_random_engine m_generator;
+  std::uniform_real_distribution<double> m_perturbation{-1, 1};
 };
 
 #endif

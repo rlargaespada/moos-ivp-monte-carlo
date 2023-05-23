@@ -295,7 +295,7 @@ ProcessConfig = pNullPlanner
 
   // publication config
   init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
-  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS]
+  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS] # lead=-1
 #ifdef INTERMEDIATE_PTS
 
   intermediate_pts = $(INTERMEDIATE_PTS)

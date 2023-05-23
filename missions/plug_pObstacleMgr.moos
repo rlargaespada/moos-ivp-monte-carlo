@@ -15,7 +15,7 @@ ProcessConfig = pObstacleMgr
   // parameters for handling unknown obstacles
   point_var = TRACKED_FEATURE
   max_pts_per_cluster = 20   // default is 20
-  max_age_per_point = 10     // (secs)  default is 20
+  max_age_per_point = 20     // (secs)  default is 20
   ignore_range = 40          // (meters) default is -1, (off)
 
   // laso option configuration

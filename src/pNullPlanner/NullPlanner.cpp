@@ -51,6 +51,9 @@ NullPlanner::NullPlanner()
   m_planning_start_time = 0;
   m_planning_end_time = 0;
   m_path_len_traversed = 0;
+
+  // seed generator using MOOS time
+  m_generator.seed(MOOSTime());
 }
 
 //---------------------------------------------------------
@@ -289,9 +292,12 @@ bool NullPlanner::planPath()
   // path is just start point, any intermediate points, and goal point
   m_path.add_vertex(m_start_point);
 
+  // add intermediate points to path
+  // include small perturbation so that downstream waypoint behavior
+  // is forced to reset when path is published
   for (int i = 0; i < m_intermediate_pts.size(); i ++)
-    m_path.add_vertex(m_intermediate_pts.get_vx(i),
-                      m_intermediate_pts.get_vy(i));
+    m_path.add_vertex(m_intermediate_pts.get_vx(i) + m_perturbation(m_generator),
+                      m_intermediate_pts.get_vy(i) + m_perturbation(m_generator));
 
   m_path.add_vertex(m_goal_point);
 

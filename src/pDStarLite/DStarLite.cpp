@@ -16,6 +16,7 @@
 #include <vector>
 #include "ACTable.h"
 #include "DStarLite.h"
+#include "GeomUtils.h"
 #include "MacroUtils.h"
 #include "MBUtils.h"
 #include "VarDataPair.h"
@@ -66,6 +67,7 @@ DStarLite::DStarLite()
   // D* Lite state
   m_last_cell = -1;  // -1 is invalid
   m_k_m = 0;
+  m_next_path_idx = 0;
 }
 
 
@@ -118,7 +120,7 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
         unsigned int last_idx{m_path.size() - 1};
         double x1{m_path.get_vx(last_idx)}, y1{m_path.get_vy(last_idx)};
         double x0{m_path.get_vx(last_idx - 1)}, y0{m_path.get_vy(last_idx - 1)};
-        m_path_len_traversed += hypot(x1 - x0, y1 - y0);
+        m_path_len_traversed += distPointToPoint(x0, y0, x1, y1);
       }
     } else if ((key == "NODE_REPORT_LOCAL") || (key == "NODE_REPORT")) {
       std::string report{tolower(msg.GetString())};
@@ -127,11 +129,12 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
       m_vpos.set_vertex(xval, yval);
     } else if (key == "WPT_INDEX") {
       // add just finished segment of path to dist traveled
-      int prev_idx{static_cast<int>(msg.GetDouble()) - 1};
+      m_next_path_idx = static_cast<int>(msg.GetDouble());
+      int prev_idx{m_next_path_idx - 1};
       if ((m_mode == PlannerMode::IN_TRANSIT)  && (prev_idx > 0)) {
         double x1{m_path.get_vx(prev_idx)}, y1{m_path.get_vy(prev_idx)};
         double x0{m_path.get_vx(prev_idx - 1)}, y0{m_path.get_vy(prev_idx - 1)};
-        m_path_len_traversed += hypot(x1 - x0, y1 - y0);
+        m_path_len_traversed += distPointToPoint(x0, y0, x1, y1);
       }
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
@@ -428,7 +431,7 @@ bool DStarLite::planPath()
     }
 
     // if vehicle position has an obstacle, which can happen when skirting a newly
-    // detected obstacle, clear the current cell;
+    // detected obstacle, clear the current cell
     unsigned int obs_cix{m_grid.getCellVarIX("obs")};
     m_grid.setVal(m_start_cell, 0, obs_cix);
 
@@ -581,18 +584,28 @@ double DStarLite::heuristic(int cell1, int cell2)
   double y1{m_grid.getElement(cell1).getCenterY()};
   double x2{m_grid.getElement(cell2).getCenterX()};
   double y2{m_grid.getElement(cell2).getCenterY()};
-  return (hypot(x2 - x1, y2 - y1));
+  return (distPointToPoint(x1, y1, x2, y2));
 }
 
 
-// Infinite if either cell is an obstacle or cells are not neigbhors, Euclidean dist
+// Infinite if either cell is an obstacle or cells are not neigbhors, else Euclidean dist
 double DStarLite::cost(int cell1, int cell2)
 {
   unsigned int obs_cix{m_grid.getCellVarIX("obs")};
-  if (m_grid.getVal(cell1, obs_cix)) return (INFINITY);
-  if (m_grid.getVal(cell2, obs_cix)) return (INFINITY);
+  if (m_grid.getVal(cell1, obs_cix) == 1) return (INFINITY);
+  if (m_grid.getVal(cell2, obs_cix) == 1) return (INFINITY);
   if (!getNeighbors(cell1).count(cell2)) return (INFINITY);
-  return (heuristic(cell1, cell2));
+
+  double base_cost{heuristic(cell1, cell2)};  // heuristic is Euclidean dist
+
+  // if cell2 neighbors any obstacles, scale the cost
+  int cost_scale{1};
+  for (int n : getNeighbors(cell2)) {
+    if (m_grid.getVal(n, obs_cix) == 1)
+      cost_scale++;
+  }
+
+  return (cost_scale * base_cost);
 }
 
 
@@ -763,6 +776,7 @@ bool DStarLite::postPath()
 {
   Notify(m_prefix + m_path_found_var, "true");
   Notify(m_prefix + m_path_stats_var, getPathStats());
+  m_next_path_idx = 0;
   postFlags(m_traverse_flags);
   return (true);
 }
@@ -772,12 +786,26 @@ bool DStarLite::postPath()
 
 bool DStarLite::checkObstacles()
 {
-  // grab pairs of points on path
+  unsigned int obs_cix{m_grid.getCellVarIX("obs")};
+
   for (int i = 0; i < m_path.size() - 1; i++) {
+    // if we strayed too far from the next waypoint, replan is needed
+    XYPoint next_wpt{m_path.get_point(m_next_path_idx)};
+    double threshold{3 * m_grid.getCellSize()};
+    if (distPointToPoint(m_vpos, next_wpt) > threshold)
+      return (false);
+
+    // grab pairs of points on path
     double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
     double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
 
-    // if line between points intersects an obstacle, replan false
+    // if either point is in an occupied square, replan is needed
+    int cell1{findCellByPoint(XYPoint{x1, y1})};
+    int cell2{findCellByPoint(XYPoint{x2, y2})};
+    if ((m_grid.getVal(cell1, obs_cix) == 1) || (m_grid.getVal(cell2, obs_cix) == 1))
+      return (false);
+
+    // if line between points intersects an obstacle, replan is needed
     for (auto const& obs : m_obstacle_map) {
       if (obs.second.seg_intercepts(x1, y1, x2, y2)) {
         reportEvent("Replan required, path intersects with " + obs.first);
