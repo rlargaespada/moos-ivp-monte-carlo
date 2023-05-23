@@ -24,7 +24,7 @@ source ${LAYOUT_DIR}/config.sh
 
 mkdir -p --verbose tmp
 
-for i in {0..3}
+for i in {0..99}
 do
     FILENAME=tmp/benchmark_obstacles_known_${i}.txt
     echo "writing to ${FILENAME}"
