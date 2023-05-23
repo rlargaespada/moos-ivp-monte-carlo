@@ -77,6 +77,8 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_obstacles_made   = 0;
 
   m_sensor_range = 50;
+
+  m_generator.seed(MOOSTime());
 }
 
 //---------------------------------------------------------
@@ -547,7 +549,7 @@ void ObsMonteCarloSim::updateObstaclesField()
   double tmp;
   double moos_time_frac{modf(m_curr_time, &tmp)};  // get fraction from current time
   int seed{static_cast<int>(moos_time_frac * pow(10, 6))};  // scale frac and cast to int
-  srand(seed);
+  m_generator.seed(seed);
 
   // Do the obstacle regeneration
   vector<XYPolygon> new_obstacles;
@@ -599,23 +601,18 @@ bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int
   double xlen = maxx - minx;
   double ylen = maxy - miny;
 
-  double radius = m_min_poly_size;
+  double radius{m_min_poly_size};
   if (m_max_poly_size > m_min_poly_size) {
-    int rand_int_r = rand() % 1000;
-    double rand_pct_r = static_cast<double>(rand_int_r) / 1000;
-    radius = m_min_poly_size;
-    radius += ((m_max_poly_size - m_min_poly_size) * rand_pct_r);
+    double radius_scaling{m_obs_scaling(m_generator)};
+    radius += ((m_max_poly_size - m_min_poly_size) * radius_scaling);
   }
 
   for (unsigned int k=0; k < tries; k++) {
-    int rand_int_x = rand() % 10000;
-    int rand_int_y = rand() % 10000;
+    double x_scaling{m_obs_scaling(m_generator)};
+    double y_scaling{m_obs_scaling(m_generator)};
 
-    double rand_pct_x = static_cast<double>(rand_int_x) / 10000;
-    double rand_pct_y = static_cast<double>(rand_int_y) / 10000;
-
-    double rand_x = minx + (rand_pct_x * xlen);
-    double rand_y = miny + (rand_pct_y * ylen);
+    double rand_x = minx + (x_scaling * xlen);
+    double rand_y = miny + (y_scaling * ylen);
 
     // Reject if poly center point is not in the overall region
     if (!m_poly_region.contains(rand_x, rand_y))

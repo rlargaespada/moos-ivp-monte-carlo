@@ -8,13 +8,15 @@
 #ifndef ObsMonteCarloSim_HEADER
 #define ObsMonteCarloSim_HEADER
 
+#include <map>
+#include <random>
 #include <string>
 #include <vector>
-#include <map>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
-#include "XYPolygon.h"
 #include "NodeRecord.h"
 #include "VarDataPair.h"
+#include "XYPolygon.h"
+
 
 class ObsMonteCarloSim : public AppCastingMOOSApp
 {
@@ -125,6 +127,10 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
 
   unsigned int m_obstacles_made;
   unsigned int m_obstacles_posted;
+
+  // random number generator for generating obstacles
+  std::default_random_engine m_generator;
+  std::uniform_real_distribution<double> m_obs_scaling{0, 1};
 };
 
 #endif
