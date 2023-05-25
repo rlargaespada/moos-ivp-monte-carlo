@@ -10,15 +10,15 @@
 #include <iterator>
 #include <string>
 #include <vector>
-#include "MBUtils.h"
-#include "GeomUtils.h"
 #include "ACTable.h"
-#include "ObsMonteCarloSim.h"
-#include "FileBuffer.h"
+#include "AngleUtils.h"
 #include "ColorParse.h"
-#include "XYFormatUtilsPoly.h"
+#include "FileBuffer.h"
+#include "GeomUtils.h"
+#include "MBUtils.h"
 #include "NodeRecordUtils.h"
-#include "ObstacleFieldGenerator.h"
+#include "ObsMonteCarloSim.h"
+#include "XYFormatUtilsPoly.h"
 
 
 //---------------------------------------------------------
@@ -35,6 +35,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
 
   m_obstacle_file_var = "";  // set in OnStartup()
 
+  m_post_visuals = true;
   m_poly_fill_color = "white";
   m_poly_edge_color = "gray50";
   m_poly_vert_color = "gray50";
@@ -51,6 +52,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_post_points = false;
   m_rate_points = 5;
   m_point_size = 2;
+  m_sensor_range = 50;
 
   m_min_duration = -1;
   m_max_duration = -1;
@@ -60,9 +62,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_reset_range = 10;
   m_reset_var = "";  // set in OnStartup()
 
-  m_sensor_range = 50;
-
-  m_post_visuals = true;
+  m_num_drifting_obs = 0;
 
   // Init State variables
   m_reset_tstamp = 0;
@@ -82,6 +82,9 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_obstacles_made = 0;
 
   m_generator.seed(MOOSTime());
+
+  m_drift_vector.setPosition(0, 0);  // vector position doesn't matter, only the magnitude
+  m_drift_vector.setVectorXY(0, 0);  // default is no drift
 }
 
 
@@ -601,14 +604,23 @@ bool ObsMonteCarloSim::OnStartUp()
     std::string value = line;
 
     bool handled = false;
+    // Parameters if we're creating obstacles as we go
     if (param == "obstacle_file") {
       obstacle_file_line = orig;
       handled = true;  // process later
-    } else if (param == "obstacle_file_var") {
-      handled = setNonWhiteVarOnString(m_obstacle_file_var, toupper(value));
+    } else if (param == "reuse_ids") {
+      handled = setBooleanOnString(m_reuse_ids, value);
     } else if (param == "label_prefix") {
       if (!strEnds(value, "_")) value += "_";    // add trailing underscore
       handled = setNonWhiteVarOnString(m_label_prefix, value);
+
+    // Parameters for reading obstacles from a file
+    } else if (param == "obstacle_file_var") {
+      handled = setNonWhiteVarOnString(m_obstacle_file_var, toupper(value));
+
+    // Visual params for rendering obstacles
+    } else if (param == "post_visuals") {
+      handled = setBooleanOnString(m_post_visuals, value);
     } else if ((param == "poly_vert_color") && isColor(value)) {
       handled = setColorOnString(m_poly_vert_color, value);
     } else if ((param == "poly_fill_color") && isColor(value)) {
@@ -618,13 +630,14 @@ bool ObsMonteCarloSim::OnStartUp()
     } else if ((param == "poly_label_color") && isColor(value)) {
       handled = setColorOnString(m_poly_label_color, value);
 
-    } else if (param == "poly_vert_size") {
-      handled = setNonNegDoubleOnString(m_poly_vert_size, value);
     } else if (param == "poly_edge_size") {
       handled = setNonNegDoubleOnString(m_poly_edge_size, value);
+    } else if (param == "poly_vert_size") {
+      handled = setNonNegDoubleOnString(m_poly_vert_size, value);
     } else if (param == "poly_transparency") {
       handled = setNonNegDoubleOnString(m_poly_transparency, value);
 
+    // Visual params for rendering region
     } else if (param == "draw_region") {
       handled = setBooleanOnString(m_draw_region, value);
     } else if ((param == "region_edge_color") && isColor(value)) {
@@ -632,16 +645,17 @@ bool ObsMonteCarloSim::OnStartUp()
     } else if ((param == "region_vert_color") && isColor(value)) {
       handled = setColorOnString(m_region_vert_color, value);
 
+    // Pseudo LIDAR generation mode
     } else if (param == "post_points") {
       handled = setBooleanOnString(m_post_points, value);
     } else if (param == "rate_points") {
       handled = setNonNegDoubleOnString(m_rate_points, value);
     } else if (param == "point_size") {
       handled = setNonNegDoubleOnString(m_point_size, value);
-
     } else if (param == "sensor_range") {
       handled = setNonNegDoubleOnString(m_sensor_range, value);
 
+    // Params for random durations
     } else if (param == "min_duration") {
       handled = handleConfigMinDuration(value);
     } else if (param == "max_duration") {
@@ -649,6 +663,7 @@ bool ObsMonteCarloSim::OnStartUp()
     } else if (param == "refresh_interval") {
       handled = setNonNegDoubleOnString(m_obs_refresh_interval, value);
 
+    // Params for resetting the obs field
     } else if (param == "reset_interval") {
       handled = setNonNegDoubleOnString(m_reset_interval, value);
     } else if (param == "reset_range") {
@@ -660,11 +675,51 @@ bool ObsMonteCarloSim::OnStartUp()
       } else {
         handled = setNonWhiteVarOnString(m_reset_var, toupper(value));
       }
-    } else if (param == "reuse_ids") {
-      handled = setBooleanOnString(m_reuse_ids, value);
 
-    } else if (param == "post_visuals") {
-      handled = setBooleanOnString(m_post_visuals, value);
+    // Params for obstacle drift
+    } else if ((param == "num_drifting_obs") || (param == "num_drifting_obstacles")) {
+      if (tolower(value) == "all") {
+        m_num_drifting_obs = -1;  // negative number means all obstacles should drift
+        handled = true;
+      } else {
+        handled = setIntOnString(m_num_drifting_obs, value);
+      }
+    } else if (param == "drift_x") {
+      double drift_x;
+      handled = setDoubleOnString(drift_x, value);
+      if (handled)
+        m_drift_vector.setVectorXY(drift_x, m_drift_vector.ydot());
+    } else if (param == "drift_y") {
+      double drift_y;
+      handled = setDoubleOnString(drift_y, value);
+      if (handled)
+        m_drift_vector.setVectorXY(m_drift_vector.xdot(), drift_y);
+    } else if (param == "drift_vector") {
+      bool valid_format;
+      double ang, mag;
+
+      // handle format drift_vector = ang=a, mag=b
+      valid_format = tokParse(value, "ang", ',', '=', ang);
+      valid_format = valid_format && tokParse(value, "mag", ',', '=', mag);
+      if (valid_format) {
+        m_drift_vector.setVectorMA(mag, angle360(ang));
+        handled = true;
+        continue;  // move onto next param
+      }
+
+      // handle format drift_vector = ang,mag
+      valid_format = setDoubleOnString(ang, biteStringX(value, ','));  // first part is angle
+      valid_format = valid_format && setDoubleOnString(mag, value);  // leftover is magnitude
+      if (valid_format) {
+        m_drift_vector.setVectorMA(mag, angle360(ang));
+        handled = true;
+        continue;  // move onto next param
+      }
+
+      // other formats invalid
+      handled = false;
+    } else if (param == "rotate_speed") {
+      handled = setNonNegDoubleOnString(m_rotate_speed, value);
     }
 
     if (!handled)

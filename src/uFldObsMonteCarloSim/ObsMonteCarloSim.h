@@ -16,6 +16,7 @@
 #include "NodeRecord.h"
 #include "VarDataPair.h"
 #include "XYPolygon.h"
+#include "XYVector.h"
 
 
 class ObsMonteCarloSim : public AppCastingMOOSApp
@@ -67,6 +68,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   std::string m_obstacle_file_var;
 
   // Visual params for rendering obstacles
+  bool   m_post_visuals;
   std::string m_poly_fill_color;
   std::string m_poly_edge_color;
   std::string m_poly_vert_color;
@@ -85,6 +87,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   bool    m_post_points;
   double  m_rate_points;
   double  m_point_size;
+  double m_sensor_range;  // range of the sensor for generating point updates
 
   // Params for random durations
   double  m_min_duration;
@@ -96,10 +99,9 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   double       m_reset_range;
   std::string  m_reset_var;
 
-  // range of the sensor for generating point updates
-  double m_sensor_range;
+  // Params for obstacle drift
+  int m_num_drifting_obs;
 
-  bool   m_post_visuals;
  private:  // State variables
   // Core list of obtacles
   std::vector<XYPolygon> m_obstacles;
@@ -132,6 +134,10 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   // random number generator for generating obstacles
   std::default_random_engine m_generator;
   std::uniform_real_distribution<double> m_obs_scaling{0, 1};
+
+  // obstacle drift state
+  XYVector m_drift_vector;
+  double m_rotate_speed;
 };
 
 #endif
