@@ -71,6 +71,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   std::string m_poly_edge_color;
   std::string m_poly_vert_color;
   std::string m_poly_label_color;
+
   double      m_poly_edge_size;
   double      m_poly_vert_size;
   double      m_poly_transparency;

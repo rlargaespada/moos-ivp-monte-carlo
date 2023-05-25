@@ -33,13 +33,15 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_reuse_ids = true;
   m_label_prefix = "";
 
-  m_poly_fill_color  = "white";
-  m_poly_edge_color  = "gray50";
-  m_poly_vert_color  = "gray50";
+  m_obstacle_file_var = "";  // set in OnStartup()
+
+  m_poly_fill_color = "white";
+  m_poly_edge_color = "gray50";
+  m_poly_vert_color = "gray50";
   m_poly_label_color = "invisible";
 
-  m_poly_edge_size   = 1;
-  m_poly_vert_size   = 1;
+  m_poly_edge_size = 1;
+  m_poly_vert_size = 1;
   m_poly_transparency = 0.15;
 
   m_draw_region = true;
@@ -48,7 +50,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
 
   m_post_points = false;
   m_rate_points = 5;
-  m_point_size  = 2;
+  m_point_size = 2;
 
   m_min_duration = -1;
   m_max_duration = -1;
@@ -56,16 +58,19 @@ ObsMonteCarloSim::ObsMonteCarloSim()
 
   m_reset_interval = -1;
   m_reset_range = 10;
+  m_reset_var = "";  // set in OnStartup()
+
+  m_sensor_range = 50;
 
   m_post_visuals = true;
 
   // Init State variables
-  m_reset_tstamp   = 0;
-  m_reset_request  = false;
-  m_reset_pending  = false;
-  m_newly_exited   = false;
+  m_reset_tstamp = 0;
+  m_reset_request = false;
+  m_reset_pending = false;
+  m_newly_exited = false;
   m_region_entered = false;
-  m_reset_total    = 0;
+  m_reset_total = 0;
 
   m_min_vrange_to_region = -1;
 
@@ -73,9 +78,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_obs_refresh_tstamp = -1;
 
   m_obstacles_posted = 0;
-  m_obstacles_made   = 0;
-
-  m_sensor_range = 50;
+  m_obstacles_made = 0;
 
   m_generator.seed(MOOSTime());
 }
@@ -120,8 +123,7 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "VEHICLE_CONNECT") {
       m_obs_refresh_needed = true;
     } else if (key == m_reset_var) {
-      if (m_reset_var != "NONE")  // ignore if requests disabled
-        m_reset_request = true;
+      m_reset_request = true;
     } else if (key == m_obstacle_file_var) {
       m_new_obstacle_file = sval;
     } else if (key == "UFOS_POINT_SIZE") {
@@ -576,7 +578,10 @@ bool ObsMonteCarloSim::OnStartUp()
   if (!m_MissionReader.GetConfiguration(GetAppName(), sParams))
     reportConfigWarning("No config block found for " + GetAppName());
 
-  // Pass 1: Process everything but the obstacle file for now.
+  std::string obstacle_file_line{""};
+  bool no_reset_var{false};
+
+  // Part 1: Process everything but the obstacle file for now.
   STRING_LIST::iterator p;
   for (p = sParams.begin(); p != sParams.end(); p++) {
     std::string orig  = *p;
@@ -585,63 +590,71 @@ bool ObsMonteCarloSim::OnStartUp()
     std::string value = line;
 
     bool handled = false;
-    if (param == "obstacle_file")
+    if (param == "obstacle_file") {
+      obstacle_file_line = orig;
       handled = true;  // process later
-    if (param == "obstacle_file_var")
-      handled = setNonWhiteVarOnString(m_obstacle_file_var, value);
-    else if (param == "label_prefix")
-      handled = setNonWhiteVarOnString(m_label_prefix, value + "_");  // add trailing underscore
-    else if ((param == "poly_vert_color") && isColor(value))
+    } else if (param == "obstacle_file_var") {
+      handled = setNonWhiteVarOnString(m_obstacle_file_var, toupper(value));
+    } else if (param == "label_prefix") {
+      if (!strEnds(value, "_")) value += "_";    // add trailing underscore
+      handled = setNonWhiteVarOnString(m_label_prefix, value);
+    } else if ((param == "poly_vert_color") && isColor(value)) {
       handled = setColorOnString(m_poly_vert_color, value);
-    else if ((param == "poly_fill_color") && isColor(value))
+    } else if ((param == "poly_fill_color") && isColor(value)) {
       handled = setColorOnString(m_poly_fill_color, value);
-    else if ((param == "poly_edge_color") && isColor(value))
+    } else if ((param == "poly_edge_color") && isColor(value)) {
       handled = setColorOnString(m_poly_edge_color, value);
-    else if ((param == "poly_label_color") && isColor(value))
+    } else if ((param == "poly_label_color") && isColor(value)) {
       handled = setColorOnString(m_poly_label_color, value);
 
-    else if (param == "poly_vert_size")
+    } else if (param == "poly_vert_size") {
       handled = setNonNegDoubleOnString(m_poly_vert_size, value);
-    else if (param == "poly_edge_size")
+    } else if (param == "poly_edge_size") {
       handled = setNonNegDoubleOnString(m_poly_edge_size, value);
-    else if (param == "poly_transparency")
+    } else if (param == "poly_transparency") {
       handled = setNonNegDoubleOnString(m_poly_transparency, value);
 
-    else if (param == "draw_region")
+    } else if (param == "draw_region") {
       handled = setBooleanOnString(m_draw_region, value);
-    else if ((param == "region_edge_color") && isColor(value))
+    } else if ((param == "region_edge_color") && isColor(value)) {
       handled = setColorOnString(m_region_edge_color, value);
-    else if ((param == "region_vert_color") && isColor(value))
+    } else if ((param == "region_vert_color") && isColor(value)) {
       handled = setColorOnString(m_region_vert_color, value);
 
-    else if (param == "post_points")
+    } else if (param == "post_points") {
       handled = setBooleanOnString(m_post_points, value);
-    else if (param == "rate_points")
+    } else if (param == "rate_points") {
       handled = setNonNegDoubleOnString(m_rate_points, value);
-    else if (param == "point_size")
+    } else if (param == "point_size") {
       handled = setNonNegDoubleOnString(m_point_size, value);
 
-    else if (param == "sensor_range")
+    } else if (param == "sensor_range") {
       handled = setNonNegDoubleOnString(m_sensor_range, value);
 
-    else if (param == "min_duration")
+    } else if (param == "min_duration") {
       handled = handleConfigMinDuration(value);
-    else if (param == "max_duration")
+    } else if (param == "max_duration") {
       handled = handleConfigMaxDuration(value);
-    else if (param == "refresh_interval")
+    } else if (param == "refresh_interval") {
       handled = setNonNegDoubleOnString(m_obs_refresh_interval, value);
 
-    else if (param == "reset_interval")
+    } else if (param == "reset_interval") {
       handled = setNonNegDoubleOnString(m_reset_interval, value);
-    else if (param == "reset_range")
+    } else if (param == "reset_range") {
       handled = setNonNegDoubleOnString(m_reset_range, value);
-    else if (param == "reset_var")
-      handled = setNonWhiteVarOnString(m_reset_var, toupper(value));
-    else if (param == "reuse_ids")
+    } else if (param == "reset_var") {
+      if (tolower(value) == "none") {
+        no_reset_var = true;
+        handled = true;
+      } else {
+        handled = setNonWhiteVarOnString(m_reset_var, toupper(value));
+      }
+    } else if (param == "reuse_ids") {
       handled = setBooleanOnString(m_reuse_ids, value);
 
-    else if (param == "post_visuals")
+    } else if (param == "post_visuals") {
       handled = setBooleanOnString(m_post_visuals, value);
+    }
 
     if (!handled)
       reportUnhandledConfigWarning(orig);
@@ -651,23 +664,23 @@ bool ObsMonteCarloSim::OnStartUp()
   // m_reset_var is left unset in constructor because we don't
   // want to unnecessarily register for a variable that we don't
   // actually need
-  if (m_reset_var.empty())
+  if ((!no_reset_var) && (m_reset_var.empty()))
     m_reset_var = "UFOS_RESET";
 
-  // Pass 2: Process obstacle file last so all color settings can be
-  // configured first, and applied as the obstacles are being created.
-  for (p = sParams.begin(); p != sParams.end(); p++) {
-    std::string orig  = *p;
-    std::string line  = *p;
-    std::string param = tolower(biteStringX(line, '='));
-    std::string value = line;
 
-    bool handled = true;
-    if (param == "obstacle_file")
-      handled = handleConfigObstacleFile(value);
+  // Part 2: Process obstacle file last so all color settings can be
+  // configured first, and applied as the obstacles are being created.
+  if (!obstacle_file_line.empty()) {
+    std::string orig{obstacle_file_line};
+    bool handled{false};
+
+    std::string value{tolower(rbiteStringX(obstacle_file_line, '='))};
+    handled = handleConfigObstacleFile(value);
+
     if (!handled)
       reportUnhandledConfigWarning(orig);
   }
+
 
   m_reset_tstamp = MOOSTime();
   handleConfigObstacleDurations();
@@ -813,7 +826,7 @@ void ObsMonteCarloSim::registerVariables()
   Register("PMV_CONNECT", 0);
   Register("OBM_CONNECT", 0);
   Register("VEHICLE_CONNECT", 0);
-  if (!m_reset_var.empty() && (m_reset_var != "NONE"))
+  if (!m_reset_var.empty())
     Register(m_reset_var, 0);
   if (!m_obstacle_file_var.empty())
     Register(m_obstacle_file_var, 0);
@@ -855,10 +868,10 @@ bool ObsMonteCarloSim::buildReport()
   m_msgs << "  Max Duration:  " << max_dur_str << endl;
   m_msgs << "  Refresh Intrv: " << refresh_interval_str << endl;
   m_msgs << "Config (Reset)   " << endl;
-  if (m_reset_var != "NONE")
-    m_msgs << "  Reset Var:     " << m_reset_var << endl;
-  else
+  if (m_reset_var.empty())
     m_msgs << "  RESET REQUESTS DISABLED" << endl;
+  else
+    m_msgs << "  Reset Var:     " << m_reset_var << endl;
   m_msgs << "  Reset Range:   " << doubleToString(m_reset_range, 0) << endl;
   m_msgs << "  Reset_Interv:  " << doubleToString(m_reset_interval, 0) << endl;
   m_msgs << "================================" << endl;
