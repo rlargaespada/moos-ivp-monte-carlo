@@ -128,15 +128,30 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
       m_obs_refresh_needed = true;
     } else if (key == "VEHICLE_CONNECT") {
       m_obs_refresh_needed = true;
+    } else if (key == "NODE_REPORT") {
+      handled = handleMailNodeReport(sval);
     } else if (key == m_reset_var) {
       m_reset_request = true;
     } else if (key == m_obstacle_file_var) {
       m_new_obstacle_file = sval;
       m_reset_request = false;  // new obstacle file takes precedence over reset request
+    } else if (key == "DRIFT_X") {
+      m_drift_vector.setVectorXY(msg.GetDouble(), m_drift_vector.ydot());
+    } else if (key == "DRIFT_Y") {
+      m_drift_vector.setVectorXY(m_drift_vector.xdot(), msg.GetDouble());
+    } else if (key == "DRIFT_VECTOR") {
+      handled = handleConfigDriftVector(sval);  // reuse config hanlding method
+    } else if (key == "DRIFT_VECTOR_ADD") {
+      double ang, mag;
+      handled = setDoubleOnString(ang, biteStringX(sval, ','));  // first part is angle
+      handled = setDoubleOnString(mag, sval)  && handled;  // leftover is magnitude
+      if (handled) m_drift_vector.mergeVectorMA(mag, ang);
+    } else if (key == "DRIFT_VECTOR_MULT") {
+      m_drift_vector.augMagnitude(msg.GetDouble());
+    } else if (key == "ROTATE_SPEED") {
+      handled = setPosDoubleOnString(m_rotate_speed, msg.GetAsString());
     } else if (key == "UFOS_POINT_SIZE") {
       handled = handleMailPointSize(sval);
-    } else if (key == "NODE_REPORT") {
-      handled = handleMailNodeReport(sval);
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       handled = false;
     }
@@ -695,29 +710,7 @@ bool ObsMonteCarloSim::OnStartUp()
       if (handled)
         m_drift_vector.setVectorXY(m_drift_vector.xdot(), drift_y);
     } else if (param == "drift_vector") {
-      bool valid_format;
-      double ang, mag;
-
-      // handle format drift_vector = ang=a, mag=b
-      valid_format = tokParse(value, "ang", ',', '=', ang);
-      valid_format = valid_format && tokParse(value, "mag", ',', '=', mag);
-      if (valid_format) {
-        m_drift_vector.setVectorMA(mag, angle360(ang));
-        handled = true;
-        continue;  // move onto next param
-      }
-
-      // handle format drift_vector = ang,mag
-      valid_format = setDoubleOnString(ang, biteStringX(value, ','));  // first part is angle
-      valid_format = valid_format && setDoubleOnString(mag, value);  // leftover is magnitude
-      if (valid_format) {
-        m_drift_vector.setVectorMA(mag, angle360(ang));
-        handled = true;
-        continue;  // move onto next param
-      }
-
-      // other formats invalid
-      handled = false;
+      handled = handleConfigDriftVector(value);
     } else if (param == "rotate_speed") {
       handled = setNonNegDoubleOnString(m_rotate_speed, value);
     }
@@ -883,21 +876,60 @@ void ObsMonteCarloSim::handleConfigObstacleDurations()
 }
 
 
+bool ObsMonteCarloSim::handleConfigDriftVector(std::string vector_str)
+{
+  bool valid_format;
+  double ang, mag;
+
+  // handle format drift_vector = ang=a, mag=b
+  valid_format = tokParse(vector_str, "ang", ',', '=', ang);
+  valid_format = valid_format && tokParse(vector_str, "mag", ',', '=', mag);
+  if (valid_format) {
+    m_drift_vector.setVectorMA(mag, angle360(ang));
+    return (true);
+  }
+
+  // handle format drift_vector = ang,mag
+  valid_format = setDoubleOnString(ang, biteStringX(vector_str, ','));  // first part is angle
+  valid_format = valid_format && setDoubleOnString(mag, vector_str);  // leftover is magnitude
+  if (valid_format) {
+    m_drift_vector.setVectorMA(mag, angle360(ang));
+    return (true);
+  }
+
+  // other formats invalid
+  return (false);
+}
+
+
 //---------------------------------------------------------
 // Procedure: registerVariables()
 
 void ObsMonteCarloSim::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
+  // vehicle connections
   Register("PMV_CONNECT", 0);
   Register("OBM_CONNECT", 0);
   Register("VEHICLE_CONNECT", 0);
+  Register("NODE_REPORT", 0);
+
+  // obstacle reset requests
   if (!m_reset_var.empty())
     Register(m_reset_var, 0);
   if (!m_obstacle_file_var.empty())
     Register(m_obstacle_file_var, 0);
+
+  // obstacle drift postings, subscribe to same variables as uSimMarine
+  Register("DRIFT_X", 0);
+  Register("DRIFT_Y", 0);
+  Register("DRIFT_VECTOR", 0);
+  Register("DRIFT_VECTOR_ADD", 0);
+  Register("DRIFT_VECTOR_MULT", 0);
+  Register("ROTATE_SPEED", 0);
+
+  // other
   Register("UFOS_POINT_SIZE", 0);
-  Register("NODE_REPORT", 0);
 }
 
 
@@ -949,6 +981,13 @@ bool ObsMonteCarloSim::buildReport()
   m_msgs << "  Newly Exited :  " << boolToString(m_newly_exited) << endl;
   m_msgs << "  Reset Tstamp :  " << doubleToString(m_reset_tstamp, 0) << endl;
   m_msgs << "  Reset Total  :  " << uintToString(m_reset_total) << endl;
+
+  std::string drift_summary;
+  drift_summary += "ang=" + doubleToStringX(m_drift_vector.ang()) + ", ";
+  drift_summary += "mag=" + doubleToStringX(m_drift_vector.mag()) + ", ";
+  drift_summary += "xmag=" + doubleToStringX(m_drift_vector.xdot()) + ", ";
+  drift_summary += "ymag=" + doubleToStringX(m_drift_vector.ydot());
+  m_msgs << "State (Drift Vector): " << drift_summary << endl;
 
   m_msgs << endl << endl;
 

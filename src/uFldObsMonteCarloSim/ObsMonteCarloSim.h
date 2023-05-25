@@ -41,6 +41,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   bool handleConfigMaxDuration(std::string);
   bool handleConfigObstacleFile(std::string filename);
   void handleConfigObstacleDurations();
+  bool handleConfigDriftVector(std::string vector_str);
 
   bool handleMailNodeReport(std::string);
   bool handleMailPointSize(std::string);
