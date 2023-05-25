@@ -527,6 +527,8 @@ void EvalPlanner::calcMetrics()
 
   // calculate averages as needed and save to global metrics
   size_t num_trials{m_trial_data.size()};
+  m_global_metrics.successful_trials = successes;
+  m_global_metrics.total_trials = num_trials;
   m_global_metrics.success_rate = (successes/num_trials);
   m_global_metrics.avg_planning_time = (summed_planning_time/num_trials);
   m_global_metrics.avg_duration = (summed_duration/num_trials);
@@ -1046,7 +1048,9 @@ bool EvalPlanner::buildReport()
   // global metrics over all trials
   m_msgs << header << endl;
   m_msgs << "Global Metrics" << endl;
-  m_msgs << "  Success Rate: " << doubleToStringX(m_global_metrics.success_rate, 2) << endl;
+  m_msgs << "  Success Rate: " << intToString(m_global_metrics.successful_trials) << "/" <<
+    intToString(m_global_metrics.total_trials) << " (" <<
+    doubleToStringX(m_global_metrics.success_rate, 2) << ")" << endl;
   m_msgs << "  Avg. Planning Time: " <<
     doubleToStringX(m_global_metrics.avg_planning_time, 2) << " s"<< endl;
   m_msgs << "  Avg. Duration: " <<

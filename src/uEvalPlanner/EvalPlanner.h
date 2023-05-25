@@ -60,6 +60,8 @@ struct TrialData
 
 struct GlobalMetrics
 {
+  int successful_trials{0};
+  int total_trials{0};
   double success_rate{1};
   double avg_planning_time{0};
   double avg_duration{0};
