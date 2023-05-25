@@ -1,7 +1,7 @@
 /************************************************************/
-/*    NAME: Raul Largaespada                                              */
+/*    NAME: Raul Largaespada                                */
 /*    ORGN: MIT, Cambridge MA                               */
-/*    FILE: ObsMonteCarloSim.cpp                                        */
+/*    FILE: ObsMonteCarloSim.cpp                            */
 /*    DATE: December 29th, 1963                             */
 /************************************************************/
 
@@ -20,7 +20,6 @@
 #include "NodeRecordUtils.h"
 #include "ObstacleFieldGenerator.h"
 
-using namespace std;
 
 //---------------------------------------------------------
 // Constructor()
@@ -98,15 +97,15 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
   MOOSMSG_LIST::iterator p;
   for (p = NewMail.begin(); p !=NewMail.end(); p++) {
     CMOOSMsg &msg = *p;
-    string key = msg.GetKey();
-    string sval = msg.GetString();
+    std::string key = msg.GetKey();
+    std::string sval = msg.GetString();
 
 
 #if 0  // Keep these around just for template
-    string comm  = msg.GetCommunity();
+    std::string comm  = msg.GetCommunity();
     double dval  = msg.GetDouble();
-    string sval  = msg.GetString();
-    string msrc  = msg.GetSource();
+    std::string sval  = msg.GetString();
+    std::string msrc  = msg.GetSource();
     double mtime = msg.GetTime();
     bool   mdbl  = msg.IsDouble();
     bool   mstr  = msg.IsString();
@@ -141,12 +140,12 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
 }
 
 
-bool ObsMonteCarloSim::handleMailNodeReport(string node_report)
+bool ObsMonteCarloSim::handleMailNodeReport(std::string node_report)
 {
   NodeRecord record = string2NodeRecord(node_report);
   if (!record.valid())
     return(false);
-  string vname = record.getName();
+  std::string vname = record.getName();
 
   // If this is the first node report from this vehicle, consider
   // it also to be a query for obstacles.
@@ -159,7 +158,7 @@ bool ObsMonteCarloSim::handleMailNodeReport(string node_report)
 }
 
 
-bool ObsMonteCarloSim::handleMailPointSize(string str)
+bool ObsMonteCarloSim::handleMailPointSize(std::string str)
 {
   str = tolower(str);
   double dval = atof(str.c_str());
@@ -206,7 +205,7 @@ void ObsMonteCarloSim::postObstaclesRefresh()
   // =================================================
   if (m_post_visuals) {
     for (unsigned int i=0; i < m_obstacles.size(); i++) {
-      string spec = m_obstacles[i].get_spec(2);
+      std::string spec = m_obstacles[i].get_spec(2);
       Notify("VIEW_POLYGON", spec);
     }
     if (m_draw_region && m_poly_region.is_convex())
@@ -218,8 +217,8 @@ void ObsMonteCarloSim::postObstaclesRefresh()
   // Part 2: Post ground truth
   // =================================================
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    string spec = m_obstacles[i].get_spec_pts_label(2);
-    string key  = m_obstacles[i].get_label();
+    std::string spec = m_obstacles[i].get_spec_pts_label(2);
+    std::string key  = m_obstacles[i].get_label();
     if (m_durations[i] >= 0)
       spec += ",duration=" + doubleToStringX(m_durations[i]);
 
@@ -241,7 +240,7 @@ void ObsMonteCarloSim::postObstaclesErase()
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
     XYPolygon obstacle = m_obstacles[i];
     obstacle.set_duration(0);
-    string spec = obstacle.get_spec_inactive();
+    std::string spec = obstacle.get_spec_inactive();
     if (m_post_visuals)
       Notify("VIEW_POLYGON", spec);
     Notify("KNOWN_OBSTACLE", spec);
@@ -257,13 +256,13 @@ void ObsMonteCarloSim::postObstaclesErase()
 void ObsMonteCarloSim::postPoints()
 {
 #if 1
-  map<string, NodeRecord>::iterator p;
+  std::map<std::string, NodeRecord>::iterator p;
   for (p = m_map_vrecords.begin(); p != m_map_vrecords.end(); p++) {
-    string vname  = p->first;
-    string uvname = toupper(p->first);
+    std::string vname  = p->first;
+    std::string uvname = toupper(p->first);
     double osx = p->second.getX();
     double osy = p->second.getY();
-    string vcolor = p->second.getColor("yellow");
+    std::string vcolor = p->second.getColor("yellow");
 
     for (unsigned int i=0; i < m_obstacles.size(); i++) {
       if (m_obstacles[i].dist_to_poly(osx, osy) <= m_sensor_range) {
@@ -271,8 +270,8 @@ void ObsMonteCarloSim::postPoints()
           double x, y;
           bool ok = randPointOnPoly(osx, osy, m_obstacles[i], x, y);
           if (ok) {
-            string key = m_obstacles[i].get_label();
-            string msg = "x=" + doubleToStringX(x, 2);
+            std::string key = m_obstacles[i].get_label();
+            std::string msg = "x=" + doubleToStringX(x, 2);
             msg += ",y=" + doubleToStringX(y, 2);
             msg += ",key=" + key;
             Notify("TRACKED_FEATURE_"+uvname, msg);
@@ -286,7 +285,7 @@ void ObsMonteCarloSim::postPoints()
               p.set_vertex_size(m_point_size);
               p.set_label_color("invisible");
               p.set_duration(10);
-              string spec = p.get_spec();
+              std::string spec = p.get_spec();
               Notify("VIEW_POINT", spec);
             }
           }
@@ -343,9 +342,9 @@ void ObsMonteCarloSim::updateVRanges()
 {
   // Part 1: calculate the new min_vrange_to_region
   double min_vrange = -1;
-  map<string, NodeRecord>::iterator p;
+  std::map<std::string, NodeRecord>::iterator p;
   for (p = m_map_vrecords.begin(); p != m_map_vrecords.end(); p++) {
-    string     vname = p->first;
+    std::string vname = p->first;
     NodeRecord record = p->second;
 
     double vx = record.getX();
@@ -408,7 +407,7 @@ void ObsMonteCarloSim::updateObstaclesField()
   m_generator.seed(seed);
 
   // Do the obstacle regeneration
-  vector<XYPolygon> new_obstacles;
+  std::vector<XYPolygon> new_obstacles;
   bool ok = true;
   for (unsigned int i=0; (ok && (i < m_obstacles.size())); i++) {
     ok = ok && generateObstacle(&new_obstacles, 1000);
@@ -444,7 +443,7 @@ void ObsMonteCarloSim::updateObstaclesField()
 }
 
 
-bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int tries)
+bool ObsMonteCarloSim::generateObstacle(std::vector<XYPolygon>* obs_vec, unsigned int tries)
 {
   if (!m_poly_region.is_convex())
     return (false);
@@ -485,7 +484,7 @@ bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int
       continue;
 
     // "radial:: x=val, y=val, radius=val, pts=val, snap=val, label=val"
-    string str = "format=radial, x=" + doubleToString(rand_x, 1);
+    std::string str = "format=radial, x=" + doubleToString(rand_x, 1);
     str += ", y=" + doubleToString(rand_y, 1);
     str += ",radius=" + doubleToString(radius);
     str += ",snap=0.1";  // + doubleToStringX(0.1, 3);  // 0.1m precision
@@ -580,10 +579,10 @@ bool ObsMonteCarloSim::OnStartUp()
   // Pass 1: Process everything but the obstacle file for now.
   STRING_LIST::iterator p;
   for (p = sParams.begin(); p != sParams.end(); p++) {
-    string orig  = *p;
-    string line  = *p;
-    string param = tolower(biteStringX(line, '='));
-    string value = line;
+    std::string orig  = *p;
+    std::string line  = *p;
+    std::string param = tolower(biteStringX(line, '='));
+    std::string value = line;
 
     bool handled = false;
     if (param == "obstacle_file")
@@ -658,10 +657,10 @@ bool ObsMonteCarloSim::OnStartUp()
   // Pass 2: Process obstacle file last so all color settings can be
   // configured first, and applied as the obstacles are being created.
   for (p = sParams.begin(); p != sParams.end(); p++) {
-    string orig  = *p;
-    string line  = *p;
-    string param = tolower(biteStringX(line, '='));
-    string value = line;
+    std::string orig  = *p;
+    std::string line  = *p;
+    std::string param = tolower(biteStringX(line, '='));
+    std::string value = line;
 
     bool handled = true;
     if (param == "obstacle_file")
@@ -677,7 +676,7 @@ bool ObsMonteCarloSim::OnStartUp()
 }
 
 
-bool ObsMonteCarloSim::handleConfigMinDuration(string sval)
+bool ObsMonteCarloSim::handleConfigMinDuration(std::string sval)
 {
   if (!isNumber(sval))
     return(false);
@@ -691,7 +690,7 @@ bool ObsMonteCarloSim::handleConfigMinDuration(string sval)
 }
 
 
-bool ObsMonteCarloSim::handleConfigMaxDuration(string sval)
+bool ObsMonteCarloSim::handleConfigMaxDuration(std::string sval)
 {
   if (!isNumber(sval))
     return(false);
@@ -709,9 +708,9 @@ bool ObsMonteCarloSim::handleConfigMaxDuration(string sval)
 }
 
 
-bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
+bool ObsMonteCarloSim::handleConfigObstacleFile(std::string filename)
 {
-  vector<string> lines = fileBuffer(filename);
+  std::vector<std::string> lines = fileBuffer(filename);
   unsigned int i, vsize = lines.size();
   if (vsize == 0) {
     reportConfigWarning("Error reading: " + filename);
@@ -719,12 +718,12 @@ bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
   }
 
   for (i = 0; i < vsize; i++) {
-    string line = stripBlankEnds(lines[i]);
+    std::string line = stripBlankEnds(lines[i]);
     if ((line == "") || strBegins(line, "//") || strBegins(line, "#"))
       continue;
 
-    string left  = biteStringX(line, '=');
-    string right = line;
+    std::string left  = biteStringX(line, '=');
+    std::string right = line;
     if (left == "region") {
       XYPolygon region = string2Poly(right);
       if (!region.is_convex()) {
@@ -828,15 +827,16 @@ void ObsMonteCarloSim::registerVariables()
 
 bool ObsMonteCarloSim::buildReport()
 {
-  string min_dur_str = "n/a";
+  using std::endl;
+  std::string min_dur_str = "n/a";
   if (m_min_duration > 0)
     min_dur_str = doubleToString(m_min_duration, 1);
 
-  string max_dur_str = "n/a";
+  std::string max_dur_str = "n/a";
   if (m_max_duration > 0)
     max_dur_str = doubleToString(m_max_duration, 1);
 
-  string refresh_interval_str = "n/a";
+  std::string refresh_interval_str = "n/a";
   if (m_obs_refresh_interval > 0)
     refresh_interval_str = doubleToStringX(m_obs_refresh_interval, 1);
 
@@ -879,10 +879,10 @@ bool ObsMonteCarloSim::buildReport()
   actab.addHeaderLines();
 
   for (unsigned int i=0; i < m_obstacles.size(); i++)  {
-    string key = m_obstacles[i].get_label();
-    string dur_str = doubleToString(m_durations[i], 1);
-    string pts_str = uintToString(m_map_pts_published[key]);
-    string giv_str = uintToString(m_map_giv_published[key]);
+    std::string key = m_obstacles[i].get_label();
+    std::string dur_str = doubleToString(m_durations[i], 1);
+    std::string pts_str = uintToString(m_map_pts_published[key]);
+    std::string giv_str = uintToString(m_map_giv_published[key]);
 
     actab << key;
     actab << dur_str;
