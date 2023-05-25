@@ -68,6 +68,7 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_reset_tstamp = 0;
   m_reset_request = false;
   m_reset_pending = false;
+  m_new_obstacle_file = "";
   m_newly_exited = false;
   m_region_entered = false;
   m_reset_total = 0;
@@ -83,12 +84,14 @@ ObsMonteCarloSim::ObsMonteCarloSim()
   m_generator.seed(MOOSTime());
 }
 
+
 //---------------------------------------------------------
 // Destructor
 
 ObsMonteCarloSim::~ObsMonteCarloSim()
 {
 }
+
 
 //---------------------------------------------------------
 // Procedure: OnNewMail()
@@ -126,6 +129,7 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
       m_reset_request = true;
     } else if (key == m_obstacle_file_var) {
       m_new_obstacle_file = sval;
+      m_reset_request = false;  // new obstacle file takes precedence over reset request
     } else if (key == "UFOS_POINT_SIZE") {
       handled = handleMailPointSize(sval);
     } else if (key == "NODE_REPORT") {
@@ -243,8 +247,10 @@ void ObsMonteCarloSim::postObstaclesErase()
     XYPolygon obstacle = m_obstacles[i];
     obstacle.set_duration(0);
     std::string spec = obstacle.get_spec_inactive();
+
     if (m_post_visuals)
       Notify("VIEW_POLYGON", spec);
+
     Notify("KNOWN_OBSTACLE", spec);
     if (!m_post_points)
       Notify("GIVEN_OBSTACLE", spec);
@@ -480,6 +486,7 @@ bool ObsMonteCarloSim::generateObstacle(std::vector<XYPolygon>* obs_vec, unsigne
     for (unsigned int i=0; i < obs_vec->size(); i++) {
       if ((*obs_vec)[i].contains(rand_x, rand_y)) {
         pt_in_obstacle = true;
+        break;
       }
     }
     if (pt_in_obstacle)
@@ -509,6 +516,7 @@ bool ObsMonteCarloSim::generateObstacle(std::vector<XYPolygon>* obs_vec, unsigne
     for (unsigned int i=0; i < obs_vec->size(); i++) {
       if ((*obs_vec)[i].intersects(try_poly)) {
         poly_ints_obstacle = true;
+        break;
       }
     }
     if (poly_ints_obstacle)
@@ -519,6 +527,7 @@ bool ObsMonteCarloSim::generateObstacle(std::vector<XYPolygon>* obs_vec, unsigne
     for (unsigned int i=0; i < obs_vec->size(); i++) {
       if ((*obs_vec)[i].dist_to_poly(try_poly) < m_min_range) {
         poly_closeto_obstacle = true;
+        break;
       }
     }
     if (poly_closeto_obstacle)
@@ -543,7 +552,9 @@ void ObsMonteCarloSim::updateObstaclesFromFile()
   m_obstacles.clear();
 
   // reuse config handling function to update obstacle field
-  handleConfigObstacleFile(m_new_obstacle_file);
+  bool file_ok{handleConfigObstacleFile(m_new_obstacle_file)};
+  if (!file_ok)
+    reportRunWarning("Invalid file posted to " + m_obstacle_file_var);
 
   // set up to post new obstacles
   m_new_obstacle_file.clear();
