@@ -51,6 +51,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   void postPoints();
 
   void updateVRanges();
+  void updateObstacleDrift();
   void updateObstaclesField();
   bool generateObstacle(std::vector<XYPolygon>* obs_vec, unsigned int tries);
   void updateObstaclesFromFile();

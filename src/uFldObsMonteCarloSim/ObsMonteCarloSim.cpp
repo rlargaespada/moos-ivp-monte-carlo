@@ -349,6 +349,7 @@ bool ObsMonteCarloSim::Iterate()
   AppCastingMOOSApp::Iterate();
 
   updateVRanges();
+  // updateObstacleDrift();
   updateObstaclesField();
   updateObstaclesFromFile();
   updateObstaclesRefresh();
@@ -411,6 +412,39 @@ void ObsMonteCarloSim::updateVRanges()
       }
     }
   }
+}
+
+
+void ObsMonteCarloSim::updateObstacleDrift()
+{
+  // don't bother doing this if we're getting new obstacles
+  if (m_reset_pending || !(m_new_obstacle_file.empty()))
+    return;
+
+  // if no obstacles are drifting, nothing to do
+  if (m_num_drifting_obs == 0)
+    return;
+
+  // if there's no drift, nothing to do
+  if (m_drift_vector.mag() == 0)
+    return;
+
+  // figure out how many obs we actually need to move
+  unsigned int num_drifting_obs;
+  if ((m_num_drifting_obs < 0) || (m_num_drifting_obs > m_obstacles.size()))
+    num_drifting_obs = m_obstacles.size();
+  else
+    num_drifting_obs = m_num_drifting_obs;
+
+  // update drifting obs based on drift vector and rotate speed
+  for (unsigned int i=0; i < num_drifting_obs; i++) {
+    m_obstacles[i].shift_horz(m_drift_vector.xdot());
+    m_obstacles[i].shift_vert(m_drift_vector.ydot());
+    m_obstacles[i].rotate(m_rotate_speed);
+    //? what if obstacle leaves obstacle region?
+  }
+
+  m_obs_refresh_needed = true;
 }
 
 
@@ -987,7 +1021,9 @@ bool ObsMonteCarloSim::buildReport()
   drift_summary += "mag=" + doubleToStringX(m_drift_vector.mag()) + ", ";
   drift_summary += "xmag=" + doubleToStringX(m_drift_vector.xdot()) + ", ";
   drift_summary += "ymag=" + doubleToStringX(m_drift_vector.ydot());
-  m_msgs << "State (Drift Vector): " << drift_summary << endl;
+  m_msgs << "State (Obstacle Drift): " << endl;
+  m_msgs << "  Drift Summary: " << drift_summary << endl;
+  m_msgs << "  Rotation Speed: " << doubleToStringX(m_rotate_speed) << "m/s" << endl;
 
   m_msgs << endl << endl;
 
