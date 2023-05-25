@@ -140,6 +140,43 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
   return(true);
 }
 
+
+bool ObsMonteCarloSim::handleMailNodeReport(string node_report)
+{
+  NodeRecord record = string2NodeRecord(node_report);
+  if (!record.valid())
+    return(false);
+  string vname = record.getName();
+
+  // If this is the first node report from this vehicle, consider
+  // it also to be a query for obstacles.
+  if (m_map_vrecords.count(vname) == 0)
+    m_obs_refresh_needed = true;
+
+  // Update the node record list for this vehicle
+  m_map_vrecords[vname] = record;
+  return(true);
+}
+
+
+bool ObsMonteCarloSim::handleMailPointSize(string str)
+{
+  str = tolower(str);
+  double dval = atof(str.c_str());
+
+  if (dval >= 1)
+    m_point_size = dval;
+  else if ((str == "smaller") && (m_point_size >=2))
+    m_point_size -= 1;
+  else if (str == "bigger")
+    m_point_size += 1;
+  else
+    return(false);
+
+  return(true);
+}
+
+
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()
 
@@ -148,6 +185,135 @@ bool ObsMonteCarloSim::OnConnectToServer()
   registerVariables();
   return(true);
 }
+
+
+//------------------------------------------------------------
+
+// Procedure: postObstaclesRefresh()
+//     Notes: o VIEW_POLYGON info is likely for GUI apps like PMV
+//     Notes: o The KNOWN_OBSTACLE is intended for the benefit of
+//              other shoreside apps, e.g., uFldCollObDetect so it
+//              has access to ground truth. Thus KNOWN_OBSTACLE is
+//              not intented to be shared out to the vehicles
+//            o The GIVEN_OBSTACLE is intended for sharing to the
+//              vehicles, only if this sim is not in "post_points"
+//              mode. In post_points mode, this sim is sharing
+//              simulated sensor data, not actual obstacle info
+void ObsMonteCarloSim::postObstaclesRefresh()
+{
+  // =================================================
+  // Part 1: Post the viewable info
+  // =================================================
+  if (m_post_visuals) {
+    for (unsigned int i=0; i < m_obstacles.size(); i++) {
+      string spec = m_obstacles[i].get_spec(2);
+      Notify("VIEW_POLYGON", spec);
+    }
+    if (m_draw_region && m_poly_region.is_convex())
+      Notify("VIEW_POLYGON", m_poly_region.get_spec());
+  }
+
+
+  // =================================================
+  // Part 2: Post ground truth
+  // =================================================
+  for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    string spec = m_obstacles[i].get_spec_pts_label(2);
+    string key  = m_obstacles[i].get_label();
+    if (m_durations[i] >= 0)
+      spec += ",duration=" + doubleToStringX(m_durations[i]);
+
+    Notify("KNOWN_OBSTACLE", spec);
+    if (!m_post_points) {
+      Notify("GIVEN_OBSTACLE", spec);
+      m_map_giv_published[key]++;
+    }
+  }
+
+  m_obs_refresh_needed = false;
+  m_obs_refresh_tstamp = m_curr_time;
+  m_obstacles_posted++;
+}
+
+
+void ObsMonteCarloSim::postObstaclesErase()
+{
+  for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    XYPolygon obstacle = m_obstacles[i];
+    obstacle.set_duration(0);
+    string spec = obstacle.get_spec_inactive();
+    if (m_post_visuals)
+      Notify("VIEW_POLYGON", spec);
+    Notify("KNOWN_OBSTACLE", spec);
+    if (!m_post_points)
+      Notify("GIVEN_OBSTACLE", spec);
+  }
+}
+
+
+// Procedure: postPoints()
+//      Note: Points are published as:
+//            TRACKED_FEATURE = x=5,y=8,label=key,size=4,color=1
+void ObsMonteCarloSim::postPoints()
+{
+#if 1
+  map<string, NodeRecord>::iterator p;
+  for (p = m_map_vrecords.begin(); p != m_map_vrecords.end(); p++) {
+    string vname  = p->first;
+    string uvname = toupper(p->first);
+    double osx = p->second.getX();
+    double osy = p->second.getY();
+    string vcolor = p->second.getColor("yellow");
+
+    for (unsigned int i=0; i < m_obstacles.size(); i++) {
+      if (m_obstacles[i].dist_to_poly(osx, osy) <= m_sensor_range) {
+        for (unsigned int j=0; j < m_rate_points; j++) {
+          double x, y;
+          bool ok = randPointOnPoly(osx, osy, m_obstacles[i], x, y);
+          if (ok) {
+            string key = m_obstacles[i].get_label();
+            string msg = "x=" + doubleToStringX(x, 2);
+            msg += ",y=" + doubleToStringX(y, 2);
+            msg += ",key=" + key;
+            Notify("TRACKED_FEATURE_"+uvname, msg);
+            m_map_pts_published[key]++;
+            int label_index = static_cast<int>(m_map_pts_published[key]) % 100;
+
+            if (m_post_visuals) {
+              XYPoint p(x, y);
+              p.set_label(vname + ":" + key + ":" + intToString(label_index));
+              p.set_vertex_color(vcolor);
+              p.set_vertex_size(m_point_size);
+              p.set_label_color("invisible");
+              p.set_duration(10);
+              string spec = p.get_spec();
+              Notify("VIEW_POINT", spec);
+            }
+          }
+        }
+      }
+    }
+  }
+#endif
+#if 0
+  for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    for (unsigned int j=0; j < m_rate_points; j++) {
+      double x, y;
+      bool ok = randPointInPoly(m_obstacles[i], x, y);
+      if (ok) {
+        string key = m_obstacles[i].get_label();
+        string msg = "x=" + doubleToStringX(x, 2);
+        msg += ",y=" + doubleToStringX(y, 2);
+        msg += ",key=" + key;
+        Notify("TRACKED_FEATURE", msg);
+        reportEvent("TRACKED_FEATURE="+msg);
+        m_map_pts_published[key]++;
+      }
+    }
+  }
+#endif
+}
+
 
 //---------------------------------------------------------
 // Procedure: Iterate()
@@ -171,6 +337,232 @@ bool ObsMonteCarloSim::Iterate()
   AppCastingMOOSApp::PostReport();
   return(true);
 }
+
+
+void ObsMonteCarloSim::updateVRanges()
+{
+  // Part 1: calculate the new min_vrange_to_region
+  double min_vrange = -1;
+  map<string, NodeRecord>::iterator p;
+  for (p = m_map_vrecords.begin(); p != m_map_vrecords.end(); p++) {
+    string     vname = p->first;
+    NodeRecord record = p->second;
+
+    double vx = record.getX();
+    double vy = record.getY();
+
+    if (m_poly_region.is_convex()) {
+      if (!m_poly_region.contains(vx, vy)) {
+        double range = m_poly_region.dist_to_poly(vx, vy);
+        m_map_vrange[vname] = range;
+        if ((min_vrange < 0) || (range < min_vrange))
+          min_vrange = range;
+      } else {
+        m_region_entered = true;
+        min_vrange = 0;
+      }
+    }
+  }
+
+  // Part 2: Determine if vehicles are newly_exited
+  if ((m_min_vrange_to_region <= 0) && (min_vrange > 0))
+    m_newly_exited = true;
+  if ((min_vrange <= 0) || !m_region_entered)
+    m_newly_exited = false;
+
+  m_min_vrange_to_region = min_vrange;
+
+  // Part 3: If resetting is enabled, determine if reset warranted
+  if ((m_reset_interval > 0) || m_reset_request) {
+    if (m_min_vrange_to_region > m_reset_range) {
+      if (m_newly_exited || m_reset_request) {
+        double elapsed = m_curr_time - m_reset_tstamp;
+        if ((elapsed > m_reset_interval) || m_reset_request) {
+          m_reset_pending = true;
+          m_reset_request = false;
+          m_reset_tstamp = m_curr_time;
+          m_newly_exited = false;
+        }
+      }
+    }
+  }
+}
+
+
+// Procedure: updateObstaclesField()
+//   Purpose: If the reset_interval is non-negative, then check
+//            if enough time has elapsed for a reset. If so, then
+//            check if a reset is warranted based on range, and
+//            then reset the obstacles.
+void ObsMonteCarloSim::updateObstaclesField()
+{
+  if (!m_reset_pending)
+    return;
+
+  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
+
+  // Seed randomness from fractional part of current moos time
+  double tmp;
+  double moos_time_frac{modf(m_curr_time, &tmp)};  // get fraction from current time
+  int seed{static_cast<int>(moos_time_frac * pow(10, 6))};  // scale frac and cast to int
+  m_generator.seed(seed);
+
+  // Do the obstacle regeneration
+  vector<XYPolygon> new_obstacles;
+  bool ok = true;
+  for (unsigned int i=0; (ok && (i < m_obstacles.size())); i++) {
+    ok = ok && generateObstacle(&new_obstacles, 1000);
+  }
+
+  // Sanity check the results.
+  if (new_obstacles.size() != m_obstacles.size())
+    return;
+
+  // If new obstacles will have a new id/label, erase obstacles
+  // before overwriting them with new ones with different labels
+  if (!m_reuse_ids)
+    postObstaclesErase();
+
+  m_obstacles = new_obstacles;
+  m_obstacles_made += new_obstacles.size();
+  m_reset_total++;
+
+
+  // Apply the local simulator viewing preferences
+  for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    m_obstacles[i].set_color("edge", m_poly_edge_color);
+    m_obstacles[i].set_color("vertex", m_poly_vert_color);
+    m_obstacles[i].set_color("fill", m_poly_fill_color);
+    m_obstacles[i].set_color("label", m_poly_label_color);
+    m_obstacles[i].set_vertex_size(m_poly_vert_size);
+    m_obstacles[i].set_edge_size(m_poly_edge_size);
+    m_obstacles[i].set_transparency(m_poly_transparency);
+  }
+
+  m_obs_refresh_needed = true;
+  m_reset_pending = false;
+}
+
+
+bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int tries)
+{
+  if (!m_poly_region.is_convex())
+    return (false);
+
+  double minx = m_poly_region.get_min_x();
+  double miny = m_poly_region.get_min_y();
+  double maxx = m_poly_region.get_max_x();
+  double maxy = m_poly_region.get_max_y();
+
+  double xlen = maxx - minx;
+  double ylen = maxy - miny;
+
+  double radius{m_min_poly_size};
+  if (m_max_poly_size > m_min_poly_size) {
+    double radius_scaling{m_obs_scaling(m_generator)};
+    radius += ((m_max_poly_size - m_min_poly_size) * radius_scaling);
+  }
+
+  for (unsigned int k=0; k < tries; k++) {
+    double x_scaling{m_obs_scaling(m_generator)};
+    double y_scaling{m_obs_scaling(m_generator)};
+
+    double rand_x = minx + (x_scaling * xlen);
+    double rand_y = miny + (y_scaling * ylen);
+
+    // Reject if poly center point is not in the overall region
+    if (!m_poly_region.contains(rand_x, rand_y))
+      continue;
+
+    // Reject if poly center point is in an existing obstacle
+    bool pt_in_obstacle = false;
+    for (unsigned int i=0; i < obs_vec->size(); i++) {
+      if ((*obs_vec)[i].contains(rand_x, rand_y)) {
+        pt_in_obstacle = true;
+      }
+    }
+    if (pt_in_obstacle)
+      continue;
+
+    // "radial:: x=val, y=val, radius=val, pts=val, snap=val, label=val"
+    string str = "format=radial, x=" + doubleToString(rand_x, 1);
+    str += ", y=" + doubleToString(rand_y, 1);
+    str += ",radius=" + doubleToString(radius);
+    str += ",snap=0.1";  // + doubleToStringX(0.1, 3);  // 0.1m precision
+    str += ",pts=8";  // + uintToString(m_poly_vertices);  //  make octagons
+    unsigned int begin_id{(m_reuse_ids) ? 0 : m_obstacles_made};
+    str += ",label=" + m_label_prefix + "ob_" + uintToString(begin_id + obs_vec->size());
+
+    XYPolygon try_poly = string2Poly(str);
+    if (!try_poly.is_convex()) {
+      // cout << "     try_poly is not convex." << endl;
+      return (false);
+    }
+
+    // Reject if poly is not in the overall region
+    if (!m_poly_region.contains(try_poly))
+      continue;
+
+    // Reject if poly intersects any existing obstacle
+    bool poly_ints_obstacle = false;
+    for (unsigned int i=0; i < obs_vec->size(); i++) {
+      if ((*obs_vec)[i].intersects(try_poly)) {
+        poly_ints_obstacle = true;
+      }
+    }
+    if (poly_ints_obstacle)
+      continue;
+
+    // Reject if poly is too close to any existing obstacle
+    bool poly_closeto_obstacle = false;
+    for (unsigned int i=0; i < obs_vec->size(); i++) {
+      if ((*obs_vec)[i].dist_to_poly(try_poly) < m_min_range) {
+        poly_closeto_obstacle = true;
+      }
+    }
+    if (poly_closeto_obstacle)
+      continue;
+
+    // Success!!!
+    obs_vec->push_back(try_poly);
+    return (true);
+  }
+  return (false);
+}
+
+
+void ObsMonteCarloSim::updateObstaclesFromFile()
+{
+  if (m_new_obstacle_file.empty())
+    return;
+
+  // clear existing obstacles
+  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
+  postObstaclesErase();
+  m_obstacles.clear();
+
+  // reuse config handling function to update obstacle field
+  handleConfigObstacleFile(m_new_obstacle_file);
+
+  // set up to post new obstacles
+  m_new_obstacle_file.clear();
+  m_reset_total++;
+  m_obs_refresh_needed = true;
+}
+
+
+// Procedure: updateObstaclesRefresh()
+//   Purpose: If obstacles are set to be refreshed periodically,
+//            check if refresh is needed now based on elapsed time.
+void ObsMonteCarloSim::updateObstaclesRefresh()
+{
+  if (m_obs_refresh_interval > 0) {
+    double elapsed = m_curr_time - m_obs_refresh_tstamp;
+    if (elapsed > m_obs_refresh_interval)
+      m_obs_refresh_needed = true;
+  }
+}
+
 
 //---------------------------------------------------------
 // Procedure: OnStartUp()
@@ -284,65 +676,6 @@ bool ObsMonteCarloSim::OnStartUp()
   return(true);
 }
 
-//---------------------------------------------------------
-// Procedure: registerVariables()
-
-void ObsMonteCarloSim::registerVariables()
-{
-  AppCastingMOOSApp::RegisterVariables();
-  Register("PMV_CONNECT", 0);
-  Register("OBM_CONNECT", 0);
-  Register("VEHICLE_CONNECT", 0);
-  if (!m_reset_var.empty() && (m_reset_var != "NONE"))
-    Register(m_reset_var, 0);
-  if (!m_obstacle_file_var.empty())
-    Register(m_obstacle_file_var, 0);
-  Register("UFOS_POINT_SIZE", 0);
-  Register("NODE_REPORT", 0);
-}
-
-//------------------------------------------------------------
-// Procedure: handleMailNodeReport()
-
-bool ObsMonteCarloSim::handleMailNodeReport(string node_report)
-{
-  NodeRecord record = string2NodeRecord(node_report);
-  if (!record.valid())
-    return(false);
-  string vname = record.getName();
-
-  // If this is the first node report from this vehicle, consider
-  // it also to be a query for obstacles.
-  if (m_map_vrecords.count(vname) == 0)
-    m_obs_refresh_needed = true;
-
-  // Update the node record list for this vehicle
-  m_map_vrecords[vname] = record;
-  return(true);
-}
-
-//------------------------------------------------------------
-// Procedure: handleMailPointSize()
-
-bool ObsMonteCarloSim::handleMailPointSize(string str)
-{
-  str = tolower(str);
-  double dval = atof(str.c_str());
-
-  if (dval >= 1)
-    m_point_size = dval;
-  else if ((str == "smaller") && (m_point_size >=2))
-    m_point_size -= 1;
-  else if (str == "bigger")
-    m_point_size += 1;
-  else
-    return(false);
-
-  return(true);
-}
-
-//------------------------------------------------------------
-// Procedure: handleConfigMinDuration()
 
 bool ObsMonteCarloSim::handleConfigMinDuration(string sval)
 {
@@ -357,8 +690,6 @@ bool ObsMonteCarloSim::handleConfigMinDuration(string sval)
   return(true);
 }
 
-//------------------------------------------------------------
-// Procedure: handleConfigMaxDuration()
 
 bool ObsMonteCarloSim::handleConfigMaxDuration(string sval)
 {
@@ -377,9 +708,6 @@ bool ObsMonteCarloSim::handleConfigMaxDuration(string sval)
   return(true);
 }
 
-
-//------------------------------------------------------------
-// Procedure: handleConfigObstacleFile
 
 bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
 {
@@ -462,8 +790,6 @@ bool ObsMonteCarloSim::handleConfigObstacleFile(string filename)
   return(true);
 }
 
-//------------------------------------------------------------
-// Procedure: handleConfigObstacleDurations()
 
 void ObsMonteCarloSim::handleConfigObstacleDurations()
 {
@@ -478,370 +804,22 @@ void ObsMonteCarloSim::handleConfigObstacleDurations()
     m_durations[i] = randomDouble(min_duration, m_max_duration);
 }
 
-//------------------------------------------------------------
-// Procedure: updateVRanges()
 
-void ObsMonteCarloSim::updateVRanges()
+//---------------------------------------------------------
+// Procedure: registerVariables()
+
+void ObsMonteCarloSim::registerVariables()
 {
-  // Part 1: calculate the new min_vrange_to_region
-  double min_vrange = -1;
-  map<string, NodeRecord>::iterator p;
-  for (p = m_map_vrecords.begin(); p != m_map_vrecords.end(); p++) {
-    string     vname = p->first;
-    NodeRecord record = p->second;
-
-    double vx = record.getX();
-    double vy = record.getY();
-
-    if (m_poly_region.is_convex()) {
-      if (!m_poly_region.contains(vx, vy)) {
-        double range = m_poly_region.dist_to_poly(vx, vy);
-        m_map_vrange[vname] = range;
-        if ((min_vrange < 0) || (range < min_vrange))
-          min_vrange = range;
-      } else {
-        m_region_entered = true;
-        min_vrange = 0;
-      }
-    }
-  }
-
-  // Part 2: Determine if vehicles are newly_exited
-  if ((m_min_vrange_to_region <= 0) && (min_vrange > 0))
-    m_newly_exited = true;
-  if ((min_vrange <= 0) || !m_region_entered)
-    m_newly_exited = false;
-
-  m_min_vrange_to_region = min_vrange;
-
-  // Part 3: If resetting is enabled, determine if reset warranted
-  if ((m_reset_interval > 0) || m_reset_request) {
-    if (m_min_vrange_to_region > m_reset_range) {
-      if (m_newly_exited || m_reset_request) {
-        double elapsed = m_curr_time - m_reset_tstamp;
-        if ((elapsed > m_reset_interval) || m_reset_request) {
-          m_reset_pending = true;
-          m_reset_request = false;
-          m_reset_tstamp = m_curr_time;
-          m_newly_exited = false;
-        }
-      }
-    }
-  }
-}
-
-
-//------------------------------------------------------------
-// Procedure: updateObstaclesField()
-//   Purpose: If the reset_interval is non-negative, then check
-//            if enough time has elapsed for a reset. If so, then
-//            check if a reset is warranted based on range, and
-//            then reset the obstacles.
-
-void ObsMonteCarloSim::updateObstaclesField()
-{
-  if (!m_reset_pending)
-    return;
-
-  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
-
-  // Seed randomness from fractional part of current moos time
-  double tmp;
-  double moos_time_frac{modf(m_curr_time, &tmp)};  // get fraction from current time
-  int seed{static_cast<int>(moos_time_frac * pow(10, 6))};  // scale frac and cast to int
-  m_generator.seed(seed);
-
-  // Do the obstacle regeneration
-  vector<XYPolygon> new_obstacles;
-  bool ok = true;
-  for (unsigned int i=0; (ok && (i < m_obstacles.size())); i++) {
-    ok = ok && generateObstacle(&new_obstacles, 1000);
-  }
-
-  // Sanity check the results.
-  if (new_obstacles.size() != m_obstacles.size())
-    return;
-
-  // If new obstacles will have a new id/label, erase obstacles
-  // before overwriting them with new ones with different labels
-  if (!m_reuse_ids)
-    postObstaclesErase();
-
-  m_obstacles = new_obstacles;
-  m_obstacles_made += new_obstacles.size();
-  m_reset_total++;
-
-
-  // Apply the local simulator viewing preferences
-  for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    m_obstacles[i].set_color("edge", m_poly_edge_color);
-    m_obstacles[i].set_color("vertex", m_poly_vert_color);
-    m_obstacles[i].set_color("fill", m_poly_fill_color);
-    m_obstacles[i].set_color("label", m_poly_label_color);
-    m_obstacles[i].set_vertex_size(m_poly_vert_size);
-    m_obstacles[i].set_edge_size(m_poly_edge_size);
-    m_obstacles[i].set_transparency(m_poly_transparency);
-  }
-
-  m_obs_refresh_needed = true;
-  m_reset_pending = false;
-}
-
-// ------------------------------------------------------------
-bool ObsMonteCarloSim::generateObstacle(vector<XYPolygon>* obs_vec, unsigned int tries)
-{
-  if (!m_poly_region.is_convex())
-    return (false);
-
-  double minx = m_poly_region.get_min_x();
-  double miny = m_poly_region.get_min_y();
-  double maxx = m_poly_region.get_max_x();
-  double maxy = m_poly_region.get_max_y();
-
-  double xlen = maxx - minx;
-  double ylen = maxy - miny;
-
-  double radius{m_min_poly_size};
-  if (m_max_poly_size > m_min_poly_size) {
-    double radius_scaling{m_obs_scaling(m_generator)};
-    radius += ((m_max_poly_size - m_min_poly_size) * radius_scaling);
-  }
-
-  for (unsigned int k=0; k < tries; k++) {
-    double x_scaling{m_obs_scaling(m_generator)};
-    double y_scaling{m_obs_scaling(m_generator)};
-
-    double rand_x = minx + (x_scaling * xlen);
-    double rand_y = miny + (y_scaling * ylen);
-
-    // Reject if poly center point is not in the overall region
-    if (!m_poly_region.contains(rand_x, rand_y))
-      continue;
-
-    // Reject if poly center point is in an existing obstacle
-    bool pt_in_obstacle = false;
-    for (unsigned int i=0; i < obs_vec->size(); i++) {
-      if ((*obs_vec)[i].contains(rand_x, rand_y)) {
-        pt_in_obstacle = true;
-      }
-    }
-    if (pt_in_obstacle)
-      continue;
-
-    // "radial:: x=val, y=val, radius=val, pts=val, snap=val, label=val"
-    string str = "format=radial, x=" + doubleToString(rand_x, 1);
-    str += ", y=" + doubleToString(rand_y, 1);
-    str += ",radius=" + doubleToString(radius);
-    str += ",snap=0.1";  // + doubleToStringX(0.1, 3);  // 0.1m precision
-    str += ",pts=8";  // + uintToString(m_poly_vertices);  //  make octagons
-    unsigned int begin_id{(m_reuse_ids) ? 0 : m_obstacles_made};
-    str += ",label=" + m_label_prefix + "ob_" + uintToString(begin_id + obs_vec->size());
-
-    XYPolygon try_poly = string2Poly(str);
-    if (!try_poly.is_convex()) {
-      // cout << "     try_poly is not convex." << endl;
-      return (false);
-    }
-
-    // Reject if poly is not in the overall region
-    if (!m_poly_region.contains(try_poly))
-      continue;
-
-    // Reject if poly intersects any existing obstacle
-    bool poly_ints_obstacle = false;
-    for (unsigned int i=0; i < obs_vec->size(); i++) {
-      if ((*obs_vec)[i].intersects(try_poly)) {
-        poly_ints_obstacle = true;
-      }
-    }
-    if (poly_ints_obstacle)
-      continue;
-
-    // Reject if poly is too close to any existing obstacle
-    bool poly_closeto_obstacle = false;
-    for (unsigned int i=0; i < obs_vec->size(); i++) {
-      if ((*obs_vec)[i].dist_to_poly(try_poly) < m_min_range) {
-        poly_closeto_obstacle = true;
-      }
-    }
-    if (poly_closeto_obstacle)
-      continue;
-
-    // Success!!!
-    obs_vec->push_back(try_poly);
-    return (true);
-  }
-  return (false);
-}
-
-
-//------------------------------------------------------------
-// Procedure: updateObstaclesFromFile()
-void ObsMonteCarloSim::updateObstaclesFromFile()
-{
-  if (m_new_obstacle_file.empty())
-    return;
-
-  // clear existing obstacles
-  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
-  postObstaclesErase();
-  m_obstacles.clear();
-
-  // reuse config handling function to update obstacle field
-  handleConfigObstacleFile(m_new_obstacle_file);
-
-  // set up to post new obstacles
-  m_new_obstacle_file.clear();
-  m_reset_total++;
-  m_obs_refresh_needed = true;
-}
-
-
-
-//------------------------------------------------------------
-// Procedure: updateObstaclesRefresh()
-//   Purpose: If obstacles are set to be refreshed periodically,
-//            check if refresh is needed now based on elapsed time.
-
-void ObsMonteCarloSim::updateObstaclesRefresh()
-{
-  if (m_obs_refresh_interval > 0) {
-    double elapsed = m_curr_time - m_obs_refresh_tstamp;
-    if (elapsed > m_obs_refresh_interval)
-      m_obs_refresh_needed = true;
-  }
-}
-
-
-//------------------------------------------------------------
-// Procedure: postObstaclesRefresh()
-//     Notes: o VIEW_POLYGON info is likely for GUI apps like PMV
-//     Notes: o The KNOWN_OBSTACLE is intended for the benefit of
-//              other shoreside apps, e.g., uFldCollObDetect so it
-//              has access to ground truth. Thus KNOWN_OBSTACLE is
-//              not intented to be shared out to the vehicles
-//            o The GIVEN_OBSTACLE is intended for sharing to the
-//              vehicles, only if this sim is not in "post_points"
-//              mode. In post_points mode, this sim is sharing
-//              simulated sensor data, not actual obstacle info
-
-void ObsMonteCarloSim::postObstaclesRefresh()
-{
-  // =================================================
-  // Part 1: Post the viewable info
-  // =================================================
-  if (m_post_visuals) {
-    for (unsigned int i=0; i < m_obstacles.size(); i++) {
-      string spec = m_obstacles[i].get_spec(2);
-      Notify("VIEW_POLYGON", spec);
-    }
-    if (m_draw_region && m_poly_region.is_convex())
-      Notify("VIEW_POLYGON", m_poly_region.get_spec());
-  }
-
-
-  // =================================================
-  // Part 2: Post ground truth
-  // =================================================
-  for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    string spec = m_obstacles[i].get_spec_pts_label(2);
-    string key  = m_obstacles[i].get_label();
-    if (m_durations[i] >= 0)
-      spec += ",duration=" + doubleToStringX(m_durations[i]);
-
-    Notify("KNOWN_OBSTACLE", spec);
-    if (!m_post_points) {
-      Notify("GIVEN_OBSTACLE", spec);
-      m_map_giv_published[key]++;
-    }
-  }
-
-  m_obs_refresh_needed = false;
-  m_obs_refresh_tstamp = m_curr_time;
-  m_obstacles_posted++;
-}
-
-//------------------------------------------------------------
-// Procedure: postObstaclesErase()
-
-void ObsMonteCarloSim::postObstaclesErase()
-{
-  for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    XYPolygon obstacle = m_obstacles[i];
-    obstacle.set_duration(0);
-    string spec = obstacle.get_spec_inactive();
-    if (m_post_visuals)
-      Notify("VIEW_POLYGON", spec);
-    Notify("KNOWN_OBSTACLE", spec);
-    if (!m_post_points)
-      Notify("GIVEN_OBSTACLE", spec);
-  }
-}
-
-
-//------------------------------------------------------------
-// Procedure: postPoints()
-//      Note: Points are published as:
-//            TRACKED_FEATURE = x=5,y=8,label=key,size=4,color=1
-
-void ObsMonteCarloSim::postPoints()
-{
-#if 1
-  map<string, NodeRecord>::iterator p;
-  for (p = m_map_vrecords.begin(); p != m_map_vrecords.end(); p++) {
-    string vname  = p->first;
-    string uvname = toupper(p->first);
-    double osx = p->second.getX();
-    double osy = p->second.getY();
-    string vcolor = p->second.getColor("yellow");
-
-    for (unsigned int i=0; i < m_obstacles.size(); i++) {
-      if (m_obstacles[i].dist_to_poly(osx, osy) <= m_sensor_range) {
-        for (unsigned int j=0; j < m_rate_points; j++) {
-          double x, y;
-          bool ok = randPointOnPoly(osx, osy, m_obstacles[i], x, y);
-          if (ok) {
-            string key = m_obstacles[i].get_label();
-            string msg = "x=" + doubleToStringX(x, 2);
-            msg += ",y=" + doubleToStringX(y, 2);
-            msg += ",key=" + key;
-            Notify("TRACKED_FEATURE_"+uvname, msg);
-            m_map_pts_published[key]++;
-            int label_index = static_cast<int>(m_map_pts_published[key]) % 100;
-
-            if (m_post_visuals) {
-              XYPoint p(x, y);
-              p.set_label(vname + ":" + key + ":" + intToString(label_index));
-              p.set_vertex_color(vcolor);
-              p.set_vertex_size(m_point_size);
-              p.set_label_color("invisible");
-              p.set_duration(10);
-              string spec = p.get_spec();
-              Notify("VIEW_POINT", spec);
-            }
-          }
-        }
-      }
-    }
-  }
-#endif
-#if 0
-  for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    for (unsigned int j=0; j < m_rate_points; j++) {
-      double x, y;
-      bool ok = randPointInPoly(m_obstacles[i], x, y);
-      if (ok) {
-        string key = m_obstacles[i].get_label();
-        string msg = "x=" + doubleToStringX(x, 2);
-        msg += ",y=" + doubleToStringX(y, 2);
-        msg += ",key=" + key;
-        Notify("TRACKED_FEATURE", msg);
-        reportEvent("TRACKED_FEATURE="+msg);
-        m_map_pts_published[key]++;
-      }
-    }
-  }
-#endif
+  AppCastingMOOSApp::RegisterVariables();
+  Register("PMV_CONNECT", 0);
+  Register("OBM_CONNECT", 0);
+  Register("VEHICLE_CONNECT", 0);
+  if (!m_reset_var.empty() && (m_reset_var != "NONE"))
+    Register(m_reset_var, 0);
+  if (!m_obstacle_file_var.empty())
+    Register(m_obstacle_file_var, 0);
+  Register("UFOS_POINT_SIZE", 0);
+  Register("NODE_REPORT", 0);
 }
 
 
