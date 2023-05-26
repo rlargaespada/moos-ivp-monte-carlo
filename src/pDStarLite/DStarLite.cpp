@@ -242,6 +242,7 @@ bool DStarLite::Iterate()
     m_planning_start_time = MOOSTime();
     m_path_len_traversed = 0;
     m_path.clear();
+    m_path_grid_cells.clear();
 
     // plan path until we reach max number of iterations
     path_found = planPath();
@@ -423,6 +424,7 @@ bool DStarLite::planPath()
 
   // if we're in transit, plan again from the current vehicle position
   } else if (m_mode == PlannerMode::IN_TRANSIT) {
+    m_start_point = m_vpos;  // start point is current vehicle position
     m_start_cell = findCellByPoint(m_vpos);
     if (m_start_cell < 0) {
       handlePlanningFail("ERROR: tried to replan from current vehicle position, "
@@ -436,14 +438,13 @@ bool DStarLite::planPath()
     m_grid.setVal(m_start_cell, 0, obs_cix);
 
     m_k_m += heuristic(m_last_cell, m_start_cell);
-    // run with fewer iters since we had to do replanning work
-    planning_complete = computeShortestPath(m_max_iters/2);
+    // end after setting up for replanning, start planning during next Iterate() call
   }
 
   // planning done, return true if we found a path
   if (planning_complete) {
-    m_path = parsePathFromGrid();
-    if (m_path.size() == 0) {
+    bool path_ok{parsePathFromGrid()};
+    if (!path_ok) {
       handlePlanningFail("Unable to find a path from the start to the goal!");
       return (false);
     }
@@ -711,22 +712,23 @@ bool DStarLite::computeShortestPath(int max_iters)
 }
 
 
-XYSegList DStarLite::parsePathFromGrid()
+bool DStarLite::parsePathFromGrid()
 {
   XYSegList path;
+  std::vector<int> path_grid_cells;
   path.set_label("D* Lite");
   unsigned int g_cix{m_grid.getCellVarIX("g")};
 
   int current_cell{m_start_cell}, next_cell;
   double wpt_x, wpt_y, min_cost, neighbor_cost;
   while (current_cell != m_goal_cell) {
-    // check no path found condition, return empty path if not found
+    // check no path found condition, don't set path if not found
     if (std::isinf(m_grid.getVal(current_cell, g_cix))) {
-      path.clear();  // anything we found so far isn't helpful
-      return (path);
+      return (false);
     }
 
     // add current cell to path
+    path_grid_cells.push_back(current_cell);
     wpt_x = m_grid.getElement(current_cell).getCenterX();
     wpt_y = m_grid.getElement(current_cell).getCenterY();
     path.add_vertex(wpt_x, wpt_y);
@@ -744,12 +746,14 @@ XYSegList DStarLite::parsePathFromGrid()
     current_cell = next_cell;
   }
 
-  if (m_path.size() == 0)  // when jnitially planning, change first point to be start point
-    path.mod_vertex(0, m_start_point.x(), m_start_point.y());
+  path.mod_vertex(0, m_start_point.x(), m_start_point.y());  // change first point to be start point
+  path_grid_cells.push_back(m_goal_cell);
+  path.add_vertex(m_goal_point);  // add goal point
 
-  // add goal point and return
-  path.add_vertex(m_goal_point);
-  return (path);
+  // save path and return
+  m_path = path;
+  m_path_grid_cells = path_grid_cells;
+  return (true);
 }
 
 
@@ -786,31 +790,28 @@ bool DStarLite::postPath()
 
 bool DStarLite::checkObstacles()
 {
+  // if we strayed too far from the next waypoint, replan is needed
+  XYPoint next_wpt{m_path.get_point(m_next_path_idx)};
+  double threshold{3 * m_grid.getCellSize()};
+  if (distPointToPoint(m_vpos, next_wpt) > threshold)
+    return (false);
+
+  // check remainder of path for validity
   unsigned int obs_cix{m_grid.getCellVarIX("obs")};
-
-  for (int i = 0; i < m_path.size() - 1; i++) {
-    // if we strayed too far from the next waypoint, replan is needed
-    XYPoint next_wpt{m_path.get_point(m_next_path_idx)};
-    double threshold{3 * m_grid.getCellSize()};
-    if (distPointToPoint(m_vpos, next_wpt) > threshold)
-      return (false);
-
+  for (int i = m_next_path_idx; i < m_path.size() - 1; i++) {
     // grab pairs of points on path
+    int cell1{m_path_grid_cells[i]}, cell2{m_path_grid_cells[i + 1]};
     double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
     double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
 
     // if either point is in an occupied square, replan is needed
-    int cell1{findCellByPoint(XYPoint{x1, y1})};
-    int cell2{findCellByPoint(XYPoint{x2, y2})};
     if ((m_grid.getVal(cell1, obs_cix) == 1) || (m_grid.getVal(cell2, obs_cix) == 1))
       return (false);
 
     // if line between points intersects an obstacle, replan is needed
     for (auto const& obs : m_obstacle_map) {
-      if (obs.second.seg_intercepts(x1, y1, x2, y2)) {
-        reportEvent("Replan required, path intersects with " + obs.first);
+      if (obs.second.seg_intercepts(x1, y1, x2, y2))
         return (false);
-      }
     }
   }
   return (true);

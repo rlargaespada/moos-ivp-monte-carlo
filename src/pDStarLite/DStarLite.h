@@ -75,7 +75,7 @@ class DStarLite : public AppCastingMOOSApp
   void updateVertex(int grid_ix);
 
   bool computeShortestPath(int max_iters);
-  XYSegList parsePathFromGrid();
+  bool parsePathFromGrid();
 
   // path publishing
   std::string getPathStats();
@@ -122,7 +122,7 @@ class DStarLite : public AppCastingMOOSApp
   XYPoint m_goal_point;
   XYPoint m_vpos;
 
-  // index of cell in graph that contains start, goal, and vehicle positions
+  // index of cell in graph that contains start and goal position
   int m_start_cell;
   int m_goal_cell;
 
@@ -137,6 +137,7 @@ class DStarLite : public AppCastingMOOSApp
   double m_planning_end_time;
   double m_path_len_traversed;
   XYSegList m_path;
+  std::vector<int> m_path_grid_cells;
 
   // D* Lite state
   int m_last_cell;  // last cell planned from, used for replanning

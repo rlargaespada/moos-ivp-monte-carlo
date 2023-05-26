@@ -323,4 +323,6 @@ ProcessConfig = pDStarLite
   // grid_bounds = {-159,91:-159,-357:276,-357:276,91}
   grid_bounds = $(SEARCH_BOUNDS)
   grid_cell_size = 5
+
+  max_planning_iters = 100
 }
