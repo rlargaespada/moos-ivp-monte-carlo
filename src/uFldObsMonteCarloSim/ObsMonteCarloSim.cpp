@@ -441,7 +441,7 @@ void ObsMonteCarloSim::updateObstacleDrift()
     m_obstacles[i].shift_horz(m_drift_vector.xdot());
     m_obstacles[i].shift_vert(m_drift_vector.ydot());
     m_obstacles[i].rotate(m_rotate_speed);
-    //? what if obstacle leaves obstacle region?
+    // todo: what if obstacle leaves obstacle region?
   }
 
   m_obs_refresh_needed = true;
@@ -726,6 +726,7 @@ bool ObsMonteCarloSim::OnStartUp()
       }
 
     // Params for obstacle drift
+    // todo: how to configure this in mission? hard code? env variables? user cmd line args?
     } else if ((param == "num_drifting_obs") || (param == "num_drifting_obstacles")) {
       if (tolower(value) == "all") {
         m_num_drifting_obs = -1;  // negative number means all obstacles should drift
@@ -955,6 +956,9 @@ void ObsMonteCarloSim::registerVariables()
     Register(m_obstacle_file_var, 0);
 
   // obstacle drift postings, subscribe to same variables as uSimMarine
+  // todo: what variables to subscribe to? variable names configurable? other way to
+  // differentiate between postings to a different obstacle sim?
+  // todo: how to handle wind? needs to be a separate posting
   Register("DRIFT_X", 0);
   Register("DRIFT_Y", 0);
   Register("DRIFT_VECTOR", 0);

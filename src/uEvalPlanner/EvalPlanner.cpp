@@ -34,6 +34,7 @@ EvalPlanner::EvalPlanner()
   m_reset_sim_var = "USM_RESET";
   m_desired_trials = 10;
   m_trial_timeout = 300;  // seconds
+  m_end_trial_on_collision = false;
   m_export_file_base = GetAppName() + "_Metrics";
   m_use_timestamp = true;
 
@@ -221,6 +222,10 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
         if ((isTrialOngoing()) && (vname == m_vehicle_name)) {
           m_current_trial.collision_count++;
           m_current_trial.trial_successful = false;  // fail on collision
+          if (m_end_trial_on_collision) {
+            m_request_new_path = SimRequest::CLOSED;
+            m_next_trial_pending = true;
+          }
 
           double dist;
           if (tokParse(alert, "dist", ',', '=', dist)) {
@@ -488,8 +493,8 @@ void EvalPlanner::calcMetrics()
 {
   // declare variables to track totals and extrema
   double successes{0};
-  double summed_planning_time{0}, summed_duration{0};
   int total_timeouts{0}, total_collisions{0}, total_plan_fails{0};
+  double summed_planning_time{0}, summed_duration{0};
   double summed_min_dist_to_obs{0}, global_min_dist_to_obs{INFINITY};
   double total_dist_traveled{0}, total_path_len{0}, summed_dist_eff{0};
   double summed_deviation{0}, global_max_deviation{0};
@@ -498,14 +503,23 @@ void EvalPlanner::calcMetrics()
 
   // iterate through trials and pull out data we need
   for (TrialData td : m_trial_data) {
-    if (td.trial_successful) successes++;
+    // if trial is unsuccessful, only track reason for failure
+    if (!td.trial_successful) {
+      if (td.timed_out)
+        total_timeouts++;
+      if (td.planning_failed)
+        total_plan_fails++;
+      total_collisions += td.collision_count;
+      continue;  // don't want to compile other stats from this trial
+    }
+
+    // for successful trials, track remainder of stats
+    successes++;
 
     summed_planning_time += td.planning_time;
     summed_duration += td.duration;
 
-    if (td.timed_out) total_timeouts++;
     total_collisions += td.collision_count;
-    if (td.planning_failed) total_plan_fails++;
 
     if (!std::isinf(td.min_dist_to_obs))
       summed_min_dist_to_obs += td.min_dist_to_obs;
@@ -530,25 +544,29 @@ void EvalPlanner::calcMetrics()
   m_global_metrics.successful_trials = successes;
   m_global_metrics.total_trials = num_trials;
   m_global_metrics.success_rate = (successes/num_trials);
-  m_global_metrics.avg_planning_time = (summed_planning_time/num_trials);
-  m_global_metrics.avg_duration = (summed_duration/num_trials);
 
   m_global_metrics.total_timeouts = total_timeouts;
   m_global_metrics.total_collisions = total_collisions;
   m_global_metrics.total_planning_fails = total_plan_fails;
 
+  if (successes == 0)  // nothing to calculate without a successful trial
+    return;
+
+  m_global_metrics.avg_planning_time = (summed_planning_time/successes);
+  m_global_metrics.avg_duration = (summed_duration/successes);
+
   m_global_metrics.avg_min_dist_to_obs =
-    (summed_min_dist_to_obs/(num_trials - num_inf_dist_to_obs));
+    (summed_min_dist_to_obs/(successes - num_inf_dist_to_obs));
   m_global_metrics.min_dist_to_obs = global_min_dist_to_obs;
 
-  m_global_metrics.avg_dist_traveled = (total_dist_traveled/num_trials);
-  m_global_metrics.avg_path_len = (total_path_len/num_trials);
-  m_global_metrics.avg_dist_eff = (summed_dist_eff/num_trials);
+  m_global_metrics.avg_dist_traveled = (total_dist_traveled/successes);
+  m_global_metrics.avg_path_len = (total_path_len/successes);
+  m_global_metrics.avg_dist_eff = (summed_dist_eff/successes);
 
-  m_global_metrics.avg_total_deviation = (summed_deviation/num_trials);
+  m_global_metrics.avg_total_deviation = (summed_deviation/successes);
   m_global_metrics.max_deviation = global_max_deviation;
 
-  m_global_metrics.avg_energy_eff = (summed_energy_eff/num_trials);
+  m_global_metrics.avg_energy_eff = (summed_energy_eff/successes);
 }
 
 
@@ -827,9 +845,6 @@ bool EvalPlanner::OnStartUp()
     bool handled{false};
     if (param == "vehicle_name") {
       handled = setNonWhiteVarOnString(m_vehicle_name, tolower(value));
-    } else if (param == "timeout") {
-      reportEvent(value);
-      handled = setNonNegDoubleOnString(m_trial_timeout, value);
     } else if (param == "start_pos") {
       handled = setVPoint(&m_start_point, value);
     } else if (param == "goal_pos") {
@@ -849,6 +864,10 @@ bool EvalPlanner::OnStartUp()
       handled = setNonWhiteVarOnString(m_path_failed_var, toupper(value));
     } else if (param == "num_trials") {
       handled = setIntOnString(m_desired_trials, value);
+    } else if (param == "timeout") {
+      handled = setNonNegDoubleOnString(m_trial_timeout, value);
+    } else if (param == "end_trial_on_collision") {
+      handled = setBooleanOnString(m_end_trial_on_collision, value);
     } else if (param == "obs_reset_var") {
       if (tolower(value) == "none") {
         no_obstacle_resets = true;

@@ -63,12 +63,13 @@ struct GlobalMetrics
   int successful_trials{0};
   int total_trials{0};
   double success_rate{1};
-  double avg_planning_time{0};
-  double avg_duration{0};
 
   int total_timeouts{0};
-  int total_collisions{0};
   int total_planning_fails{0};
+  int total_collisions{0};
+
+  double avg_planning_time{0};
+  double avg_duration{0};
 
   double avg_min_dist_to_obs{INFINITY};
   double min_dist_to_obs{INFINITY};
@@ -152,7 +153,6 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string m_vehicle_name;
   XYPoint m_start_point;
   XYPoint m_goal_point;
-  XYPoint m_vpos;
 
   double m_hdg_on_reset;
   bool m_rel_hdg_on_reset;
@@ -174,6 +174,7 @@ class EvalPlanner : public AppCastingMOOSApp
   // sim parameters
   int m_desired_trials;
   double m_trial_timeout;  // seconds
+  bool m_end_trial_on_collision;
 
   std::vector<VarDataPair> m_trial_flags;
   std::vector<VarDataPair> m_end_flags;
@@ -183,6 +184,7 @@ class EvalPlanner : public AppCastingMOOSApp
   bool m_use_timestamp;
 
  private:  // State variables
+  XYPoint m_vpos;
   bool m_sim_active;
 
   // commands from user
