@@ -117,10 +117,7 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
         m_mode = PlannerMode::PATH_COMPLETE;
 
         // add final segment of path to dist traveled
-        unsigned int last_idx{m_path.size() - 1};
-        double x1{m_path.get_vx(last_idx)}, y1{m_path.get_vy(last_idx)};
-        double x0{m_path.get_vx(last_idx - 1)}, y0{m_path.get_vy(last_idx - 1)};
-        m_path_len_traversed += distPointToPoint(x0, y0, x1, y1);
+        handleNewWpt(m_path.size() - 1);
       }
     } else if ((key == "NODE_REPORT_LOCAL") || (key == "NODE_REPORT")) {
       std::string report{tolower(msg.GetString())};
@@ -129,13 +126,8 @@ bool DStarLite::OnNewMail(MOOSMSG_LIST &NewMail)
       m_vpos.set_vertex(xval, yval);
     } else if (key == "WPT_INDEX") {
       // add just finished segment of path to dist traveled
-      m_next_path_idx = static_cast<int>(msg.GetDouble());
-      int prev_idx{m_next_path_idx - 1};
-      if ((m_mode == PlannerMode::IN_TRANSIT)  && (prev_idx > 0)) {
-        double x1{m_path.get_vx(prev_idx)}, y1{m_path.get_vy(prev_idx)};
-        double x0{m_path.get_vx(prev_idx - 1)}, y0{m_path.get_vy(prev_idx - 1)};
-        m_path_len_traversed += distPointToPoint(x0, y0, x1, y1);
-      }
+      if (m_mode == PlannerMode::IN_TRANSIT)
+        handleNewWpt(static_cast<int>(msg.GetDouble()));
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
       reportRunWarning("Unhandled Mail: " + key);
     }
@@ -203,6 +195,24 @@ bool DStarLite::handleObstacleResolved(const std::string obs_label)
   }
   // otherwise ignore message
   return (false);
+}
+
+
+void DStarLite::handleNewWpt(int new_wpt_idx)
+{
+  int wpt_just_completed{new_wpt_idx - 1};
+  int prev_wpt_completed{std::max(m_next_path_idx - 1, 0)};
+
+  if (wpt_just_completed < 1)
+    return;
+
+  for (int i = prev_wpt_completed; i < wpt_just_completed; i++) {
+    double x0{m_path.get_vx(i)}, y0{m_path.get_vy(i)};
+    double x1{m_path.get_vx(i + 1)}, y1{m_path.get_vy(i + 1)};
+    m_path_len_traversed += distPointToPoint(x0, y0, x1, y1);
+  }
+
+  m_next_path_idx = new_wpt_idx;
 }
 
 
@@ -801,18 +811,19 @@ bool DStarLite::checkObstacles()
   for (int i = m_next_path_idx; i < m_path.size() - 1; i++) {
     // grab pairs of points on path
     int cell1{m_path_grid_cells[i]}, cell2{m_path_grid_cells[i + 1]};
-    double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
-    double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
+    // double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
+    // double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
 
     // if either point is in an occupied square, replan is needed
     if ((m_grid.getVal(cell1, obs_cix) == 1) || (m_grid.getVal(cell2, obs_cix) == 1))
       return (false);
 
     // if line between points intersects an obstacle, replan is needed
-    for (auto const& obs : m_obstacle_map) {
-      if (obs.second.seg_intercepts(x1, y1, x2, y2))
-        return (false);
-    }
+    //* NOTE: this case is handled by previous check on occupied squares
+    // for (auto const& obs : m_obstacle_map) {
+    //   if (obs.second.seg_intercepts(x1, y1, x2, y2))
+    //     return (false);
+    // }
   }
   return (true);
 }
@@ -1044,6 +1055,7 @@ bool DStarLite::buildReport()
   }
 
   m_msgs << "Path Stats:" << endl;
+  m_msgs << "  Next Waypoint Index: " << intToString(m_next_path_idx) << endl;
   m_msgs << "  Planning Time: " <<
     doubleToStringX(m_planning_end_time - m_planning_start_time, 2) << endl;
   m_msgs << "  Path Length: " << doubleToStringX(m_path.length(), 2) << endl;

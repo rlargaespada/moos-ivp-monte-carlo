@@ -56,6 +56,7 @@ class DStarLite : public AppCastingMOOSApp
   bool setEndpoints(std::string request);
   bool handleObstacleAlert(std::string obs_alert);
   bool handleObstacleResolved(std::string obs_label);
+  void handleNewWpt(int new_wpt_idx);
 
   // path planning
   bool checkPlanningPreconditions();  // D* Lite, signature in base
