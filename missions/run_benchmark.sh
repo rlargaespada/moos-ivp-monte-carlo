@@ -47,14 +47,16 @@ for ARGI; do
         echo "    the \".csv\" suffix. Defaults to \"METRICS_<PLANNER>.\""
         echo "  --no_obs_avoid                                   "
         echo "    Do not use pObstacleMgr obstacle avoidance behaviors during trials."
-        echo "  --drift_strength=<strength>                      "
-        echo "    Strength of current drifts disturbing vehicle motion. Default is "
-        echo "    0 for no drifts.                               "
-        echo "  --drift_dir=<dir>                                "
-        echo "    Direction of drifts disturbing vehicle motion, must be one of "
-        echo "    [${DRIFT_DIR_OPTIONS[@]}]. Default is \"$DRIFT_DIR\"."
-        echo "    If random, drifts are produced with a random direction "
-        echo "    and a magnitude between 0.5 and 2."
+        echo "  --drift_vector=<heading>,<magnitude>             "
+        echo "    Vector defining water currents affecting obstacle "
+        echo "    and vehicle motion. Default is no drifts.      "
+        echo "  --wind_vector=<heading>,<magnitude>              "
+        echo "    Vector defining winds affecting vehicle motion only. "
+        echo "    Default is no winds.                           "
+        echo "  --random_gusts                                   "
+        echo "    Add random gusts of wind disturbing vehicle motion."
+        echo "    Gusts are produced with a random direction and a"
+        echo "    magnitude between 0.5 and 2."
         exit 0;
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
         TIME_WARP=$ARGI
@@ -78,17 +80,12 @@ for ARGI; do
 
     elif [ "${ARGI}" = "--no_obs_avoid" ] ; then
         USE_OBS_AVOID="false"
-    elif [ "${ARGI::17}" = "--drift_strength=" ] ; then
-        DRIFT_STRENGTH="${ARGI#*=}"
-    elif [ "${ARGI::12}" = "--drift_dir=" ] ; then
-        DRIFT_DIR=${ARGI#*=}  # remove arg name by splitting at "="
-        DRIFT_DIR=$(echo $DRIFT_DIR | sed "s/[A-Z]/\L&/g")  # make arg lowercase
-        if [[ ! " ${DRIFT_DIR_OPTIONS[*]} " =~ " ${DRIFT_DIR} " ]]; then
-            echo "launch.sh Bad arg: $ARGI"
-            echo "Value must be one of [${DRIFT_DIR_OPTIONS[@]}]"
-            echo "Exiting with code: 1"
-            exit 1;
-        fi
+    elif [ "${ARGI::15}" = "--drift_vector=" ] ; then
+        DRIFT_VECTOR="${ARGI#*=}"
+    elif [ "${ARGI::14}" = "--wind_vector=" ] ; then
+        WIND_VECTOR="${ARGI#*=}"
+    elif [ "${ARGI}" = "--random_gusts" ] ; then
+        RANDOM_GUSTS="true"
     else 
         echo "launch.sh Bad arg:" $ARGI " Exiting with code: 1"
         exit 1
@@ -140,7 +137,10 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        EXPORT_DIR="${METRICS_DIR}" \
        EXPORT_FILE="${EXPORT_FILE}" \
        PLANNER=$PLANNER \
-       USE_BENCHMARK=$USE_BENCHMARK
+       USE_BENCHMARK=$USE_BENCHMARK \
+       DRIFT_VEC=${DRIFT_VECTOR} \
+       WIND_VEC=${WIND_VECTOR}
+
 
 nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \
@@ -159,8 +159,7 @@ nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        PLANNER=$PLANNER \
        INTERMEDIATE_PTS="${NULL_PLANNER_PTS}" \
        SEARCH_BOUNDS="${SEARCH_BOUNDS}" \
-       DRIFT_DIR=$DRIFT_DIR \
-       DRIFT_STRENGTH=$DRIFT_STRENGTH
+       RANDOM_GUSTS=${RANDOM_GUSTS}
 
 nsplug ${MISSIONS_DIR}/meta_vehicle.bhv targ_$V1_NAME.bhv -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \

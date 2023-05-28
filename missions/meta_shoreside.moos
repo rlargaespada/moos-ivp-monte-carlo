@@ -15,6 +15,8 @@
 #define OBS_MIN_DURATION 120
 #define OBS_MAX_DURATION 180
 
+#define NUM_OBS_DRIFTING 1
+
 
 //*******************************************************
 // ShoreSide Configuration File
@@ -32,9 +34,9 @@ Processconfig = ANTLER
 
   Run = MOOSDB                @ NewConsole = false
   Run = pRealm                @ NewConsole = false
-#ifdef GUI true
+  #ifdef GUI true
   Run = pMarineViewer         @ NewConsole = false
-#endif
+  #endif
   // Run = uXMS                  @ NewConsole = true
 
   // Run = pLogger               @ NewConsole = false
@@ -253,6 +255,10 @@ ProcessConfig = uFldShoreBroker
   qbridge = $(PATH_REQUEST_VAR)
   qbridge = $(STATION_START_UPDATES_VAR)
   bridge = src=GIVEN_OBSTACLE
+  bridge = src=DRIFT_VECTOR
+  bridge = src=DRIFT_VECTOR_ADD
+  bridge = src=WIND_VECTOR, alias=DRIFT_VECTOR
+  bridge = src=WIND_VECTOR_ADD, alias=DRIFT_VECTOR_ADD
 }
 
 
@@ -290,6 +296,8 @@ ProcessConfig = uFldObsMonteCarloSim_CONSTANT
   // obstacle reset configuration
   // for constant obstacles, don't want obstacles to reset
   reset_var = none  // disable reset requests
+
+  num_drifting_obs = 0
 }
 
 
@@ -300,11 +308,11 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
   AppTick       = 1
   CommsTick     = 1
 
-#ifdef USE_BENCHMARK true
+  #ifdef USE_BENCHMARK true
   obstacle_file = $(OBS_KNOWN_FILE)_0.txt
-#else
+  #else
   obstacle_file = $(OBS_KNOWN_FILE)
-#endif
+  #endif
 
   post_visuals = $(GUI)
   label_prefix = known
@@ -339,6 +347,9 @@ ProcessConfig = uFldObsMonteCarloSim_KNOWN
   reset_var = RESET_KNOWN_OBSTACLES
   reset_range = 10
   reuse_ids = true
+
+  num_drifting_obs = $(NUM_OBS_DRIFTING)
+  drift_vector = 0,0
 }
 
 
@@ -349,11 +360,11 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
   AppTick       = 1
   CommsTick     = 1
 
-#ifdef USE_BENCHMARK true
+  #ifdef USE_BENCHMARK true
   obstacle_file = $(OBS_UNKNOWN_FILE)_0.txt
-#else
+  #else
   obstacle_file = $(OBS_UNKNOWN_FILE)
-#endif
+  #endif
 
   post_visuals = $(GUI)
   label_prefix = unknown
@@ -390,6 +401,9 @@ ProcessConfig = uFldObsMonteCarloSim_UNKNOWN
   reset_var = RESET_UNKNOWN_OBSTACLES
   reset_range = 10
   reuse_ids = true
+
+  num_drifting_obs = $(NUM_OBS_DRIFTING)
+  drift_vector = 0,0
 
   sensor_range = 50
 }
@@ -445,24 +459,38 @@ ProcessConfig = uEvalPlanner
   num_trials = $(NUM_TRIALS)
 
   end_trial_on_collision = false  // set to true when running final trials
+  endflag = DEPLOY_%(V1_NAME)=false
 
-#ifdef USE_BENCHMARK true
+  // obs reset config
+  #ifdef USE_BENCHMARK true
   obs_reset_var = NEW_OBSTACLE_FILE_KNOWN=$(OBS_KNOWN_FILE)_$[IX].txt
   obs_reset_var = NEW_OBSTACLE_FILE_UNKNOWN=$(OBS_UNKNOWN_FILE)_$[IX].txt
 
   endflag = NEW_OBSTACLE_FILE_KNOWN=$(OBS_KNOWN_FILE)_0.txt  // reset to first file
   endflag = NEW_OBSTACLE_FILE_UNKNOWN=$(OBS_UNKNOWN_FILE)_0.txt  // reset to first file
-#else
+  #else
   obs_reset_var = RESET_KNOWN_OBSTACLES
   obs_reset_var = RESET_UNKNOWN_OBSTACLES
-#endif
 
-  endflag = DEPLOY_%(V1_NAME)=false
+  endflag = RESET_KNOWN_OBSTACLES=now  // reset obstacles when session is done
+  endflag = RESET_UNKNOWN_OBSTACLES=now  // reset obstacles when session is done
+  #endif
 
-#ifdef EXPORT_FILE default
+  // drift and wind vector config
+  #ifdef DRIFT_VEC
+  initflag = DRIFT_VECTOR_ADD=$(DRIFT_VEC)
+  endflag = DRIFT_VECTOR=0,0  // stop drift at end of session
+  #endif
+  #ifdef WIND_VEC
+  initflag = WIND_VECTOR_ADD=$(WIND_VEC)
+  endflag = WIND_VECTOR=0,0  // stop wind at end of session
+  #endif
+
+  // export config
+  #ifdef EXPORT_FILE default
   file = $(EXPORT_DIR)/METRICS_%(PLANNER)
-#else
+  #else
   file = $(EXPORT_DIR)/$(EXPORT_FILE)
-#endif
+  #endif
   use_timestamp = false
 }

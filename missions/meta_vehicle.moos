@@ -38,9 +38,9 @@ Processconfig = ANTLER
   Run = uSimMarineV22    @ NewConsole = false
   Run = pMarinePIDV22    @ NewConsole = false
   Run = pNodeReporter    @ NewConsole = false
-#ifdef DRIFT_DIR random
-  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_DRIFTS
-#endif
+  #ifdef RANDOM_GUSTS true
+  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_WIND
+  #endif
 
   Run = pShare           @ NewConsole = false
   Run = pHostInfo        @ NewConsole = false
@@ -48,11 +48,11 @@ Processconfig = ANTLER
 
   Run = pObstacleMgr     @ NewConsole = false
 
-#ifdef PLANNER nullplanner
+  #ifdef PLANNER nullplanner
   Run = pNullPlanner     @ NewConsole = false
-#elseifdef PLANNER dstarlite
+  #elseifdef PLANNER dstarlite
   Run = pDStarLite       @ NewConsole = false
-#endif
+  #endif
 }
 
 
@@ -143,14 +143,8 @@ ProcessConfig = uSimMarineV22
   // start_depth = 0
 
   // drift config
-#ifdef DRIFT_DIR x
-  drift_x = $(DRIFT_STRENGTH)
-  drift_y = 0
-#elseifdef DRIFT_DIR y
-  drift_x = 0
-  drift_y = $(DRIFT_STRENGTH)
-#endif
-  rotate_speed = 0  //? maybe in the future
+  drift_vector = 0,0
+  rotate_speed = 0
 
   // keep default turn speed, acceleration parameters
   // depth and buoyancy rate unused
@@ -241,20 +235,22 @@ ProcessConfig = pNodeReporter
 
 
 //------------------------------------------
-// uTimerScript_RANDOM_DRIFTS configuration  block
+// uTimerScript_RANDOM_WIND configuration  block
 // simulates random drift vectors on vehicle
 
-ProcessConfig = uTimerScript_RANDOM_DRIFTS
+ProcessConfig = uTimerScript_RANDOM_WIND
 {
   AppTick   = 2
   CommsTick = 2
+  condition = DEPLOY=true
   paused        = false
   reset_max     = unlimited
   reset_time    = end
   delay_reset   = 10
   time_warp     = 0.25:2.0
-  script_name   = RANDOM_DRIFTS
-  script_atomic = true
+  script_name   = RANDOM_WIND
+  script_atomic = false
+  upon_awake = restart
 
   randvar = varname=ANG, min=0,   max=359, key=at_reset
   randvar = varname=MAG, min=0.5, max=2, key=at_reset
@@ -296,10 +292,9 @@ ProcessConfig = pNullPlanner
   // publication config
   init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
   traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS] # lead=-1
-#ifdef INTERMEDIATE_PTS
-
+  #ifdef INTERMEDIATE_PTS
   intermediate_pts = $(INTERMEDIATE_PTS)
-#endif
+  #endif
 }
 
 

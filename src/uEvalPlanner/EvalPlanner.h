@@ -176,6 +176,7 @@ class EvalPlanner : public AppCastingMOOSApp
   double m_trial_timeout;  // seconds
   bool m_end_trial_on_collision;
 
+  std::vector<VarDataPair> m_init_flags;
   std::vector<VarDataPair> m_trial_flags;
   std::vector<VarDataPair> m_end_flags;
 

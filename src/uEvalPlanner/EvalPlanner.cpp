@@ -738,6 +738,7 @@ bool EvalPlanner::handleResetSim() {
   m_reset_vehicles = SimRequest::PENDING;
   m_reset_odometry = SimRequest::PENDING;
   m_request_new_path = SimRequest::PENDING;
+  postFlags(m_init_flags);
   postFlags(m_trial_flags);
 
   // set file name for metrics export when all trials are done
@@ -879,6 +880,8 @@ bool EvalPlanner::OnStartUp()
       }
     } else if (param == "deviation_limit") {
       handled = setNonNegDoubleOnString(m_deviation_limit, value);
+    } else if ((param == "init_flag") || (param == "initflag")) {
+      handled = addVarDataPairOnString(m_init_flags, value);
     } else if ((param == "trial_flag") || (param == "trialflag")) {
       handled = addVarDataPairOnString(m_trial_flags, value);
     } else if ((param == "end_flag") || (param == "endflag")) {
