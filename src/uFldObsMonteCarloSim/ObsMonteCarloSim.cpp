@@ -5,6 +5,7 @@
 /*    DATE: December 29th, 1963                             */
 /************************************************************/
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iterator>
@@ -212,6 +213,33 @@ bool ObsMonteCarloSim::OnConnectToServer()
 
 //------------------------------------------------------------
 
+void ObsMonteCarloSim::postObstacleRefresh(std::string obs_label)
+{
+  for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    std::string key{m_obstacles[i].get_label()};
+    if (key != obs_label)
+      continue;
+
+    // post visuals
+    if (m_post_visuals)
+      Notify("VIEW_POLYGON", m_obstacles[i].get_spec(2));
+
+    std::string spec{m_obstacles[i].get_spec_pts_label(2)};
+    if (m_durations[i] >= 0)
+      spec += ",duration=" + doubleToStringX(m_durations[i]);
+
+    // post ground truth
+    Notify("KNOWN_OBSTACLE", spec);
+    if (!m_post_points) {
+      Notify("GIVEN_OBSTACLE", spec);
+      m_map_giv_published[key]++;
+    }
+
+    return;  // only posting one obstacle, return after we find it
+  }
+}
+
+
 // Procedure: postObstaclesRefresh()
 //     Notes: o VIEW_POLYGON info is likely for GUI apps like PMV
 //     Notes: o The KNOWN_OBSTACLE is intended for the benefit of
@@ -229,6 +257,9 @@ void ObsMonteCarloSim::postObstaclesRefresh()
   // =================================================
   if (m_post_visuals) {
     for (unsigned int i=0; i < m_obstacles.size(); i++) {
+      if (!m_obstacles[i].active())
+        continue;
+
       std::string spec = m_obstacles[i].get_spec(2);
       Notify("VIEW_POLYGON", spec);
     }
@@ -241,6 +272,9 @@ void ObsMonteCarloSim::postObstaclesRefresh()
   // Part 2: Post ground truth
   // =================================================
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    if (!m_obstacles[i].active())
+      continue;
+
     std::string spec = m_obstacles[i].get_spec_pts_label(2);
     std::string key  = m_obstacles[i].get_label();
     if (m_durations[i] >= 0)
@@ -256,6 +290,28 @@ void ObsMonteCarloSim::postObstaclesRefresh()
   m_obs_refresh_needed = false;
   m_obs_refresh_tstamp = m_curr_time;
   m_obstacles_posted++;
+}
+
+
+void ObsMonteCarloSim::postObstacleErase(std::string obs_label)
+{
+  for (unsigned int i=0; i < m_obstacles.size(); i++) {
+    if (m_obstacles[i].get_label() != obs_label)
+      continue;
+
+    XYPolygon obstacle = m_obstacles[i];
+    obstacle.set_duration(0);
+    std::string spec = obstacle.get_spec_inactive();
+
+    if (m_post_visuals)
+      Notify("VIEW_POLYGON", spec);
+
+    Notify("KNOWN_OBSTACLE", spec);
+    if (!m_post_points)
+      Notify("GIVEN_OBSTACLE", spec);
+
+    return;  // only posting one obstacle, return after we find it
+  }
 }
 
 
@@ -291,6 +347,9 @@ void ObsMonteCarloSim::postPoints()
     std::string vcolor = p->second.getColor("yellow");
 
     for (unsigned int i=0; i < m_obstacles.size(); i++) {
+      if (!m_obstacles[i].active())
+        continue;
+
       if (m_obstacles[i].dist_to_poly(osx, osy) <= m_sensor_range) {
         for (unsigned int j=0; j < m_rate_points; j++) {
           double x, y;
@@ -349,7 +408,7 @@ bool ObsMonteCarloSim::Iterate()
   AppCastingMOOSApp::Iterate();
 
   updateVRanges();
-  // updateObstacleDrift();
+  updateObstacleDrift();
   updateObstaclesField();
   updateObstaclesFromFile();
   updateObstaclesRefresh();
@@ -438,13 +497,36 @@ void ObsMonteCarloSim::updateObstacleDrift()
 
   // update drifting obs based on drift vector and rotate speed
   for (unsigned int i=0; i < num_drifting_obs; i++) {
-    m_obstacles[i].shift_horz(m_drift_vector.xdot());
-    m_obstacles[i].shift_vert(m_drift_vector.ydot());
-    m_obstacles[i].rotate(m_rotate_speed);
-    // todo: what if obstacle leaves obstacle region?
-  }
+    std::string label{m_obstacles[i].get_label()};
 
-  m_obs_refresh_needed = true;
+    // don't drift inactive obstacles, just post clear
+    if (!m_obstacles[i].active()) {
+      if (m_curr_time - m_obs_drift_timestamps[label] < 10)
+        Notify("KNOWN_OBSTACLE_CLEAR", label);
+      continue;
+    }
+
+    // move obstacles based on drift/rotation vector * time since last update
+    double last_post{std::max(m_reset_tstamp, m_obs_drift_timestamps[label])};
+    double elapsed{m_curr_time - last_post};
+
+    m_obstacles[i].shift_horz(m_drift_vector.xdot() * elapsed);
+    m_obstacles[i].shift_vert(m_drift_vector.ydot() * elapsed);
+    m_obstacles[i].rotate(m_rotate_speed * elapsed);
+
+    // if center of obstacle is outside obstacle region, mark it inactive and erase
+    double cx{m_obstacles[i].get_center_x()}, cy{m_obstacles[i].get_center_y()};
+    if (!m_poly_region.contains(cx, cy)) {
+      m_obstacles[i].set_active(false);
+      postObstacleErase(label);
+      Notify("KNOWN_OBSTACLE_CLEAR", label);
+
+    // otherwise refresh drifting obstacle
+    } else {
+      postObstacleRefresh(label);
+      m_obs_drift_timestamps[label] = m_curr_time;
+    }
+  }
 }
 
 
@@ -458,7 +540,7 @@ void ObsMonteCarloSim::updateObstaclesField()
   if (!m_reset_pending)
     return;
 
-  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
+  Notify("KNOWN_OBSTACLE_CLEAR", "all");
 
   // Seed randomness from fractional part of current moos time
   double tmp;
@@ -599,19 +681,22 @@ void ObsMonteCarloSim::updateObstaclesFromFile()
     return;
 
   // clear existing obstacles
-  Notify("KNOWN_OBSTACLE_CLEAR", GetAppName());
+  Notify("KNOWN_OBSTACLE_CLEAR", "all");
   postObstaclesErase();
   m_obstacles.clear();
+  m_durations.clear();
 
-  // reuse config handling function to update obstacle field
+  // reuse config handling methods to update obstacles and durations
   bool file_ok{handleConfigObstacleFile(m_new_obstacle_file)};
   if (!file_ok)
     reportRunWarning("Invalid file posted to " + m_obstacle_file_var);
+  handleConfigObstacleDurations();
 
   // set up to post new obstacles
   m_new_obstacle_file.clear();
   m_reset_total++;
   m_obs_refresh_needed = true;
+  m_reset_tstamp = m_curr_time;
 }
 
 

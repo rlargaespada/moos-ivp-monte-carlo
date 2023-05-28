@@ -46,7 +46,9 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   bool handleMailNodeReport(std::string);
   bool handleMailPointSize(std::string);
 
+  void postObstacleRefresh(std::string obs_label);
   void postObstaclesRefresh();
+  void postObstacleErase(std::string obs_label);
   void postObstaclesErase();
   void postPoints();
 
@@ -140,6 +142,7 @@ class ObsMonteCarloSim : public AppCastingMOOSApp
   // obstacle drift state
   XYVector m_drift_vector;
   double m_rotate_speed;
+  std::map<std::string, double> m_obs_drift_timestamps;  // timestamps when obs drift last updated
 };
 
 #endif
