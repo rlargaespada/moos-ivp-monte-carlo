@@ -145,7 +145,7 @@ bool ObsMonteCarloSim::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == "DRIFT_VECTOR_ADD") {
       double ang, mag;
       handled = setDoubleOnString(ang, biteStringX(sval, ','));  // first part is angle
-      handled = setDoubleOnString(mag, sval)  && handled;  // leftover is magnitude
+      handled = setDoubleOnString(mag, sval) && handled;  // leftover is magnitude
       if (handled) m_drift_vector.mergeVectorMA(mag, ang);
     } else if (key == "DRIFT_VECTOR_MULT") {
       m_drift_vector.augMagnitude(msg.GetDouble());
@@ -213,7 +213,7 @@ bool ObsMonteCarloSim::OnConnectToServer()
 
 //------------------------------------------------------------
 
-void ObsMonteCarloSim::postObstacleRefresh(std::string obs_label)
+void ObsMonteCarloSim::postObstacleRefresh(const std::string obs_label)
 {
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
     std::string key{m_obstacles[i].get_label()};
@@ -293,7 +293,7 @@ void ObsMonteCarloSim::postObstaclesRefresh()
 }
 
 
-void ObsMonteCarloSim::postObstacleErase(std::string obs_label)
+void ObsMonteCarloSim::postObstacleErase(const std::string obs_label)
 {
   for (unsigned int i=0; i < m_obstacles.size(); i++) {
     if (m_obstacles[i].get_label() != obs_label)
@@ -497,10 +497,11 @@ void ObsMonteCarloSim::updateObstacleDrift()
 
   // update drifting obs based on drift vector and rotate speed
   for (unsigned int i=0; i < num_drifting_obs; i++) {
-    std::string label{m_obstacles[i].get_label()};
+    XYPolygon& obstacle{m_obstacles[i]};
+    std::string label{obstacle.get_label()};
 
     // don't drift inactive obstacles, just post clear
-    if (!m_obstacles[i].active()) {
+    if (!obstacle.active()) {
       if (m_curr_time - m_obs_drift_timestamps[label] < 10)
         Notify("KNOWN_OBSTACLE_CLEAR", label);
       continue;
@@ -510,14 +511,14 @@ void ObsMonteCarloSim::updateObstacleDrift()
     double last_post{std::max(m_reset_tstamp, m_obs_drift_timestamps[label])};
     double elapsed{m_curr_time - last_post};
 
-    m_obstacles[i].shift_horz(m_drift_vector.xdot() * elapsed);
-    m_obstacles[i].shift_vert(m_drift_vector.ydot() * elapsed);
-    m_obstacles[i].rotate(m_rotate_speed * elapsed);
+    obstacle.shift_horz(m_drift_vector.xdot() * elapsed);
+    obstacle.shift_vert(m_drift_vector.ydot() * elapsed);
+    obstacle.rotate(m_rotate_speed * elapsed);
 
     // if center of obstacle is outside obstacle region, mark it inactive and erase
-    double cx{m_obstacles[i].get_center_x()}, cy{m_obstacles[i].get_center_y()};
+    double cx{obstacle.get_center_x()}, cy{obstacle.get_center_y()};
     if (!m_poly_region.contains(cx, cy)) {
-      m_obstacles[i].set_active(false);
+      obstacle.set_active(false);
       postObstacleErase(label);
       Notify("KNOWN_OBSTACLE_CLEAR", label);
 
@@ -570,14 +571,14 @@ void ObsMonteCarloSim::updateObstaclesField()
 
 
   // Apply the local simulator viewing preferences
-  for (unsigned int i=0; i < m_obstacles.size(); i++) {
-    m_obstacles[i].set_color("edge", m_poly_edge_color);
-    m_obstacles[i].set_color("vertex", m_poly_vert_color);
-    m_obstacles[i].set_color("fill", m_poly_fill_color);
-    m_obstacles[i].set_color("label", m_poly_label_color);
-    m_obstacles[i].set_vertex_size(m_poly_vert_size);
-    m_obstacles[i].set_edge_size(m_poly_edge_size);
-    m_obstacles[i].set_transparency(m_poly_transparency);
+  for (XYPolygon& obstacle : m_obstacles) {
+    obstacle.set_color("edge", m_poly_edge_color);
+    obstacle.set_color("vertex", m_poly_vert_color);
+    obstacle.set_color("fill", m_poly_fill_color);
+    obstacle.set_color("label", m_poly_label_color);
+    obstacle.set_vertex_size(m_poly_vert_size);
+    obstacle.set_edge_size(m_poly_edge_size);
+    obstacle.set_transparency(m_poly_transparency);
   }
 
   m_obs_refresh_needed = true;
@@ -811,7 +812,6 @@ bool ObsMonteCarloSim::OnStartUp()
       }
 
     // Params for obstacle drift
-    // todo: how to configure this in mission? hard code? env variables? user cmd line args?
     } else if ((param == "num_drifting_obs") || (param == "num_drifting_obstacles")) {
       if (tolower(value) == "all") {
         m_num_drifting_obs = -1;  // negative number means all obstacles should drift
