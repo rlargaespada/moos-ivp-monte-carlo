@@ -507,13 +507,10 @@ void ObsMonteCarloSim::updateObstacleDrift()
       continue;
     }
 
-    // move obstacles based on drift/rotation vector * time since last update
-    double last_post{std::max(m_reset_tstamp, m_obs_drift_timestamps[label])};
-    double elapsed{m_curr_time - last_post};
-
-    obstacle.shift_horz(m_drift_vector.xdot() * elapsed);
-    obstacle.shift_vert(m_drift_vector.ydot() * elapsed);
-    obstacle.rotate(m_rotate_speed * elapsed);
+    // move obstacles based on drift/rotation speed / app frequency
+    obstacle.shift_horz(m_drift_vector.xdot() / GetAppFreq());
+    obstacle.shift_vert(m_drift_vector.ydot() / GetAppFreq());
+    obstacle.rotate(m_rotate_speed / GetAppFreq());
 
     // if center of obstacle is outside obstacle region, mark it inactive and erase
     double cx{obstacle.get_center_x()}, cy{obstacle.get_center_y()};

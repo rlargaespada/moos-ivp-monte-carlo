@@ -806,23 +806,27 @@ bool DStarLite::checkObstacles()
   if (distPointToPoint(m_vpos, next_wpt) > threshold)
     return (false);
 
-  // check remainder of path for validity
+  // check each waypoint on remainder of path for validity
   unsigned int obs_cix{m_grid.getCellVarIX("obs")};
-  for (int i = m_next_path_idx; i < m_path.size() - 1; i++) {
-    // grab pairs of points on path
-    int cell1{m_path_grid_cells[i]}, cell2{m_path_grid_cells[i + 1]};
-    // double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
-    // double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
-
-    // if either point is in an occupied square, replan is needed
-    if ((m_grid.getVal(cell1, obs_cix) == 1) || (m_grid.getVal(cell2, obs_cix) == 1))
+  for (int i = m_next_path_idx; i < m_path.size(); i++) {
+    // if this waypoint is in an occupied cell, need to replan
+    int cell1{m_path_grid_cells[i]};
+    if (m_grid.getVal(cell1, obs_cix) == 1)
       return (false);
 
-    // if line between points intersects an obstacle, replan is needed
-    //* NOTE: this case is handled by previous check on occupied squares
-    // for (auto const& obs : m_obstacle_map) {
-    //   if (obs.second.seg_intercepts(x1, y1, x2, y2))
-    //     return (false);
+    // if we're not at the end of the path, check if the line between
+    // this waypoint and the next intersects any obstacle
+    //* NOTE: this case is covered by previous check on occupied squares and thus is unused
+    // if (i < m_path.size() - 1) {
+    //   // get xy values of this point and the next point
+    //   double x1{m_path.get_vx(i)}, y1{m_path.get_vy(i)};
+    //   double x2{m_path.get_vx(i + 1)}, y2{m_path.get_vy(i + 1)};
+
+    //   // if line between points intersects an obstacle, replan is needed
+    //   for (auto const& obs : m_obstacle_map) {
+    //     if (obs.second.seg_intercepts(x1, y1, x2, y2))
+    //       return (false);
+    //   }
     // }
   }
   return (true);

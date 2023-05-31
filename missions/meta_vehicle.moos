@@ -237,7 +237,7 @@ ProcessConfig = pNodeReporter
 //------------------------------------------
 // uTimerScript_RANDOM_WIND configuration  block
 // simulates random drift vectors on vehicle
-
+// todo: for multiple vehicles, this should be on the shoreside, what conditions?
 ProcessConfig = uTimerScript_RANDOM_WIND
 {
   AppTick   = 2
