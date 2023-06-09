@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -540,10 +541,14 @@ void ObsMonteCarloSim::updateObstaclesField()
 
   Notify("KNOWN_OBSTACLE_CLEAR", "all");
 
-  // Seed randomness from fractional part of current moos time
+  // seed randomness from app name + fractional part of current moos time
+  std::hash<std::string> hash_func;
+  size_t seed{hash_func(GetAppName())};  // seed is hash of app name
+
+  // add fractional part of moos time to seed
   double tmp;
   double moos_time_frac{modf(m_curr_time, &tmp)};  // get fraction from current time
-  int seed{static_cast<int>(moos_time_frac * pow(10, 6))};  // scale frac and cast to int
+  seed += static_cast<int>(moos_time_frac * pow(10, 6));  // scale frac and cast to int
   m_generator.seed(seed);
 
   // Do the obstacle regeneration
