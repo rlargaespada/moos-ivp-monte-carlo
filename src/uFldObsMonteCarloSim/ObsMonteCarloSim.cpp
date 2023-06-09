@@ -459,18 +459,24 @@ void ObsMonteCarloSim::updateVRanges()
   m_min_vrange_to_region = min_vrange;
 
   // Part 3: If resetting is enabled, determine if reset warranted
-  if ((m_reset_interval > 0) || m_reset_request) {
-    if (m_min_vrange_to_region > m_reset_range) {
-      if (m_newly_exited || m_reset_request) {
-        double elapsed = m_curr_time - m_reset_tstamp;
-        if ((elapsed > m_reset_interval) || m_reset_request) {
-          m_reset_pending = true;
-          m_reset_request = false;
-          m_reset_tstamp = m_curr_time;
-          m_newly_exited = false;
-        }
-      }
-    }
+  // if vehicles in region, can't reset; exit early
+  if (m_min_vrange_to_region <= m_reset_range)
+    return;
+
+  // if explicit reset request, mark reset pending
+  if (m_reset_request)
+    m_reset_pending = true;
+
+  // if timed resets enabled and enough time has passed, mark reset pending
+  double elapsed{m_curr_time - m_reset_tstamp};
+  if ((m_reset_interval > 0) && (elapsed > m_reset_interval) && (m_newly_exited))
+    m_reset_pending = true;
+
+  // update app state when reset is pending
+  if (m_reset_pending) {
+    m_reset_request = false;
+    m_reset_tstamp = m_curr_time;
+    m_newly_exited = false;
   }
 }
 
@@ -677,7 +683,9 @@ bool ObsMonteCarloSim::generateObstacle(std::vector<XYPolygon>* obs_vec, unsigne
   return (false);
 }
 
-
+// Procedure: updateObstaclesField()
+// Note: this method does not check if all vehicles are outside of the current
+// or incoming obstacle region before loading in new obstacles; use with caution
 void ObsMonteCarloSim::updateObstaclesFromFile()
 {
   if (m_new_obstacle_file.empty())
