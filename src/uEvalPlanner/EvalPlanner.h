@@ -50,6 +50,7 @@ struct TrialData
   double max_deviation{0};  // maximum deviation from path given by planner
 
   double energy_eff{0};  // path_len / initial_path_len
+  double total_speed_change{0};
 
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
@@ -82,6 +83,7 @@ struct GlobalMetrics
   double max_deviation{0};
 
   double avg_energy_eff{0};
+  double avg_total_speed_change{0};
 
   // in C++11, using default member initializers prevents brace initialization
   // so add constructors to spawn these structs
@@ -186,6 +188,7 @@ class EvalPlanner : public AppCastingMOOSApp
 
  private:  // State variables
   XYPoint m_vpos;
+  double m_vspeed;
   bool m_sim_active;
 
   // commands from user

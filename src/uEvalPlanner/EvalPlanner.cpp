@@ -39,6 +39,7 @@ EvalPlanner::EvalPlanner()
   m_use_timestamp = true;
 
   // state variables
+  m_vspeed = 0;
   m_sim_active = false;
   m_obstacle_reset_responses = 0;
   initialize();
@@ -180,6 +181,14 @@ bool EvalPlanner::OnNewMail(MOOSMSG_LIST &NewMail)
               m_reset_vehicles = SimRequest::CLOSED;
             }
       }
+
+      // save current vehicle speed
+      double spd{tokDoubleParse(report, "spd", ',', '=')};
+      if (isTrialOngoing())
+        m_current_trial.total_speed_change += std::abs(spd - m_vspeed);
+      m_vspeed = spd;
+
+
     } else if (key == "UPC_ODOMETRY_REPORT") {
       std::string odo_report{tolower(msg.GetString())};
       std::string vname{tokStringParse(odo_report, "vname", ',', '=')};
@@ -485,6 +494,7 @@ std::string EvalPlanner::getTrialSpec(TrialData trial)
   vspec.push_back("max_deviation=" + doubleToStringX(trial.max_deviation, 2));
 
   vspec.push_back("energy_eff=" + doubleToStringX(trial.energy_eff, 2));
+  vspec.push_back("total_speed_change=" + doubleToStringX(trial.total_speed_change, 2));
   return (stringVectorToString(vspec));
 }
 
@@ -495,11 +505,12 @@ void EvalPlanner::calcMetrics()
   double successes{0};
   int total_timeouts{0}, total_collisions{0}, total_plan_fails{0};
   double summed_planning_time{0}, summed_duration{0};
+  int num_inf_dist_to_obs{0};
   double summed_min_dist_to_obs{0}, global_min_dist_to_obs{INFINITY};
   double total_dist_traveled{0}, total_path_len{0}, summed_dist_eff{0};
   double summed_deviation{0}, global_max_deviation{0};
   double summed_energy_eff{0};
-  int num_inf_dist_to_obs{0};
+  double summed_speed_change{0};
 
   // iterate through trials and pull out data we need
   for (TrialData td : m_trial_data) {
@@ -537,6 +548,7 @@ void EvalPlanner::calcMetrics()
       global_max_deviation = td.max_deviation;
 
     summed_energy_eff += td.energy_eff;
+    summed_speed_change += td.total_speed_change;
   }
 
   // calculate averages as needed and save to global metrics
@@ -567,6 +579,7 @@ void EvalPlanner::calcMetrics()
   m_global_metrics.max_deviation = global_max_deviation;
 
   m_global_metrics.avg_energy_eff = (summed_energy_eff/successes);
+  m_global_metrics.avg_total_speed_change = (summed_speed_change/successes);
 }
 
 
@@ -615,7 +628,7 @@ bool EvalPlanner::exportMetrics()
   // add trial data as csv items
   outf << "trial_num,trial_successful,timed_out, planning_failed,planning_time," <<
     "duration,collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff," <<
-    "total_deviation,max_deviation,energy_eff\n";
+    "total_deviation,max_deviation,energy_eff,total_speed_change\n";
 
   std::vector<std::string> trialvec;
   for (TrialData td : m_trial_data) {
@@ -624,20 +637,21 @@ bool EvalPlanner::exportMetrics()
     trialvec.push_back(td.timed_out ? "1" : "0");  // convert bool to int
     trialvec.push_back(td.planning_failed ? "1" : "0");  // convert bool to int
 
-    trialvec.push_back(doubleToStringX(td.planning_time, 3));
-    trialvec.push_back(doubleToStringX(td.duration, 3));
+    trialvec.push_back(doubleToStringX(td.planning_time));
+    trialvec.push_back(doubleToStringX(td.duration));
 
     trialvec.push_back(intToString(td.collision_count));
-    trialvec.push_back(doubleToStringX(td.min_dist_to_obs, 3));
+    trialvec.push_back(doubleToStringX(td.min_dist_to_obs));
 
-    trialvec.push_back(doubleToStringX(td.dist_traveled, 3));
-    trialvec.push_back(doubleToStringX(td.path_len, 3));
-    trialvec.push_back(doubleToStringX(td.dist_eff, 3));
+    trialvec.push_back(doubleToStringX(td.dist_traveled));
+    trialvec.push_back(doubleToStringX(td.path_len));
+    trialvec.push_back(doubleToStringX(td.dist_eff));
 
-    trialvec.push_back(doubleToStringX(td.total_deviation, 3));
-    trialvec.push_back(doubleToStringX(td.max_deviation, 3));
+    trialvec.push_back(doubleToStringX(td.total_deviation));
+    trialvec.push_back(doubleToStringX(td.max_deviation));
 
-    trialvec.push_back(doubleToStringX(td.energy_eff, 3));
+    trialvec.push_back(doubleToStringX(td.energy_eff));
+    trialvec.push_back(doubleToStringX(td.total_speed_change));
 
     outf << stringVectorToString(trialvec, ',') << "\n";
     trialvec.clear();
@@ -1109,6 +1123,8 @@ bool EvalPlanner::buildReport()
     " m from Path: " << doubleToStringX(m_current_trial.total_deviation) << " m" << endl;
   m_msgs << "  Maximum Deviation > " << doubleToStringX(m_deviation_limit, 2) <<
     " m from Path: " << doubleToStringX(m_current_trial.max_deviation) << " m" << endl;
+  m_msgs << "  Total Speed Change: " << doubleToStringX(m_current_trial.total_speed_change)
+    << " m/s" << endl;
 
   return(true);
 }

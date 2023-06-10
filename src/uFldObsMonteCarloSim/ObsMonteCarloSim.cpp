@@ -683,6 +683,7 @@ bool ObsMonteCarloSim::generateObstacle(std::vector<XYPolygon>* obs_vec, unsigne
   return (false);
 }
 
+
 // Procedure: updateObstaclesField()
 // Note: this method does not check if all vehicles are outside of the current
 // or incoming obstacle region before loading in new obstacles; use with caution
