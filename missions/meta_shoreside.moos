@@ -487,10 +487,6 @@ ProcessConfig = uEvalPlanner
   #endif
 
   // export config
-  #ifdef EXPORT_FILE default
-  file = $(EXPORT_DIR)/METRICS_%(PLANNER)
-  #else
-  file = $(EXPORT_DIR)/$(EXPORT_FILE)
-  #endif
+  file = $(EXPORT_FILE)
   use_timestamp = false
 }

@@ -1,8 +1,8 @@
 #!/bin/bash -e
 #----------------------------------------------------------
-#  Script: launch.sh
+#  Script: run_benchmark.sh
 #  Author: Raul Largaespada
-#  LastEd: May 22nd 2023
+#  LastEd: June 13th 2023
 #
 #^ NOTE: This script cannot be run directly, but must be
 #^ called by a launch script from a child directory. It is
@@ -44,7 +44,8 @@ for ARGI; do
         echo "    Default is \"$PLANNER\".                       "
         echo "  --export=<filestem>, -e=<filestem>               "
         echo "    CSV file to export simulation results to, without"
-        echo "    the \".csv\" suffix. Defaults to \"METRICS_<PLANNER>.\""
+        echo "    the \".csv\" suffix. Defaults to \"$EXPORT_FILE\"."
+        echo "    File is placed in the \"./${METRICS_DIR}/<planner>/\" directory."
         echo "  --no_obs_avoid                                   "
         echo "    Do not use pObstacleMgr obstacle avoidance behaviors during trials."
         echo "  --drift_vector=<heading>,<magnitude>             "
@@ -67,7 +68,7 @@ for ARGI; do
 
     elif [ "${ARGI::10}" = "--planner=" -o "${ARGI::3}" = "-p=" ] ; then
         PLANNER=${ARGI#*=}  # remove arg name by splitting at "="
-        PLANNER=$(echo $PLANNER | sed "s/[A-Z]/\L&/g")  # make arg lowercase
+        PLANNER=${PLANNER,,}  # make arg lowercase
         if [[ ! " ${PLANNER_OPTIONS[*]} " =~ " ${PLANNER} " ]]; then
             echo "launch.sh Bad arg: $ARGI"
             echo "Value must be one of [${PLANNER_OPTIONS[@]}]"
@@ -92,6 +93,8 @@ for ARGI; do
     fi
 done
 
+# add parent dirs to export file
+EXPORT_FILE=${METRICS_DIR}/${PLANNER}/${EXPORT_FILE}
 
 #-------------------------------------------------------
 #  Part 3: Create the .moos and .bhv files
@@ -101,9 +104,6 @@ done
 unzip -q benchmark_obstacles.zip
 NUM_TRIALS=$(ls tmp | wc -l)  # count number of files unzipped
 NUM_TRIALS=$(($NUM_TRIALS/2))  # divide by 2 since files are in known/unknown pairs
-
-# make metrics directory if it doesn't exist
-mkdir -p "${METRICS_DIR}"
 
 # generate constant obstacle file
 nsplug "${MAP_DIR}/${OBS_MAP_FILE}" "${OBS_CONST_FILE}" -i -f \
@@ -134,7 +134,6 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        START_POS="${V1_START_POS}" \
        GOAL_POS="${V1_GOAL_POS}" \
        HDG_ON_RESET=$HDG_ON_RESET \
-       EXPORT_DIR="${METRICS_DIR}" \
        EXPORT_FILE="${EXPORT_FILE}" \
        PLANNER=$PLANNER \
        USE_BENCHMARK=$USE_BENCHMARK \
@@ -179,6 +178,9 @@ fi
 #----------------------------------------------------------
 #  Part 4: Launch the processes
 #----------------------------------------------------------
+# make export directory if it doesn't exist
+mkdir -p "$(dirname $EXPORT_FILE)"
+
 echo "Launching Shoreside MOOS Community. WARP is" $TIME_WARP
 pAntler targ_shoreside.moos >& /dev/null &
 

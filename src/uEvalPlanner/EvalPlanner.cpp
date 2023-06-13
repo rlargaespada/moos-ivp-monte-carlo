@@ -35,7 +35,7 @@ EvalPlanner::EvalPlanner()
   m_desired_trials = 10;
   m_trial_timeout = 300;  // seconds
   m_end_trial_on_collision = false;
-  m_export_file_base = GetAppName() + "_Metrics";
+  m_export_file_base = "default";
   m_use_timestamp = true;
 
   // state variables
@@ -757,7 +757,10 @@ bool EvalPlanner::handleResetSim() {
 
   // set file name for metrics export when all trials are done
   if (!m_export_file_base.empty()) {
-    m_export_file = m_export_file_base;
+    if (tolower(m_export_file_base) == "default")
+      m_export_file = GetAppName() + "_Metrics";
+    else
+      m_export_file = m_export_file_base;
     if (m_use_timestamp) m_export_file += "_" + MOOSGetTimeStampString();
     m_export_file += ".csv";
   }

@@ -9,7 +9,7 @@ GUI="true"
 
 PLANNER="dstarlite"; PLANNER_OPTIONS=("nullplanner" $PLANNER  "gcs" "gcsr")
 NUM_TRIALS=3
-EXPORT_FILE="default"
+EXPORT_FILE="uEvalPlanner_Metrics"
 
 USE_OBS_AVOID="true"
 DRIFT_VECTOR=""
