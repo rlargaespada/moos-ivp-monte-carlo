@@ -1,0 +1,9 @@
+//------------------------------------------------
+// pIRIS config block
+
+ProcessConfig = pIRIS
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+

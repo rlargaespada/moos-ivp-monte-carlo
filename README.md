@@ -13,3 +13,6 @@ This code is meant for Ubuntu Linux of MacOS machines running bash, not for Wind
 Run `build.sh` to build executables for this project. `env_bash.sh` will have already added these exeuctables into your path.
 
 From this directory, change to the monte carlo mission directory using `cd missions/monte_carlo`. Verify the proper executables are on your path by running `which MOOSDB` and `which uEvalPlanner`, and running `env_bash.sh` if either `which` command fails. Run `launch.sh` to run the Monte Carlo simulation. Use `launch.sh -h` to see all simulation configuration options.
+
+<!-- TODO: ADD INSTALLATION INSTRUCTIONS FOR EIGEN3, MOSEK-->
+<!--EIGEN3: sudo apt install libeigen3-dev might work, or download and extract, then run instructions in eigen-3.4.0/INSTALL-->
