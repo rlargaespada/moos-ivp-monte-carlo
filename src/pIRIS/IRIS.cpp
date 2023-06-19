@@ -17,6 +17,25 @@
 
 IRIS::IRIS()
 {
+  //* Config Variables
+  // vars to subscribe to, all are set in onStartup();
+  m_obs_alert_var = "";
+  m_seed_pt_var = "";
+
+  // publication config
+  m_iris_region_var = "IRIS_REGION";
+  m_complete_var = "IRIS_COMPLETE";
+  m_post_visuals = true;
+
+  // IRIS config
+  m_mode = "manual";
+  m_desired_regions = 20;
+  m_max_iters = 100;
+
+  //* State Variables
+  m_clear_pending = false;
+  m_run_pending = false;
+  m_iris_active = false;
 }
 
 //---------------------------------------------------------
@@ -73,7 +92,42 @@ bool IRIS::OnConnectToServer()
 bool IRIS::Iterate()
 {
   AppCastingMOOSApp::Iterate();
-  // Do your thing here!
+
+  /*
+  handleRequests()  //* handles iris active/inactive, clearing obstacles
+    if clear pending
+      erase all regions
+      if not in auto, mark inactive
+    else if run pending
+      if manual and already active, mark refresh or something
+      mark active (doesn't affect auto, leave comment)
+    mark clear pending false
+    mark run pending false
+
+  syncObstacles()
+    if queues are empty, return
+    for remove queue, invalidate any regions which intersect obs
+    for add queue, invalidate any regions which intersect obs
+    if it doesn't intersect with any obstacles, remove from invalid queue //? return early conflicts?
+    add obs to map and clear queues
+
+  if seed point queue isn't empty
+    buildRegion(seed point)
+  else if active and still regions to go
+    buildRegion(random seed)
+    if manual and last region
+      mark inactive
+  else if active and invalidate queue isn't empty
+    erase region in invalidate queue
+    buildRegion(center of removed region)
+
+  buildRegion(seed point)
+    run IRIS around that seed point using obstacle map
+
+
+  first pass at IRIS: when posting to seed point, build region
+  */
+
   AppCastingMOOSApp::PostReport();
   return(true);
 }
@@ -99,15 +153,33 @@ bool IRIS::OnStartUp()
     std::string value = line;
 
     bool handled = false;
-    if (param == "foo") {
-      handled = true;
-    } else if (param == "bar") {
-      handled = true;
+    // vars to subscribe to
+    if (param == "obs_alert_var") {
+      handled = setNonWhiteVarOnString(m_obs_alert_var, toupper(value));
+    } else if (param == "seed_point_var") {
+      handled = setNonWhiteVarOnString(m_seed_pt_var, toupper(value));
+    // publication config
+    } else if (param == "post_visuals") {
+      handled = setBooleanOnString(m_post_visuals, value);
+    // IRIS config
+    } else if (param == "mode") {
+      handled = true;  // todo
+    } else if (param == "desired_regions") {
+      handled = setPosUIntOnString(m_desired_regions, value);
+    } else if (param == "iris_bounds") {
+      handled = true;  // todo
+    } else if (param == "max_iters") {
+      handled = setPosUIntOnString(m_max_iters, value);
     }
 
     if (!handled)
       reportUnhandledConfigWarning(orig);
   }
+
+  if (m_obs_alert_var.empty())
+    m_obs_alert_var = "OBSTACLE_ALERT";
+  if (m_seed_pt_var.empty())
+    m_seed_pt_var = "IRIS_SEED_POINT";
 
   registerVariables();
   return(true);
@@ -119,7 +191,13 @@ bool IRIS::OnStartUp()
 void IRIS::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
-  // Register("FOOBAR", 0);
+  Register("RUN_IRIS", 0);
+  Register("CLEAR_IRIS", 0);
+  Register("OBM_RESOLVED", 0);
+  if (!m_obs_alert_var.empty())
+    Register(m_obs_alert_var, 0);
+  if (!m_seed_pt_var.empty())
+    Register(m_seed_pt_var, 0);
 }
 
 
@@ -142,7 +220,3 @@ bool IRIS::buildReport()
 
   return(true);
 }
-
-
-
-
