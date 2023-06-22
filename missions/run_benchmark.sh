@@ -57,7 +57,7 @@ for ARGI; do
         echo "  --random_gusts                                   "
         echo "    Add random gusts of wind disturbing vehicle motion."
         echo "    Gusts are produced with a random direction and a"
-        echo "    magnitude between 0.5 and 2."
+        echo "    random magnitude between 0.5 and 2."
         exit 0;
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
         TIME_WARP=$ARGI
