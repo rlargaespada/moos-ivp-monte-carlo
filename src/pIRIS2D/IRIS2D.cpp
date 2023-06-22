@@ -1,7 +1,7 @@
 /************************************************************/
 /*    NAME: Raul Largaespada                                */
 /*    ORGN: MIT, Cambridge MA                               */
-/*    FILE: IRIS.cpp                                        */
+/*    FILE: IRIS2D.cpp                                        */
 /*    DATE: June 14th, 2023                                 */
 /************************************************************/
 
@@ -10,12 +10,12 @@
 #include <string>
 #include "MBUtils.h"
 #include "ACTable.h"
-#include "IRIS.h"
+#include "IRIS2D.h"
 
 //---------------------------------------------------------
 // Constructor()
 
-IRIS::IRIS()
+IRIS2D::IRIS2D()
 {
   //* Config Variables
   // vars to subscribe to, all are set in onStartup();
@@ -41,14 +41,14 @@ IRIS::IRIS()
 //---------------------------------------------------------
 // Destructor
 
-IRIS::~IRIS()
+IRIS2D::~IRIS2D()
 {
 }
 
 //---------------------------------------------------------
 // Procedure: OnNewMail()
 
-bool IRIS::OnNewMail(MOOSMSG_LIST &NewMail)
+bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
 {
   AppCastingMOOSApp::OnNewMail(NewMail);
 
@@ -79,7 +79,7 @@ bool IRIS::OnNewMail(MOOSMSG_LIST &NewMail)
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()
 
-bool IRIS::OnConnectToServer()
+bool IRIS2D::OnConnectToServer()
 {
   registerVariables();
   return(true);
@@ -89,7 +89,7 @@ bool IRIS::OnConnectToServer()
 // Procedure: Iterate()
 //            happens AppTick times per second
 
-bool IRIS::Iterate()
+bool IRIS2D::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
@@ -99,7 +99,6 @@ bool IRIS::Iterate()
       erase all regions
       if not in auto, mark inactive
     else if run pending
-      if manual and already active, mark refresh or something
       mark active (doesn't affect auto, leave comment)
     mark clear pending false
     mark run pending false
@@ -108,7 +107,7 @@ bool IRIS::Iterate()
     if queues are empty, return
     for remove queue, invalidate any regions which intersect obs
     for add queue, invalidate any regions which intersect obs
-    if it doesn't intersect with any obstacles, remove from invalid queue //? return early conflicts?
+    if it doesn't intersect with any obstacles, remove from invalid queue
     add obs to map and clear queues
 
   if seed point queue isn't empty
@@ -120,6 +119,10 @@ bool IRIS::Iterate()
   else if active and invalidate queue isn't empty
     erase region in invalidate queue
     buildRegion(center of removed region)
+    if manual and queue is empty
+      mark inactive 
+  else if active and manual
+    go inactive
 
   buildRegion(seed point)
     run IRIS around that seed point using obstacle map
@@ -136,7 +139,7 @@ bool IRIS::Iterate()
 // Procedure: OnStartUp()
 //            happens before connection is open
 
-bool IRIS::OnStartUp()
+bool IRIS2D::OnStartUp()
 {
   AppCastingMOOSApp::OnStartUp();
 
@@ -188,7 +191,7 @@ bool IRIS::OnStartUp()
 //---------------------------------------------------------
 // Procedure: registerVariables()
 
-void IRIS::registerVariables()
+void IRIS2D::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
   Register("RUN_IRIS", 0);
@@ -204,7 +207,7 @@ void IRIS::registerVariables()
 //------------------------------------------------------------
 // Procedure: buildReport()
 
-bool IRIS::buildReport()
+bool IRIS2D::buildReport()
 {
   using std::endl;
 

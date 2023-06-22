@@ -1,13 +1,13 @@
 /****************************************************************/
 /*   NAME: Raul Largaespada                                             */
 /*   ORGN: MIT, Cambridge MA                                    */
-/*   FILE: IRIS_Info.cpp                               */
+/*   FILE: IRIS2D_Info.cpp                               */
 /*   DATE: December 29th, 1963                                  */
 /****************************************************************/
 
 #include <cstdlib>
 #include <iostream>
-#include "IRIS_Info.h"
+#include "IRIS2D_Info.h"
 #include "ColorParse.h"
 #include "ReleaseInfo.h"
 

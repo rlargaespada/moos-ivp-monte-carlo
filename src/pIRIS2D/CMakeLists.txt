@@ -4,16 +4,16 @@
 #--------------------------------------------------------
 
 SET(SRC
-  IRIS.cpp
-  IRIS_Info.cpp
+  IRIS2D.cpp
+  IRIS2D_Info.cpp
   main.cpp
 )
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
-ADD_EXECUTABLE(pIRIS ${SRC})
+ADD_EXECUTABLE(pIRIS2D ${SRC})
 
-TARGET_LINK_LIBRARIES(pIRIS
+TARGET_LINK_LIBRARIES(pIRIS2D
    ${MOOS_LIBRARIES}
    geometry
    apputil

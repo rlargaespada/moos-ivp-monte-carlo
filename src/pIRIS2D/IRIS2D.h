@@ -1,12 +1,12 @@
 /************************************************************/
 /*    NAME: Raul Largaespada                                */
 /*    ORGN: MIT, Cambridge MA                               */
-/*    FILE: IRIS.h                                          */
+/*    FILE: IRIS2D.h                                          */
 /*    DATE: June 14th, 2023                                 */
 /************************************************************/
 
-#ifndef IRIS_HEADER
-#define IRIS_HEADER
+#ifndef IRIS2D_HEADER
+#define IRIS2D_HEADER
 
 #include <Eigen/Dense>
 #include <map>
@@ -16,11 +16,11 @@
 #include "XYPolygon.h"
 
 
-class IRIS : public AppCastingMOOSApp
+class IRIS2D : public AppCastingMOOSApp
 {
  public:
-  IRIS();
-  ~IRIS();
+  IRIS2D();
+  ~IRIS2D();
 
  protected:  // Standard MOOSApp functions to overload
   bool OnNewMail(MOOSMSG_LIST &NewMail);
@@ -47,6 +47,7 @@ class IRIS : public AppCastingMOOSApp
   XYPolygon m_iris_bounds;
   unsigned int m_max_iters;
   // todo: add ellipsoid vol change threshold
+  // todo: add visualization config params
  private:  // State variables
   bool m_clear_pending;
   bool m_run_pending;

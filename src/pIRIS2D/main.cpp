@@ -8,8 +8,8 @@
 #include <string>
 #include "MBUtils.h"
 #include "ColorParse.h"
-#include "IRIS.h"
-#include "IRIS_Info.h"
+#include "IRIS2D.h"
+#include "IRIS2D_Info.h"
 
 using namespace std;
 
@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
   cout << "pIRIS launching as " << run_command << endl;
   cout << termColor() << endl;
 
-  IRIS IRIS;
+  IRIS2D IRIS2D;
 
-  IRIS.Run(run_command.c_str(), mission_file.c_str());
+  IRIS2D.Run(run_command.c_str(), mission_file.c_str());
   
   return(0);
 }

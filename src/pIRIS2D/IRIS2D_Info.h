@@ -1,12 +1,12 @@
 /****************************************************************/
 /*   NAME: Raul Largaespada                                             */
 /*   ORGN: MIT, Cambridge MA                                    */
-/*   FILE: IRIS_Info.h                                      */
+/*   FILE: IRIS2D_Info.h                                      */
 /*   DATE: Dececmber 29th, 1963                                 */
 /****************************************************************/
 
-#ifndef IRIS_INFO_HEADER
-#define IRIS_INFO_HEADER
+#ifndef IRIS2D_INFO_HEADER
+#define IRIS2D_INFO_HEADER
 
 void showSynopsis();
 void showHelpAndExit();

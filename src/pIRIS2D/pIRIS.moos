@@ -1,7 +1,7 @@
 //------------------------------------------------
-// pIRIS config block
+// pIRIS2D config block
 
-ProcessConfig = pIRIS
+ProcessConfig = pIRIS2D
 {
    AppTick   = 4
    CommsTick = 4
