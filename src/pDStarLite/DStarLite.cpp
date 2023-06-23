@@ -599,7 +599,8 @@ double DStarLite::heuristic(int cell1, int cell2)
 }
 
 
-// Infinite if either cell is an obstacle or cells are not neigbhors, else Euclidean dist
+// Infinite if either cell is an obstacle or cells are not neighbors,
+// else Euclidean dist * obstacle_scaling
 double DStarLite::cost(int cell1, int cell2)
 {
   unsigned int obs_cix{m_grid.getCellVarIX("obs")};
@@ -616,9 +617,19 @@ double DStarLite::cost(int cell1, int cell2)
       cost_scale++;
   }
 
+  // unused alternate cost scaling based on reciprocal distance to obstacles
+  // slower, paths aren't as good; keeping here for future reference
+  // double x2{m_grid.getElement(cell2).getCenterX()};
+  // double y2{m_grid.getElement(cell2).getCenterY()};
+  // double cost_scale{1};
+  // for (auto const& obs : m_obstacle_map)
+  //   cost_scale += (1. / obs.second.dist_to_poly(x2, y2));
+
   return (cost_scale * base_cost);
 }
 
+
+//---------------------------------------------------------
 
 dsl_key DStarLite::calculateKey(int grid_ix)
 {

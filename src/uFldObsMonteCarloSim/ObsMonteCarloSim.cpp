@@ -509,6 +509,7 @@ void ObsMonteCarloSim::updateObstacleDrift()
 
     // don't drift inactive obstacles, just post clear
     if (!obstacle.active()) {
+      // todo: post this less frequently? once per second is ideal
       if (m_curr_time - m_obs_drift_timestamps[label] < 10)
         Notify("KNOWN_OBSTACLE_CLEAR", label);
       continue;
