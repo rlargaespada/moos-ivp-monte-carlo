@@ -11,9 +11,14 @@
 #include <mosek.h>
 #include <iterator>
 #include <string>
-#include "MBUtils.h"
 #include "ACTable.h"
+#include "MBUtils.h"
 #include "IRIS2D.h"
+#include "XYFormatUtilsPoly.h"
+#include "XYFormatUtilsPoint.h"
+#include "XYPolygon.h"
+#include "XYPoint.h"
+
 
 //---------------------------------------------------------
 // Constructor()
@@ -81,6 +86,7 @@ bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
   for (p = NewMail.begin(); p != NewMail.end(); p++) {
     CMOOSMsg &msg = *p;
     std::string key    = msg.GetKey();
+    bool handled{true};
 
 #if 0  // Keep these around just for template
     string comm  = msg.GetCommunity();
@@ -92,14 +98,72 @@ bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
     bool   mstr  = msg.IsString();
 #endif
 
-    if (key == "FOO")
-      std::cout << "great!";
+    if (key == "RUN_IRIS") {
+      m_run_pending = true;
+    } else if (key == "CLEAR_IRIS") {
+      m_run_pending = false;
+      m_clear_pending = true;
+    } else if (key == m_obs_alert_var) {
+      handled = handleObstacleAlert(msg.GetString());
+    } else if (key == "OBM_RESOLVED") {
+      handleObstacleResolved(msg.GetString());  // even if returns false, mail is ok
+    } else if (key == m_seed_pt_var) {
+      XYPoint seed_pt{string2Point(msg.GetString())};
+      if (seed_pt.valid())
+        m_seed_pt_queue.push(seed_pt);
+      else
+        handled = false;
+    } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
+      handled = false;
+    }
 
-    else if (key != "APPCAST_REQ")  // handled by AppCastingMOOSApp
+    if (!handled)
       reportRunWarning("Unhandled Mail: " + key);
   }
   return(true);
 }
+
+
+bool IRIS2D::handleObstacleAlert(std::string obs_alert)
+{
+  // name=avd_obstacles_ob_0#poly=pts={-21.69,-135.31:-24.25,-132.75:-10.83,-132.03},label=ob_0
+  // pull out polygon from alert message
+  biteStringX(obs_alert, '#');  // removes name block
+  biteStringX(obs_alert, '=');  // removes poly= block, just leaves pts=
+
+  // parse obstacle from string
+  XYPolygon new_obs{string2Poly(obs_alert)};
+  if (!new_obs.is_convex())
+    return(false);
+
+  // add new obstacle to the ADD queue
+  std::string key{new_obs.get_label()};
+  m_obstacle_add_queue[key] = new_obs;
+
+  // if this is an obstacle with a label we've seen before,
+  // add it to the REMOVE queue so we can remove the old
+  // version of the obstacle in the iterate loop
+  if (m_obstacle_map.count(key))
+    m_obstacle_remove_queue.insert(key);
+
+  return (true);
+}
+
+
+bool IRIS2D::handleObstacleResolved(const std::string &obs_label)
+{
+  // if obstacle is in ADD queue for some reason, remove it
+  m_obstacle_add_queue.erase(obs_label);
+
+  // if obstacle is in obstacle map, add to REMOVE queue
+  if (m_obstacle_map.count(obs_label)) {
+    m_obstacle_remove_queue.insert(obs_label);
+    return (true);
+  }
+  // otherwise ignore message
+  return (false);
+}
+
 
 //---------------------------------------------------------
 // Procedure: OnConnectToServer()

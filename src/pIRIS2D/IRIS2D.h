@@ -12,6 +12,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <queue>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPolygon.h"
 
@@ -35,9 +36,12 @@ class IRIS2D : public AppCastingMOOSApp
   void registerVariables();
 
   void handleRequests();
+  bool handleObstacleAlert(std::string obs_alert);
+  bool handleObstacleResolved(const std::string &obs_label);
+
   void syncObstacles();
-  Eigen::Vector2d randomSeedPoint();
-  bool buildRegion();
+  XYPoint randomSeedPoint();
+  bool buildRegion(const XYPoint &seed);
 
  private:  // Configuration variables
   std::string m_obs_alert_var;  // OBSTACLE_ALERT
@@ -75,10 +79,11 @@ class IRIS2D : public AppCastingMOOSApp
   bool m_run_pending;
   bool m_iris_active;
 
-  // std::map<std::string,
   std::map<std::string, XYPolygon> m_obstacle_map;
   std::map<std::string, XYPolygon> m_obstacle_add_queue;
   std::set<std::string> m_obstacle_remove_queue;
+
+  std::queue<XYPoint> m_seed_pt_queue;
 };
 
 #endif
