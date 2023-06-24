@@ -34,20 +34,42 @@ class IRIS2D : public AppCastingMOOSApp
  protected:
   void registerVariables();
 
+  void handleRequests();
+  void syncObstacles();
+  Eigen::Vector2d randomSeedPoint();
+  bool buildRegion();
+
  private:  // Configuration variables
   std::string m_obs_alert_var;  // OBSTACLE_ALERT
   std::string m_seed_pt_var;  // IRIS_SEED_POINT
 
   std::string m_iris_region_var;  // IRIS_REGION
-  std::string m_complete_var;
-  bool m_post_visuals;
+  std::string m_complete_var;  // IRIS_COMPLETE
 
+  // Visual params for rendering IRIS regions
+  bool m_post_visuals;
+  std::string m_label_color;
+  std::string m_poly_fill_color;
+  std::string m_poly_edge_color;
+  std::string m_poly_vert_color;
+
+  double m_poly_edge_size;
+  double m_poly_vert_size;
+  double m_poly_transparency;
+
+  std::string m_ellipse_fill_color;
+  std::string m_ellipse_edge_color;
+
+  double m_ellipse_edge_size;
+  double m_ellipse_transparency;
+
+  // IRIS config
   std::string m_mode;
   unsigned int m_desired_regions;
   XYPolygon m_iris_bounds;
   unsigned int m_max_iters;
-  // todo: add ellipsoid vol change threshold
-  // todo: add visualization config params
+  double m_termination_threshold;
+
  private:  // State variables
   bool m_clear_pending;
   bool m_run_pending;

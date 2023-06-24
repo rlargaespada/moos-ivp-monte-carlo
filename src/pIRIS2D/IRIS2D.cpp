@@ -5,7 +5,10 @@
 /*    DATE: June 14th, 2023                                 */
 /************************************************************/
 
-#include<Eigen/Dense>
+#include <cdd/setoper.h>
+#include <cdd/cdd.h>
+#include <Eigen/Dense>
+#include <mosek.h>
 #include <iterator>
 #include <string>
 #include "MBUtils.h"
@@ -25,17 +28,37 @@ IRIS2D::IRIS2D()
   // publication config
   m_iris_region_var = "IRIS_REGION";
   m_complete_var = "IRIS_COMPLETE";
+
+  // visuals config
   m_post_visuals = true;
+  m_label_color = "white";
+  m_poly_fill_color = "violet";
+  m_poly_edge_color = "blueviolet";
+  m_poly_vert_color = "blueviolet";
+
+  m_poly_edge_size = 1;
+  m_poly_vert_size = 1;
+  m_poly_transparency = 0.15;
+
+  m_ellipse_fill_color = "invisible";
+  m_ellipse_edge_color = "slateblue";
+
+  m_ellipse_edge_size = 1;
+  m_ellipse_transparency = 0.15;
 
   // IRIS config
   m_mode = "manual";
   m_desired_regions = 20;
   m_max_iters = 100;
+  m_termination_threshold = 2e-2;
 
   //* State Variables
   m_clear_pending = false;
   m_run_pending = false;
   m_iris_active = false;
+
+  // set up cdd
+  dd_set_global_constants();
 }
 
 //---------------------------------------------------------
@@ -43,6 +66,8 @@ IRIS2D::IRIS2D()
 
 IRIS2D::~IRIS2D()
 {
+  // cleanup cdd
+  dd_free_global_constants();
 }
 
 //---------------------------------------------------------
@@ -173,6 +198,8 @@ bool IRIS2D::OnStartUp()
       handled = true;  // todo
     } else if (param == "max_iters") {
       handled = setPosUIntOnString(m_max_iters, value);
+    } else if (param == "termination_threshold") {
+      handled = setPosDoubleOnString(m_termination_threshold, value);
     }
 
     if (!handled)
