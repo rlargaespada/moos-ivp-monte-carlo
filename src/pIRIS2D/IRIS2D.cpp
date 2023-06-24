@@ -66,6 +66,7 @@ IRIS2D::IRIS2D()
   dd_set_global_constants();
 }
 
+
 //---------------------------------------------------------
 // Destructor
 
@@ -74,6 +75,7 @@ IRIS2D::~IRIS2D()
   // cleanup cdd
   dd_free_global_constants();
 }
+
 
 //---------------------------------------------------------
 // Procedure: OnNewMail()
@@ -220,9 +222,50 @@ bool IRIS2D::Iterate()
   first pass at IRIS: when posting to seed point, build region
   */
 
+  handleRequests();
+  syncObstacles();
+
+  if (!m_seed_pt_queue.empty()) {
+    buildRegion(m_seed_pt_queue.front());
+    m_seed_pt_queue.pop();
+  }
+
   AppCastingMOOSApp::PostReport();
   return(true);
 }
+
+
+//---------------------------------------------------------
+void IRIS2D::handleRequests()
+{
+  if (m_clear_pending) {
+    // todo: erase all regions
+    if (m_mode != "auto")
+      m_iris_active = false;
+  } else if (m_run_pending) {
+    m_iris_active = true;  // always true in auto mode
+  }
+
+  m_clear_pending = false;
+  m_run_pending = false;
+}
+
+
+void IRIS2D::syncObstacles()
+{}
+
+
+XYPoint IRIS2D::randomSeedPoint()
+{
+  return (XYPoint());
+}
+
+
+bool IRIS2D::buildRegion(const XYPoint &seed)
+{
+  return (true);
+}
+
 
 //---------------------------------------------------------
 // Procedure: OnStartUp()
@@ -248,7 +291,7 @@ bool IRIS2D::OnStartUp()
     // vars to subscribe to
     if (param == "obs_alert_var") {
       handled = setNonWhiteVarOnString(m_obs_alert_var, toupper(value));
-    } else if (param == "seed_point_var") {
+    } else if ((param == "seed_point_var") || (param == "seed_pt_var")) {
       handled = setNonWhiteVarOnString(m_seed_pt_var, toupper(value));
     // publication config
     } else if (param == "post_visuals") {
@@ -278,6 +321,7 @@ bool IRIS2D::OnStartUp()
   registerVariables();
   return(true);
 }
+
 
 //---------------------------------------------------------
 // Procedure: registerVariables()

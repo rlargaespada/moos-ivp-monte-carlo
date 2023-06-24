@@ -52,6 +52,8 @@ Processconfig = ANTLER
   Run = pNullPlanner     @ NewConsole = false
   #elseifdef PLANNER dstarlite
   Run = pDStarLite       @ NewConsole = false
+  #elseifdef PLANNER gcs
+  Run = pIRIS2D          @ NewConsole = false
   #endif
 }
 
@@ -319,4 +321,22 @@ ProcessConfig = pDStarLite
   grid_cell_size = 5
 
   max_planning_iters = 100
+}
+
+
+//------------------------------------------
+// pIRIS2D config block
+ProcessConfig = pIRIS2D
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  obs_alert_var = $(PLANNER_OBS_ALERT_VAR)
+  seed_point_var = IRIS_SEED_POINT
+
+  mode = manual
+  desired_regions = 20
+  max_iters = 100
+  iris_bounds = $(SEARCH_BOUNDS)
 }

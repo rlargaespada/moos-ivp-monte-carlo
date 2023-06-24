@@ -35,10 +35,12 @@ class IRIS2D : public AppCastingMOOSApp
  protected:
   void registerVariables();
 
-  void handleRequests();
+  // mail handling
   bool handleObstacleAlert(std::string obs_alert);
   bool handleObstacleResolved(const std::string &obs_label);
 
+  // iterate loop helpers
+  void handleRequests();
   void syncObstacles();
   XYPoint randomSeedPoint();
   bool buildRegion(const XYPoint &seed);
