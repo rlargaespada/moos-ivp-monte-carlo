@@ -1,12 +1,13 @@
-#ifndef IRIS2D_IRIS_PROBLEM_HEADER
-#define IRIS2D_IRIS_PROBLEM_HEADER
+#ifndef IRIS2D_IRISPROBLEM_HEADER
+#define IRIS2D_IRISPROBLEM_HEADER
 
 #include <Eigen/Dense>
 #include <vector>
 #include "XYOval.h"
 #include "XYPoint.h"
 #include "XYPolygon.h"
-#include "iris_geom.h"
+#include "IRISPolygon.h"
+#include "IRISEllipse.h"
 
 
 class IRISProblem
@@ -39,4 +40,4 @@ class IRISProblem
 };
 
 
-#endif  // IRIS2D_IRIS_PROBLEM_HEADER
+#endif  // IRIS2D_IRISPROBLEM_HEADER

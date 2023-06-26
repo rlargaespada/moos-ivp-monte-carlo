@@ -1,4 +1,4 @@
-#include "iris_problem.h"
+#include "IRISProblem.h"
 
 
 //---------------------------------------------------------

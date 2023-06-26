@@ -4,8 +4,9 @@
 #--------------------------------------------------------
 
 SET(SRC
-  iris_geom.cpp
-  iris_problem.cpp
+  IRISPolygon.cpp
+  IRISEllipse.cpp
+  IRISProblem.cpp
   IRIS2D.cpp
   IRIS2D_Info.cpp
   main.cpp
