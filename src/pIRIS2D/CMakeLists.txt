@@ -4,6 +4,8 @@
 #--------------------------------------------------------
 
 SET(SRC
+  iris_geom.cpp
+  iris_problem.cpp
   IRIS2D.cpp
   IRIS2D_Info.cpp
   main.cpp
@@ -11,7 +13,7 @@ SET(SRC
 
 # find dependencies
 # find Eigen3 using find_package
-find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 
 # search usual places for cdd library and include dir
 find_library(CDD_LIBRARY NAMES cdd)

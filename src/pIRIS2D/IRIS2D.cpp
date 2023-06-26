@@ -206,17 +206,35 @@ bool IRIS2D::Iterate()
   else if active and still regions to go
     buildRegion(random seed)
     if manual and last region
-      mark inactive
+      mark inactive, post complete
   else if active and invalidate queue isn't empty
     erase region in invalidate queue
     buildRegion(center of removed region)
-    if manual and queue is empty
-      mark inactive 
+    if queue is empty
+      post complete
+      if manual
+        mark inactive
   else if active and manual
     go inactive
 
   buildRegion(seed point)
-    run IRIS around that seed point using obstacle map
+    set up problem
+      polygon starts out empty
+      ellipse starts out from seed point
+      bounds from pIRIS2D
+      obstacles from newest obstacle map
+      input: seed XYPoint, obstacles map (?), bounds matrix/IRISPoly
+    while below iter limit
+      separating_hyperplanes(problem.obstacles, problem.ellipsoid, new_poly)
+      add bounds as constraints to new_poly
+      save new poly to problem
+      volume = iris::mosek inner_ellipsoid(polygon, ellipsoid)
+      save new volume
+      check termination conditions
+    if done
+      save polygon as XYPolygon
+      post VIEW_OVAL, VIEW_POLYGON
+    otherwise pick it up next time
 
 
   first pass at IRIS: when posting to seed point, build region
@@ -257,7 +275,7 @@ void IRIS2D::syncObstacles()
 
 XYPoint IRIS2D::randomSeedPoint()
 {
-  return (XYPoint());
+  return (XYPoint{});
 }
 
 

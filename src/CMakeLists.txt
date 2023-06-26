@@ -16,7 +16,7 @@ INCLUDE_DIRECTORIES(${LOCAL_LIBRARY_DIRS})
 #============================================================================
 # ADD_SUBDIRECTORY(lib_behaviors-test)
 ADD_SUBDIRECTORY(pNullPlanner)
-ADD_SUBDIRECTORY(pLPAStar)
+# ADD_SUBDIRECTORY(pLPAStar)
 ADD_SUBDIRECTORY(pDStarLite)
 ADD_SUBDIRECTORY(pIRIS2D)
 ADD_SUBDIRECTORY(uEvalPlanner)
