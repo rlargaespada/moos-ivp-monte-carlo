@@ -3,10 +3,11 @@
 
 #include <Eigen/Dense>
 #include "XYPoint.h"
-#include "XYOval.h"
+#include "XYPolygon.h"
 
 
-const double ELLIPSOID_C_EPSILON = 1e-4;
+const double ELLIPSE_C_EPSILON{1e-4};
+const int NUM_POLY_PTS{50};
 
 
 class IRISEllipse
@@ -14,7 +15,9 @@ class IRISEllipse
  public:
   explicit IRISEllipse(XYPoint seed);
   explicit IRISEllipse(Eigen::Vector2d seed);
-  IRISEllipse(Eigen::Matrix2d C, Eigen::Vector2d d);
+  IRISEllipse(
+    Eigen::Matrix2d C = Eigen::Matrix2d::Identity(),
+    Eigen::Vector2d d = Eigen::Vector2d::Zero()): m_C{C}, m_d{d} {}
   ~IRISEllipse() {}
 
  public:
@@ -25,11 +28,12 @@ class IRISEllipse
   void setDEntry(int idx, double val) {m_d(idx) = val;}
   void setD(const Eigen::Vector2d &d) {m_d = d;}
 
-  XYOval toXYOval();
-  double volume();
+  XYPolygon toXYPolygon(int num_pts = NUM_POLY_PTS);
+  // area is det(C) * (area of circle of radius 1) = det(C) * PI
+  double area() {return (m_C.determinant() * M_PI);}
 
  private:
-  void fromSeed(Eigen::Vector2d seed);
+  void fromSeed(Eigen::Vector2d seed, double radius = ELLIPSE_C_EPSILON);
 
   Eigen::Matrix2d m_C;
   Eigen::Vector2d m_d;
