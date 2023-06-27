@@ -13,8 +13,8 @@ const int NUM_POLY_PTS{50};
 class IRISEllipse
 {
  public:
-  explicit IRISEllipse(XYPoint seed);
-  explicit IRISEllipse(Eigen::Vector2d seed);
+  explicit IRISEllipse(XYPoint seed, double radius = ELLIPSE_C_EPSILON);
+  explicit IRISEllipse(Eigen::Vector2d seed, double radius = ELLIPSE_C_EPSILON);
   IRISEllipse(
     Eigen::Matrix2d C = Eigen::Matrix2d::Identity(),
     Eigen::Vector2d d = Eigen::Vector2d::Zero()): m_C{C}, m_d{d} {}
@@ -33,7 +33,7 @@ class IRISEllipse
   double area() {return (m_C.determinant() * M_PI);}
 
  private:
-  void fromSeed(Eigen::Vector2d seed, double radius = ELLIPSE_C_EPSILON);
+  void fromSeed(Eigen::Vector2d seed, double radius);
 
   Eigen::Matrix2d m_C;
   Eigen::Vector2d m_d;

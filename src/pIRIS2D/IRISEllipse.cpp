@@ -9,15 +9,15 @@
 //---------------------------------------------------------
 // Constructors
 
-IRISEllipse::IRISEllipse(XYPoint seed)
+IRISEllipse::IRISEllipse(XYPoint seed, double radius)
 {
-  fromSeed(Eigen::Vector2d{seed.x(), seed.y()});
+  fromSeed(Eigen::Vector2d{seed.x(), seed.y()}, radius);
 }
 
 
-IRISEllipse::IRISEllipse(Eigen::Vector2d seed)
+IRISEllipse::IRISEllipse(Eigen::Vector2d seed, double radius)
 {
-  fromSeed(seed);
+  fromSeed(seed, radius);
 }
 
 
@@ -33,7 +33,7 @@ void IRISEllipse::fromSeed(Eigen::Vector2d seed, double radius)
 
 XYPolygon IRISEllipse::toXYPolygon(int num_pts)
 {
-  // ge linspace between 0 and 2PI, add extra pt so first {num_pts} pts don't roll over
+  // get linspace between 0 and 2PI, add extra pt so first {num_pts} pts don't roll over
   Eigen::Array<double, 1, Eigen::Dynamic> ts;
   ts.setLinSpaced(num_pts + 1, 0, 2*M_PI);
 
