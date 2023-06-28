@@ -7,7 +7,7 @@
 
 
 const double ELLIPSE_C_EPSILON{1e-4};
-const int NUM_POLY_PTS{50};
+const int ELLIPSE_POLY_PTS{50};
 
 
 class IRISEllipse
@@ -28,7 +28,7 @@ class IRISEllipse
   void setDEntry(int idx, double val) {m_d(idx) = val;}
   void setD(const Eigen::Vector2d &d) {m_d = d;}
 
-  XYPolygon toXYPolygon(int num_pts = NUM_POLY_PTS);
+  XYPolygon toXYPolygon(int num_pts = ELLIPSE_POLY_PTS);
   // area is det(C) * (area of circle of radius 1) = det(C) * PI
   double area() {return (m_C.determinant() * M_PI);}
 

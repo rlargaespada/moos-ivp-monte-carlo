@@ -3,7 +3,6 @@
 
 #include <Eigen/Dense>
 #include <vector>
-#include "XYOval.h"
 #include "XYPoint.h"
 #include "XYPolygon.h"
 #include "IRISPolygon.h"
@@ -14,16 +13,18 @@ class IRISProblem
 {
  public:
   IRISProblem(XYPoint seed, XYPolygon bounds);
+  IRISProblem(XYPoint seed, IRISPolygon bounds);
   ~IRISProblem() {}
 
  public:
+  bool run(int num_iters);
+
   void addObstacle(Eigen::Matrix2Xd obstacle) {m_obstacles.push_back(obstacle);}
   void addObstacle(XYPolygon obstacle);
 
-  void run(unsigned int num_iters);
-
-  XYPolygon getXYPolygon();
-  XYOval getXYOval();
+  XYPolygon getPolygon() {return (m_polygon.toXYPolygon());}
+  XYPolygon getEllipse(int num_pts = ELLIPSE_POLY_PTS) {return (m_ellipse.toXYPolygon(num_pts));}
+  bool complete() {return (m_complete);}
 
  private:
   IRISPolygon m_polygon;
@@ -33,7 +34,7 @@ class IRISProblem
   IRISPolygon m_bounds;
 
   int m_iters_done;
-  double best_volume;
+  double m_best_volume;
   bool m_complete;
 
   //? other inputs: max iters, termination limit
