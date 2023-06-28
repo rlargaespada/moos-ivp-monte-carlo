@@ -45,7 +45,7 @@ XYPolygon IRISEllipse::toXYPolygon(int num_pts)
   // form polygon out of elllipse points and return
   XYPolygon ellipse_poly;
   for (int i=0; i < num_pts ; i++) {
-    ellipse_poly.add_vertex(points(0, i), points(1, i));
+    ellipse_poly.add_vertex(points(0, i), points(1, i), false);
   }
   ellipse_poly.determine_convexity();
   return (ellipse_poly);
