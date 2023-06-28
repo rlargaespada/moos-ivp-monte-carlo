@@ -4,6 +4,7 @@
 #include "XYPolygon.h"
 #include "IRISPolygon.h"
 
+
 //---------------------------------------------------------
 // Constructors
 
@@ -44,9 +45,55 @@ void IRISPolygon::fromXYPolygon(const XYPolygon &poly)
 }
 
 
+// uses cddlib to compute vertices of convex polygon given by Ax <= b
+// based on getGenerators() function defined in:
+// https://github.com/rdeits/iris-distro/blob/master/src/cxx/iris_cdd.h
+// assumes dd_set_global_constants() has already been called
 XYPolygon IRISPolygon::toXYPolygon()
 {
-  return XYPolygon{};
+  XYPolygon null_poly;
+
+  // only works if A and b have the same number of rows
+  if (m_A.rows() != m_b.rows())
+    return (null_poly);
+
+  Eigen::Index dim{m_A.cols()};  // problem is 2D
+
+  // fill in matrix for H-representation of polygon (Ax <= b)
+  dd_MatrixPtr hrep{dd_CreateMatrix(m_A.rows(), dim + 1)};
+  for (int i{0}; i < m_A.rows(); i++) {
+    dd_set_d(hrep->matrix[i][0], m_b(i));
+    for (int j{0}; j < dim; j++) {
+      dd_set_d(hrep->matrix[i][j+1], -m_A(i, j));
+    }
+  }
+  hrep->representation = dd_Inequality;
+
+  // convert to V-representation of polygon (vertices and rays)
+  dd_ErrorType err;
+  dd_PolyhedraPtr poly = dd_DDMatrix2Poly(hrep, &err);
+  if (err != dd_NoError)  // return empty polygon if there was an error
+    return (null_poly);
+
+  // parse out vertices of V-representation and turn into XYPolygon
+  XYPolygon solved_poly;
+  dd_MatrixPtr generators = dd_CopyGenerators(poly);
+
+  for (int i{0}; i < generators->rowsize; i++) {
+    double x, y;
+    if (dd_get_d(generators->matrix[i][0]) == 1) {  // if first col is 1, it's a vertex
+      x = dd_get_d(generators->matrix[i][1]);  // x is 2nd col of matrix
+      y = dd_get_d(generators->matrix[i][2]);  // y is 3rd col of matrix
+    }
+    solved_poly.add_vertex(x, y, false);
+  }
+  solved_poly.determine_convexity();
+
+  dd_FreeMatrix(hrep);
+  dd_FreeMatrix(generators);
+  dd_FreePolyhedra(poly);
+
+  return (solved_poly);
 }
 
 

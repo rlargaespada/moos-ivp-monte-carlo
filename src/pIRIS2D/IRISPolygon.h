@@ -35,8 +35,6 @@ class IRISPolygon
 
   Eigen::MatrixX2d m_A;
   Eigen::VectorXd m_b;
-  //? representation dirty?
-  //? get generators? dd_check?
 };
 
 #endif  // IRIS2D_IRISPOLYGON_HEADER
