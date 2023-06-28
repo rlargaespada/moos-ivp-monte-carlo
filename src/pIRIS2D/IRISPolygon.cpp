@@ -5,17 +5,6 @@
 #include "IRISPolygon.h"
 
 
-//---------------------------------------------------------
-// Constructors
-
-IRISPolygon::IRISPolygon(Eigen::MatrixX2d A, Eigen::VectorXd b) : m_A{A}, m_b{b}
-{
-}
-
-
-//---------------------------------------------------------
-// Other Methods
-
 void IRISPolygon::fromXYPolygon(const XYPolygon &poly)
 {
   // resize A and b so we have one constraint per vertex of polygon

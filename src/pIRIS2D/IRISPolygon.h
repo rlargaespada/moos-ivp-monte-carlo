@@ -10,7 +10,7 @@ class IRISPolygon
 {
  public:
   IRISPolygon() {}  // default constructor is empty
-  IRISPolygon(Eigen::MatrixX2d A, Eigen::VectorXd b);
+  IRISPolygon(Eigen::MatrixX2d A, Eigen::VectorXd b): m_A{A}, m_b{b} {}
   explicit IRISPolygon(XYPolygon poly) {fromXYPolygon(poly);}
   ~IRISPolygon() {}
 
