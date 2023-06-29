@@ -5,8 +5,8 @@
 #include <vector>
 #include "XYPoint.h"
 #include "XYPolygon.h"
-#include "IRISPolygon.h"
 #include "IRISEllipse.h"
+#include "IRISPolygon.h"
 
 
 class IRISProblem

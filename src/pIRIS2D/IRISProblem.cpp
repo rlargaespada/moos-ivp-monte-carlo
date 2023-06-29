@@ -8,6 +8,7 @@
 
 //---------------------------------------------------------
 // Constructor()
+
 IRISProblem::IRISProblem(XYPoint seed, XYPolygon bounds)
 {
   m_polygon = IRISPolygon{};  // empty to start

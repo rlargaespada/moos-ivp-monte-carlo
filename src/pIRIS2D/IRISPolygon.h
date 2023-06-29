@@ -19,7 +19,7 @@ class IRISPolygon
   void setA(const Eigen::MatrixX2d &A) {m_A = A;}
   const Eigen::VectorXd& getB() const {return m_b;}
   void setB(const Eigen::VectorXd &b) {m_b = b;}
-  int getNumConstraints() {return (m_A.rows());}
+  int getNumConstraints() const {return (m_A.rows());}
 
   bool contains(const Eigen::Vector2d &point);
   bool contains(const XYPoint &point);
