@@ -366,7 +366,7 @@ double inner_ellipsoid(const IRISPolygon &polygon, IRISEllipse *ellipse, MSKenv_
 
 Eigen::Vector2d closest_point_in_convex_hull(const Eigen::Matrix2Xd &Points, MSKenv_t *existing_env)
 {
-  const int dim = 2;  // problem is 2D
+  const int dim = Points.rows();  // problem is 2D
   const int nw = Points.cols();
   Eigen::Vector2d result;
 
