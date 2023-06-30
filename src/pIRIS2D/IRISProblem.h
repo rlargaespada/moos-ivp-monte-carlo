@@ -12,8 +12,8 @@
 class IRISProblem
 {
  public:
-  IRISProblem(XYPoint seed, XYPolygon bounds);
-  IRISProblem(XYPoint seed, IRISPolygon bounds);
+  IRISProblem(XYPoint seed, XYPolygon bounds, int max_iters, double term_threshold);
+  IRISProblem(XYPoint seed, IRISPolygon bounds, int max_iters, double term_threshold);
   ~IRISProblem() {}
 
  public:
@@ -22,12 +22,15 @@ class IRISProblem
   void addObstacle(Eigen::Matrix2Xd obstacle) {m_obstacles.push_back(obstacle);}
   void addObstacle(XYPolygon obstacle);
 
+  IRISPolygon getIRISPolygon() {return (m_polygon);}
+  IRISEllipse getIRISEllipse() {return (m_ellipse);}
+
   XYPolygon getPolygon() {return (m_polygon.toXYPolygon());}
   XYPolygon getEllipse(int num_pts = ELLIPSE_POLY_PTS) {return (m_ellipse.toXYPolygon(num_pts));}
   bool complete() {return (m_complete);}
 
  private:
-  void setup(XYPoint seed, IRISPolygon bounds);
+  void setup(XYPoint seed, IRISPolygon bounds, int max_iters, double term_threshold);
   IRISPolygon m_polygon;
   IRISEllipse m_ellipse;
 
@@ -35,10 +38,11 @@ class IRISProblem
   IRISPolygon m_bounds;
 
   int m_iters_done;
-  double m_best_volume;
+  double m_best_area;
   bool m_complete;
 
-  //? other inputs: max iters, termination limit
+  int m_max_iters;
+  double m_termination_threshold;
 };
 
 
