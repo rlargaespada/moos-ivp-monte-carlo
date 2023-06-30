@@ -7,6 +7,7 @@ SET(SRC
   IRISPolygon.cpp
   IRISEllipse.cpp
   iris_mosek.cpp
+  iris_ops.cpp
   IRISProblem.cpp
   IRIS2D.cpp
   IRIS2D_Info.cpp

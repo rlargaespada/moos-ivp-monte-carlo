@@ -3,6 +3,8 @@
 #include "XYPolygon.h"
 #include "IRISEllipse.h"
 #include "IRISPolygon.h"
+#include "iris_mosek.h"
+#include "iris_ops.h"
 #include "IRISProblem.h"
 
 
@@ -11,17 +13,17 @@
 
 IRISProblem::IRISProblem(XYPoint seed, XYPolygon bounds)
 {
-  m_polygon = IRISPolygon{};  // empty to start
-  m_ellipse = IRISEllipse{seed};
-  m_bounds = IRISPolygon{bounds};
-
-  m_iters_done = 0;
-  m_best_volume = 0;
-  m_complete = false;
+  setup(seed, IRISPolygon{bounds});
 }
 
 
 IRISProblem::IRISProblem(XYPoint seed, IRISPolygon bounds)
+{
+  setup(seed, bounds);
+}
+
+
+void IRISProblem::setup(XYPoint seed, IRISPolygon bounds)
 {
   m_polygon = IRISPolygon{};  // empty to start
   m_ellipse = IRISEllipse{seed};

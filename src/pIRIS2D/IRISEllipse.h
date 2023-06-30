@@ -21,10 +21,10 @@ class IRISEllipse
   ~IRISEllipse() {}
 
  public:
-  const Eigen::Matrix2d& getC() {return m_C;}
+  const Eigen::Matrix2d& getC() const {return m_C;}
   void setC(const Eigen::Matrix2d &C) {m_C = C;}
   void setCEntry(int row, int col, double val) {m_C(row, col) = val;}
-  const Eigen::Vector2d& getD() {return m_d;}
+  const Eigen::Vector2d& getD() const {return m_d;}
   void setDEntry(int idx, double val) {m_d(idx) = val;}
   void setD(const Eigen::Vector2d &d) {m_d = d;}
 

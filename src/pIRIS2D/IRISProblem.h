@@ -27,6 +27,7 @@ class IRISProblem
   bool complete() {return (m_complete);}
 
  private:
+  void setup(XYPoint seed, IRISPolygon bounds);
   IRISPolygon m_polygon;
   IRISEllipse m_ellipse;
 
