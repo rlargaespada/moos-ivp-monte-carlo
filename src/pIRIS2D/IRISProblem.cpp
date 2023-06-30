@@ -12,6 +12,13 @@
 //---------------------------------------------------------
 // Constructor()
 
+
+IRISProblem::IRISProblem(int max_iters, double term_threshold)
+{
+  setup(XYPoint{0, 0}, IRISPolygon{}, max_iters, term_threshold);
+}
+
+
 IRISProblem::IRISProblem(XYPoint seed, XYPolygon bounds, int max_iters, double term_threshold)
 {
   setup(seed, IRISPolygon{bounds}, max_iters, term_threshold);

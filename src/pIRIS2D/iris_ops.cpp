@@ -66,6 +66,13 @@ IRISPolygon separating_lines(
     Eigen::Vector2d closest_obs_vertex{obstacle_pts[i].col(idx)};
     line tangent_line{tangent_line_through_point(Cinv2, ellipse.getD(), closest_obs_vertex)};
 
+    // always do the optimization
+    // if (!env)
+    //   check_res(MSK_makeenv(&env, NULL));
+    // Eigen::Vector2d x_tilde_star{closest_point_in_convex_hull(image_pts[i], &env)};
+    // Eigen::Vector2d xstar{ellipse.getC() * x_tilde_star + ellipse.getD()};
+    // lines.push_back(tangent_line_through_point(Cinv2, ellipse.getD(), xstar));
+
     // calc distance from tangent line to obstacle
     Eigen::ArrayXXd dist_to_obs{(tangent_line.first.transpose() * obstacle_pts[i]).array()};
     dist_to_obs -= tangent_line.second;

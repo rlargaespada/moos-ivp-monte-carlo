@@ -15,6 +15,8 @@
 #include <queue>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPolygon.h"
+#include "IRISPolygon.h"
+#include "IRISProblem.h"
 
 
 class IRIS2D : public AppCastingMOOSApp
@@ -72,7 +74,7 @@ class IRIS2D : public AppCastingMOOSApp
   // IRIS config
   std::string m_mode;
   unsigned int m_desired_regions;
-  XYPolygon m_iris_bounds;
+  IRISPolygon m_iris_bounds;
   unsigned int m_max_iters;
   double m_termination_threshold;
 
@@ -86,6 +88,8 @@ class IRIS2D : public AppCastingMOOSApp
   std::set<std::string> m_obstacle_remove_queue;
 
   std::queue<XYPoint> m_seed_pt_queue;
+  IRISProblem m_current_problem;
+  std::map<std::string, XYPolygon> m_safe_regions;
 };
 
 #endif

@@ -17,6 +17,8 @@
 #include "XYFormatUtilsPoint.h"
 #include "XYPolygon.h"
 #include "XYPoint.h"
+#include "IRISPolygon.h"
+#include "IRISProblem.h"
 #include "IRIS2D.h"
 
 
@@ -54,8 +56,8 @@ IRIS2D::IRIS2D()
   // IRIS config
   m_mode = "manual";
   m_desired_regions = 20;
-  m_max_iters = 100;
-  m_termination_threshold = 2e-2;
+  m_max_iters = IRIS_DEFAULT_MAX_ITERS;
+  m_termination_threshold = IRIS_DEFAULT_TERMINATION_THRESHOLD;
 
   //* State Variables
   m_clear_pending = false;
@@ -198,7 +200,7 @@ bool IRIS2D::Iterate()
     if queues are empty, return
     for remove queue, invalidate any regions which intersect obs
     for add queue, invalidate any regions which intersect obs
-    if it doesn't intersect with any obstacles, remove from invalid queue
+    if region doesn't intersect with any obstacles, remove from invalid queue
     add obs to map and clear queues
 
   if seed point queue isn't empty
@@ -257,7 +259,7 @@ bool IRIS2D::Iterate()
 void IRIS2D::handleRequests()
 {
   if (m_clear_pending) {
-    // todo: erase all regions
+    m_safe_regions.clear();
     if (m_mode != "auto")
       m_iris_active = false;
   } else if (m_run_pending) {
@@ -298,6 +300,8 @@ bool IRIS2D::OnStartUp()
   if (!m_MissionReader.GetConfiguration(GetAppName(), sParams))
     reportConfigWarning("No config block found for " + GetAppName());
 
+  std::string iris_bounds{"pts="};
+
   STRING_LIST::iterator p;
   for (p = sParams.begin(); p != sParams.end(); p++) {
     std::string orig  = *p;
@@ -320,7 +324,10 @@ bool IRIS2D::OnStartUp()
     } else if (param == "desired_regions") {
       handled = setPosUIntOnString(m_desired_regions, value);
     } else if (param == "iris_bounds") {
-      handled = true;  // todo
+      if (!strBegins(value, "{")) value = "{" + value;
+      if (!strEnds(value, "}")) value += "}";
+      iris_bounds += value;
+      handled = true;
     } else if (param == "max_iters") {
       handled = setPosUIntOnString(m_max_iters, value);
     } else if (param == "termination_threshold") {
@@ -335,6 +342,8 @@ bool IRIS2D::OnStartUp()
     m_obs_alert_var = "OBSTACLE_ALERT";
   if (m_seed_pt_var.empty())
     m_seed_pt_var = "IRIS_SEED_POINT";
+
+  m_iris_bounds = IRISPolygon(string2Poly(iris_bounds));
 
   registerVariables();
   return(true);

@@ -9,11 +9,25 @@
 #include "IRISPolygon.h"
 
 
+const int IRIS_DEFAULT_MAX_ITERS{100};
+const double IRIS_DEFAULT_TERMINATION_THRESHOLD{2e-2};
+
 class IRISProblem
 {
  public:
-  IRISProblem(XYPoint seed, XYPolygon bounds, int max_iters, double term_threshold);
-  IRISProblem(XYPoint seed, IRISPolygon bounds, int max_iters, double term_threshold);
+  IRISProblem(
+    int max_iters = IRIS_DEFAULT_MAX_ITERS,
+    double term_threshold = IRIS_DEFAULT_TERMINATION_THRESHOLD);
+  IRISProblem(
+    XYPoint seed,
+    XYPolygon bounds,
+    int max_iters = IRIS_DEFAULT_MAX_ITERS,
+    double term_threshold = IRIS_DEFAULT_TERMINATION_THRESHOLD);
+  IRISProblem(
+    XYPoint seed,
+    IRISPolygon bounds,
+    int max_iters = IRIS_DEFAULT_MAX_ITERS,
+    double term_threshold = IRIS_DEFAULT_TERMINATION_THRESHOLD);
   ~IRISProblem() {}
 
  public:

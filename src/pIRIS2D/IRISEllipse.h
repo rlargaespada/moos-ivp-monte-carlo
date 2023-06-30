@@ -6,7 +6,7 @@
 #include "XYPolygon.h"
 
 
-const double ELLIPSE_C_EPSILON{1e-4};
+const double ELLIPSE_C_EPSILON{1e-2};
 const int ELLIPSE_POLY_PTS{50};
 
 
