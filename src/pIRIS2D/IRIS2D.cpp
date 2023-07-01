@@ -9,8 +9,11 @@
 #include <cdd/cdd.h>
 #include <Eigen/Dense>
 #include <mosek.h>
+#include <cmath>
 #include <iterator>
+#include <set>
 #include <string>
+#include <vector>
 #include "ACTable.h"
 #include "MBUtils.h"
 #include "XYFormatUtilsPoly.h"
@@ -48,13 +51,13 @@ IRIS2D::IRIS2D()
   m_poly_transparency = 0.15;
 
   m_ellipse_fill_color = "invisible";
-  m_ellipse_edge_color = "slateblue";
+  m_ellipse_edge_color = "turquoise";
 
   m_ellipse_edge_size = 1;
   m_ellipse_transparency = 0.15;
 
   // IRIS config
-  m_mode = "manual";
+  m_mode = "manual";  // "auto", "hybrid"
   m_desired_regions = 20;
   m_max_iters = IRIS_DEFAULT_MAX_ITERS;
   m_termination_threshold = IRIS_DEFAULT_TERMINATION_THRESHOLD;
@@ -62,7 +65,9 @@ IRIS2D::IRIS2D()
   //* State Variables
   m_clear_pending = false;
   m_run_pending = false;
-  m_iris_active = false;
+  m_active = false;
+
+  m_iris_in_progress = false;
 
   // set up cdd
   dd_set_global_constants();
@@ -187,23 +192,9 @@ bool IRIS2D::Iterate()
   AppCastingMOOSApp::Iterate();
 
   /*
-  handleRequests()  //* handles iris active/inactive, clearing obstacles
-    if clear pending
-      erase all regions
-      if not in auto, mark inactive
-    else if run pending
-      mark active (doesn't affect auto, leave comment)
-    mark clear pending false
-    mark run pending false
-
-  syncObstacles()
-    if queues are empty, return
-    for remove queue, invalidate any regions which intersect obs
-    for add queue, invalidate any regions which intersect obs
-    if region doesn't intersect with any obstacles, remove from invalid queue
-    add obs to map and clear queues
-
-  if seed point queue isn't empty
+  if currently in the middle of an iris problem
+    continue running problem
+  else if seed point queue isn't empty
     buildRegion(seed point)
   else if active and still regions to go
     buildRegion(random seed)
@@ -245,9 +236,13 @@ bool IRIS2D::Iterate()
   handleRequests();
   syncObstacles();
 
-  if (!m_seed_pt_queue.empty()) {
-    buildRegion(m_seed_pt_queue.front());
+  if (m_iris_in_progress) {
+    runIRIS();
+  } else if (!m_seed_pt_queue.empty()) {
+    setIRISProblem(m_seed_pt_queue.front());
     m_seed_pt_queue.pop();
+    m_iris_in_progress = true;
+    runIRIS();
   }
 
   AppCastingMOOSApp::PostReport();
@@ -256,14 +251,15 @@ bool IRIS2D::Iterate()
 
 
 //---------------------------------------------------------
+
 void IRIS2D::handleRequests()
 {
   if (m_clear_pending) {
     m_safe_regions.clear();
     if (m_mode != "auto")
-      m_iris_active = false;
+      m_active = false;
   } else if (m_run_pending) {
-    m_iris_active = true;  // always true in auto mode
+    m_active = true;  // always true in auto mode
   }
 
   m_clear_pending = false;
@@ -272,7 +268,54 @@ void IRIS2D::handleRequests()
 
 
 void IRIS2D::syncObstacles()
-{}
+{
+  // no obstacles to change, exit early
+  if ((m_obstacle_add_queue.empty()) && (m_obstacle_remove_queue.empty()))
+    return;
+
+  //! disable invalid region checks while testing
+  // // if any obstacles are no longer invalid (don't intersect with any obstacles),
+  // // remove them from the invalid set
+  // std::vector<std::string> no_longer_invalid;
+  // for (std::string region_name : m_invalid_regions) {
+  //   bool still_invalid{false};
+  //   // only need to check obstacles being removed, not all obstacles
+  //   for (std::string obs_label : m_obstacle_remove_queue) {
+  //     XYPolygon region{m_safe_regions.at(region_name)};
+  //     XYPolygon obs{m_obstacle_map.at(obs_label)};
+
+  //     if (region.intersects(obs)) {  // if any intersections, region is still invalid
+  //       still_invalid = true;
+  //       break;
+  //     }
+  //   }
+
+  //   if (!still_invalid)
+  //     no_longer_invalid.push_back(region_name);
+  // }
+
+  // // update invalid set after iterating
+  // for (std::string region_name : no_longer_invalid)
+  //   m_invalid_regions.erase(region_name);
+
+  // // if any safe regions intersect new obstacles, mark them as invalid
+  // for (auto const &region : m_safe_regions) {
+  //   for (auto const& obs : m_obstacle_add_queue) {
+  //     if (region.second.intersects(obs.second)) {
+  //       m_invalid_regions.insert(region.first);
+  //       break;
+  //     }
+  //   }
+  // }
+
+  // update obstacle map and clear queues
+  for (auto const& obs : m_obstacle_remove_queue)
+    m_obstacle_map.erase(obs);
+  for (auto const& obs : m_obstacle_add_queue)
+    m_obstacle_map[obs.first] = obs.second;
+  m_obstacle_add_queue.clear();
+  m_obstacle_remove_queue.clear();
+}
 
 
 XYPoint IRIS2D::randomSeedPoint()
@@ -281,9 +324,43 @@ XYPoint IRIS2D::randomSeedPoint()
 }
 
 
-bool IRIS2D::buildRegion(const XYPoint &seed)
+//---------------------------------------------------------
+
+void IRIS2D::setIRISProblem(const XYPoint &seed)
 {
-  return (true);
+  // make sure seed doesn't intersect any obstacles
+  for (auto obs : m_obstacle_map) {
+    if (obs.second.contains(seed)) {
+      std::string msg{"Cannot build region around x="};
+      msg += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
+      msg += " because this point is inside an obstacle!";
+      reportRunWarning(msg);
+      return;
+    }
+  }
+
+  // if seed is good, create a new IRIS problem
+  m_current_problem = IRISProblem(seed, m_iris_bounds, m_max_iters, m_termination_threshold);
+  for (auto obs : m_obstacle_map)
+    m_current_problem.addObstacle(obs.second);
+}
+
+
+bool IRIS2D::runIRIS()
+{
+  //? where to catch iris errors?
+
+  if (m_current_problem.complete())
+    return (true);
+
+  double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
+  return (m_current_problem.run(static_cast<int>(num_iters)));
+}
+
+
+void IRIS2D::postIRISPoly()
+{
+  //? how to label regions?
 }
 
 
@@ -320,7 +397,16 @@ bool IRIS2D::OnStartUp()
       handled = setBooleanOnString(m_post_visuals, value);
     // IRIS config
     } else if (param == "mode") {
-      handled = true;  // todo
+      std::set<std::string> valid_modes{"manual", "auto", "hybrid"};
+      if (valid_modes.count(tolower(value)) == 0) {
+        reportUnhandledConfigWarning(
+          "Mode must be one of " + stringSetToString(valid_modes, ',') +
+          ". Defaulting to " + m_mode + "mode.");
+        handled = false;
+      } else {
+        m_mode = tolower(value);
+        handled = true;
+      }
     } else if (param == "desired_regions") {
       handled = setPosUIntOnString(m_desired_regions, value);
     } else if (param == "iris_bounds") {

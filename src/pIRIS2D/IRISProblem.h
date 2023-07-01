@@ -10,7 +10,7 @@
 
 
 const int IRIS_DEFAULT_MAX_ITERS{100};
-const double IRIS_DEFAULT_TERMINATION_THRESHOLD{2e-2};
+const double IRIS_DEFAULT_TERMINATION_THRESHOLD{2e-1};
 
 class IRISProblem
 {

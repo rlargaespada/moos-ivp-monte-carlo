@@ -45,11 +45,15 @@ class IRIS2D : public AppCastingMOOSApp
   void handleRequests();
   void syncObstacles();
   XYPoint randomSeedPoint();
-  bool buildRegion(const XYPoint &seed);
+
+  // iris methods
+  void setIRISProblem(const XYPoint &seed);
+  bool runIRIS();
+  void postIRISPoly();
 
  private:  // Configuration variables
-  std::string m_obs_alert_var;  // OBSTACLE_ALERT
-  std::string m_seed_pt_var;  // IRIS_SEED_POINT
+  std::string m_obs_alert_var;  // default: OBSTACLE_ALERT
+  std::string m_seed_pt_var;  // default: IRIS_SEED_POINT
 
   std::string m_iris_region_var;  // IRIS_REGION
   std::string m_complete_var;  // IRIS_COMPLETE
@@ -81,7 +85,7 @@ class IRIS2D : public AppCastingMOOSApp
  private:  // State variables
   bool m_clear_pending;
   bool m_run_pending;
-  bool m_iris_active;
+  bool m_active;
 
   std::map<std::string, XYPolygon> m_obstacle_map;
   std::map<std::string, XYPolygon> m_obstacle_add_queue;
@@ -89,7 +93,10 @@ class IRIS2D : public AppCastingMOOSApp
 
   std::queue<XYPoint> m_seed_pt_queue;
   IRISProblem m_current_problem;
+  bool m_iris_in_progress;
+
   std::map<std::string, XYPolygon> m_safe_regions;
+  std::set<std::string> m_invalid_regions;
 };
 
 #endif
