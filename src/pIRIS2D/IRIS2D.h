@@ -82,23 +82,28 @@ class IRIS2D : public AppCastingMOOSApp
   // IRIS config
   std::string m_mode;
   unsigned int m_desired_regions;
+  XYPolygon m_xy_iris_bounds;
   IRISPolygon m_iris_bounds;
   unsigned int m_max_iters;
   double m_termination_threshold;
 
  private:  // State variables
+  // high level app state
   bool m_clear_pending;
   bool m_run_pending;
   bool m_active;
 
+  // obstacle state
   std::map<std::string, XYPolygon> m_obstacle_map;
   std::map<std::string, XYPolygon> m_obstacle_add_queue;
   std::set<std::string> m_obstacle_remove_queue;
 
+  // IRIS state
   std::queue<XYPoint> m_seed_pt_queue;
   IRISProblem m_current_problem;
   bool m_iris_in_progress;
 
+  // IRIS outputs
   std::vector<XYPolygon> m_safe_regions;
   std::vector<XYPolygon> m_iris_ellipses;
   std::set<int> m_invalid_regions;

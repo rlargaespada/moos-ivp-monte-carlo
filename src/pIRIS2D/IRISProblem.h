@@ -41,6 +41,7 @@ class IRISProblem
 
   XYPolygon getPolygon() {return (m_polygon.toXYPolygon());}
   XYPolygon getEllipse(int num_pts = ELLIPSE_POLY_PTS) {return (m_ellipse.toXYPolygon(num_pts));}
+  int itersDone() {return (m_iters_done);}
   bool complete() {return (m_complete);}
 
  private:

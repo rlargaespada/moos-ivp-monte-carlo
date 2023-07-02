@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include "ACTable.h"
+#include "GeomUtils.h"
 #include "MBUtils.h"
 #include "XYFormatUtilsPoly.h"
 #include "XYFormatUtilsPoint.h"
@@ -203,7 +204,7 @@ bool IRIS2D::Iterate()
   else if seed point queue isn't empty
     buildRegion(seed point)
   else if active and still regions to go
-    buildRegion(random seed)
+    buildRegion(random seed), if random seed is invalid don't run iris
     if manual and last region
       mark inactive, post complete
   else if active and invalidate queue isn't empty
@@ -338,9 +339,31 @@ void IRIS2D::syncObstacles()
 }
 
 
+// todo (future): more intelligently get new seed points
 XYPoint IRIS2D::randomSeedPoint()
 {
-  return (XYPoint{});
+  double x, y;
+
+  // try to get a random point in bounds which doesn't intersect
+  // any obstacles
+  for (int tries{0}; tries < 100; tries++) {
+    randPointInPoly(m_xy_iris_bounds, x, y);
+
+    // check for intersections
+    bool point_ok{true};
+    for (auto const &obs : m_obstacle_map) {
+      if (obs.second.contains(x, y)) {
+        point_ok = false;
+        break;
+      }
+    }
+
+    // no intersections, return point
+    if (point_ok)
+      return (XYPoint(x, y));
+  }
+
+  return (XYPoint{});  // return invalid point if our attempts fail
 }
 
 
@@ -352,7 +375,7 @@ bool IRIS2D::setIRISProblem(const XYPoint &seed)
   msg += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
   msg += " because this point is inside an obstacle!";
   // make sure seed doesn't intersect any obstacles
-  for (auto obs : m_obstacle_map) {
+  for (auto const &obs : m_obstacle_map) {
     if (obs.second.contains(seed)) {
       msg += " because this point is inside an obstacle!";
       reportRunWarning(msg);
@@ -367,7 +390,7 @@ bool IRIS2D::setIRISProblem(const XYPoint &seed)
 
   // if seed is good, create a new IRIS problem
   m_current_problem = IRISProblem(seed, m_iris_bounds, m_max_iters, m_termination_threshold);
-  for (auto obs : m_obstacle_map)
+  for (auto const &obs : m_obstacle_map)
     m_current_problem.addObstacle(obs.second);
   return (true);
 }
@@ -375,7 +398,7 @@ bool IRIS2D::setIRISProblem(const XYPoint &seed)
 
 bool IRIS2D::runIRIS()
 {
-  // todo: where to catch iris errors?
+  // todo: catch iris errors here and produce run warning
   // todo: post stats on number of iterations, elapsed time
   if (m_current_problem.complete())
     return (true);
@@ -409,9 +432,9 @@ void IRIS2D::saveIRISRegion(int idx)
   }
 
   // post polygon and visuals
-  Notify(m_iris_region_var, poly.get_spec_pts_label(4));
+  Notify(m_iris_region_var, poly.get_spec_pts_label(3));
   if (m_post_poly_visuals)
-    Notify("VIEW_POLYGON", poly.get_spec());
+    Notify("VIEW_POLYGON", poly.get_spec(3));
 
 
   // create ellipse and set visual params
@@ -435,7 +458,7 @@ void IRIS2D::saveIRISRegion(int idx)
 
   // post ellipse visuals
   if (m_post_ellipse_visuals)
-    Notify("VIEW_POLYGON", ellipse.get_spec());
+    Notify("VIEW_POLYGON", ellipse.get_spec(3));
 }
 
 
@@ -512,19 +535,22 @@ bool IRIS2D::OnStartUp()
   if (m_label_prefix.empty())
     m_label_prefix = GetAppName();
 
-  // save IRIS region and post visuals if needed
-  XYPolygon xy_iris_bounds{string2Poly(iris_bounds)};
-  m_iris_bounds = IRISPolygon(xy_iris_bounds);
+  // save IRIS bounds and post visuals if needed
+  m_xy_iris_bounds = string2Poly(iris_bounds);
+  if (!m_xy_iris_bounds.is_convex())
+    reportConfigWarning("Invalid IRIS bounds provided");
+  m_iris_bounds = IRISPolygon(m_xy_iris_bounds);
+
   if (m_post_poly_visuals) {
-    xy_iris_bounds.set_label(m_label_prefix + "_bounds");
-    xy_iris_bounds.set_color("edge", m_poly_edge_color);
-    xy_iris_bounds.set_color("vertex", m_poly_vert_color);
-    xy_iris_bounds.set_color("fill", "invisible");
-    xy_iris_bounds.set_color("label", m_label_color);
-    xy_iris_bounds.set_vertex_size(m_poly_vert_size * 2);
-    xy_iris_bounds.set_edge_size(m_poly_edge_size * 2);
-    xy_iris_bounds.set_transparency(1);
-    Notify("VIEW_POLYGON", xy_iris_bounds.get_spec());
+    m_xy_iris_bounds.set_label(m_label_prefix + "_bounds");
+    m_xy_iris_bounds.set_color("edge", m_poly_edge_color);
+    m_xy_iris_bounds.set_color("vertex", m_poly_vert_color);
+    m_xy_iris_bounds.set_color("fill", "invisible");
+    m_xy_iris_bounds.set_color("label", m_label_color);
+    m_xy_iris_bounds.set_vertex_size(m_poly_vert_size * 2);
+    m_xy_iris_bounds.set_edge_size(m_poly_edge_size * 2);
+    m_xy_iris_bounds.set_transparency(1);
+    Notify("VIEW_POLYGON", m_xy_iris_bounds.get_spec());
   }
 
   registerVariables();
@@ -554,6 +580,7 @@ void IRIS2D::registerVariables()
 bool IRIS2D::buildReport()
 {
   using std::endl;
+  // todo: this
 
   m_msgs << "============================================" << endl;
   m_msgs << "File:                                       " << endl;

@@ -97,7 +97,11 @@ ProcessConfig = pMarineViewer
   left_context[$(V1_NAME)_START_GOAL] = $(STATION_START_UPDATES_VAR)_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
   right_context[$(V1_NAME)_START_GOAL] = UEP_GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
 
-  left_context[IRIS_SEED] = IRIS_SEED_POINT_ALL = "x=$[XPOS], y=$[YPOS]"
+  left_context[IRIS_TESTING] = IRIS_SEED_POINT_ALL = "x=$[XPOS], y=$[YPOS]"
+  // left_context[IRIS_TESTING] = RUN_IRIS_ALL = "now"
+  right_context[IRIS_TESTING] = RESET_KNOWN_OBSTACLES = "now"
+  right_context[IRIS_TESTING] = RESET_UNKNOWN_OBSTACLES = "now"
+  right_context[IRIS_TESTING] = CLEAR_IRIS_ALL = "now"
 
   // Exclusion Filter
   // leave empty
@@ -262,6 +266,8 @@ ProcessConfig = uFldShoreBroker
   bridge = src=WIND_VECTOR, alias=DRIFT_VECTOR
   bridge = src=WIND_VECTOR_ADD, alias=DRIFT_VECTOR_ADD
   qbridge = IRIS_SEED_POINT
+  qbridge = RUN_IRIS
+  qbridge = CLEAR_IRIS
 }
 
 
