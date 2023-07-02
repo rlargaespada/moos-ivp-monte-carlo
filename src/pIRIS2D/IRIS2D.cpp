@@ -246,11 +246,13 @@ bool IRIS2D::Iterate()
   // if (m_iris_in_progress) {
   // } else if (!m_seed_pt_queue.empty()) {
   if (!m_seed_pt_queue.empty()) {
-    setIRISProblem(m_seed_pt_queue.front());
+    bool problem_set{setIRISProblem(m_seed_pt_queue.front())};
     m_seed_pt_queue.pop();
 
-    runIRIS();
-    saveIRISRegion();
+    if (problem_set) {  // todo: this should probably be m_iris_in_progress
+      runIRIS();
+      saveIRISRegion();
+    }
 
     // bool iris_complete{runIRIS()};
     // if (iris_complete) {
@@ -344,7 +346,7 @@ XYPoint IRIS2D::randomSeedPoint()
 
 //---------------------------------------------------------
 
-void IRIS2D::setIRISProblem(const XYPoint &seed)
+bool IRIS2D::setIRISProblem(const XYPoint &seed)
 {
   std::string msg{"Cannot build region around x="};
   msg += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
@@ -354,19 +356,20 @@ void IRIS2D::setIRISProblem(const XYPoint &seed)
     if (obs.second.contains(seed)) {
       msg += " because this point is inside an obstacle!";
       reportRunWarning(msg);
-      return;
+      return (false);
     }
   }
   if (!m_iris_bounds.contains(seed)) {
     msg += " because this point is outside the bounds of the IRIS search!";
     reportRunWarning(msg);
-    return;
+    return (false);
   }
 
   // if seed is good, create a new IRIS problem
   m_current_problem = IRISProblem(seed, m_iris_bounds, m_max_iters, m_termination_threshold);
   for (auto obs : m_obstacle_map)
     m_current_problem.addObstacle(obs.second);
+  return (true);
 }
 
 

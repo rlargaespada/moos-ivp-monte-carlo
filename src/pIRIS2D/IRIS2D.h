@@ -48,7 +48,7 @@ class IRIS2D : public AppCastingMOOSApp
   XYPoint randomSeedPoint();
 
   // iris methods
-  void setIRISProblem(const XYPoint &seed);
+  bool setIRISProblem(const XYPoint &seed);
   bool runIRIS();
   void saveIRISRegion(int idx = -1);
 
