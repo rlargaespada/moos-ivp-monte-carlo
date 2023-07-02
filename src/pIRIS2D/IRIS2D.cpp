@@ -240,12 +240,11 @@ bool IRIS2D::Iterate()
   syncObstacles();
 
   // todo: handle splitting IRIS into multiple iterations
-  // todo: handle invalid obstacles
   // todo: report an event when we're running IRIS
-  // todo: run iris while at desired number of regions and in manual should go inactive
   // if (m_iris_in_progress) {
   // } else if (!m_seed_pt_queue.empty()) {
   if (!m_seed_pt_queue.empty()) {
+    // if we got a seed point in the mail, run IRIS around that point, even if inactive
     bool problem_set{setIRISProblem(m_seed_pt_queue.front())};
     m_seed_pt_queue.pop();
 
@@ -261,7 +260,9 @@ bool IRIS2D::Iterate()
     // } else {
     //   m_iris_in_progress = true;
     // }
+
   } else if ((m_active) && (m_safe_regions.size() < m_desired_regions)) {
+    // if we still have regions to build to get to the desired number, run IRIS
     XYPoint pt{randomSeedPoint()};
     if (pt.valid()) {
       setIRISProblem(pt);
@@ -269,8 +270,26 @@ bool IRIS2D::Iterate()
       saveIRISRegion();
     }
 
+    // in manual mode, stop here
     if ((m_mode == "manual") && (m_safe_regions.size() >= m_desired_regions))
       m_active = false;
+
+  } else if ((m_active) && (!m_invalid_regions.empty())) {
+    // if any regions are invalid because obstacles changed, build a new region
+    int region_idx{*m_invalid_regions.begin()};
+    XYPolygon invalid_region{m_safe_regions.at(region_idx)};
+    XYPoint seed{randomSeedPoint(invalid_region)};
+
+    if (seed.valid()) {
+      m_invalid_regions.erase(region_idx);
+      setIRISProblem(seed);
+      runIRIS();
+      saveIRISRegion(region_idx);
+    }
+
+  } else if ((m_active) && (m_mode == "manual")) {
+    // nothing to do, go back to inactive
+    m_active = false;
   }
 
   AppCastingMOOSApp::PostReport();
@@ -286,6 +305,9 @@ void IRIS2D::handleRequests()
     // todo: clear visuals
     m_safe_regions.clear();
     m_iris_ellipses.clear();
+    m_invalid_regions.clear();
+    m_iris_in_progress = false;
+
     if (m_mode != "auto")
       m_active = false;
   } else if (m_run_pending) {
@@ -303,40 +325,39 @@ void IRIS2D::syncObstacles()
   if ((m_obstacle_add_queue.empty()) && (m_obstacle_remove_queue.empty()))
     return;
 
-  //! disable invalid region checks while testing
-  // // if any obstacles are no longer invalid (don't intersect with any obstacles),
-  // // remove them from the invalid set
-  // std::vector<int> no_longer_invalid;
-  // for (int region_idx : m_invalid_regions) {
-  //   bool still_invalid{false};
-  //   // only need to check obstacles being removed, not all obstacles
-  //   for (std::string obs_label : m_obstacle_remove_queue) {
-  //     XYPolygon region{m_safe_regions.at(region_idx)};
-  //     XYPolygon obs{m_obstacle_map.at(obs_label)};
+  // if any obstacles are no longer invalid (don't intersect with any obstacles),
+  // remove them from the invalid set
+  std::vector<int> no_longer_invalid;
+  for (int region_idx : m_invalid_regions) {
+    bool still_invalid{false};
+    // only need to check obstacles being removed, not all obstacles
+    for (std::string obs_label : m_obstacle_remove_queue) {
+      XYPolygon region{m_safe_regions.at(region_idx)};
+      XYPolygon obs{m_obstacle_map.at(obs_label)};
 
-  //     if (region.intersects(obs)) {  // if any intersections, region is still invalid
-  //       still_invalid = true;
-  //       break;
-  //     }
-  //   }
+      if (region.intersects(obs)) {  // if any intersections, region is still invalid
+        still_invalid = true;
+        break;
+      }
+    }
 
-  //   if (!still_invalid)
-  //     no_longer_invalid.push_back(region_idx);
-  // }
+    if (!still_invalid)
+      no_longer_invalid.push_back(region_idx);
+  }
 
-  // // update invalid set after iterating
-  // for (int region_idx : no_longer_invalid)
-  //   m_invalid_regions.erase(region_idx);
+  // update invalid set after iterating
+  for (int region_idx : no_longer_invalid)
+    m_invalid_regions.erase(region_idx);
 
-  // // if any safe regions intersect new obstacles, mark them as invalid
-  // for (int region_idx{0}; region_idx < m_safe_regions.size(); region_idx++) {
-  //   for (auto const& obs : m_obstacle_add_queue) {
-  //     if (m_safe_regions.at(region_idx).intersects(obs.second)) {
-  //       m_invalid_regions.insert(region_idx);
-  //       break;
-  //     }
-  //   }
-  // }
+  // if any safe regions intersect new obstacles, mark them as invalid
+  for (int region_idx{0}; region_idx < m_safe_regions.size(); region_idx++) {
+    for (auto const& obs : m_obstacle_add_queue) {
+      if (m_safe_regions.at(region_idx).intersects(obs.second)) {
+        m_invalid_regions.insert(region_idx);
+        break;
+      }
+    }
+  }
 
   // update obstacle map and clear queues
   for (auto const& obs : m_obstacle_remove_queue)
@@ -349,15 +370,15 @@ void IRIS2D::syncObstacles()
 
 
 // todo (future): more intelligently get new seed points
-// see Deits paper on UAV path planning using IRIS
-XYPoint IRIS2D::randomSeedPoint()
+// see Deits paper on UAV path planning using IRIS for seed pt heuristc
+XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
 {
   double x, y;
 
   // try to get a random point in bounds which doesn't intersect
   // any obstacles
   for (int tries{0}; tries < 100; tries++) {
-    randPointInPoly(m_xy_iris_bounds, x, y);
+    randPointInPoly(container, x, y);
 
     // check for intersections
     bool point_ok{true};
