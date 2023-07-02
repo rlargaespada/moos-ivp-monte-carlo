@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 #include <queue>
+#include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPolygon.h"
 #include "IRISPolygon.h"
@@ -49,7 +50,7 @@ class IRIS2D : public AppCastingMOOSApp
   // iris methods
   void setIRISProblem(const XYPoint &seed);
   bool runIRIS();
-  void postIRISPoly();
+  void saveIRISRegion(int idx = -1);
 
  private:  // Configuration variables
   std::string m_obs_alert_var;  // default: OBSTACLE_ALERT
@@ -59,20 +60,23 @@ class IRIS2D : public AppCastingMOOSApp
   std::string m_complete_var;  // IRIS_COMPLETE
 
   // Visual params for rendering IRIS regions
-  bool m_post_visuals;
+  std::string m_label_prefix;
   std::string m_label_color;
+
+  bool m_post_poly_visuals;
   std::string m_poly_fill_color;
   std::string m_poly_edge_color;
   std::string m_poly_vert_color;
-
   double m_poly_edge_size;
   double m_poly_vert_size;
   double m_poly_transparency;
 
+  bool m_post_ellipse_visuals;
   std::string m_ellipse_fill_color;
   std::string m_ellipse_edge_color;
-
+  std::string m_ellipse_vert_color;
   double m_ellipse_edge_size;
+  double m_ellipse_vert_size;
   double m_ellipse_transparency;
 
   // IRIS config
@@ -95,8 +99,9 @@ class IRIS2D : public AppCastingMOOSApp
   IRISProblem m_current_problem;
   bool m_iris_in_progress;
 
-  std::map<std::string, XYPolygon> m_safe_regions;
-  std::set<std::string> m_invalid_regions;
+  std::vector<XYPolygon> m_safe_regions;
+  std::vector<XYPolygon> m_iris_ellipses;
+  std::set<int> m_invalid_regions;
 };
 
 #endif

@@ -40,18 +40,24 @@ IRIS2D::IRIS2D()
   m_complete_var = "IRIS_COMPLETE";
 
   // visuals config
-  m_post_visuals = true;
   m_label_color = "white";
+  m_label_prefix = "";  // if empty, use GetAppName()
+
+  m_post_poly_visuals = true;
   m_poly_fill_color = "violet";
   m_poly_edge_color = "blueviolet";
   m_poly_vert_color = "blueviolet";
-
   m_poly_edge_size = 1;
   m_poly_vert_size = 1;
   m_poly_transparency = 0.15;
 
+  m_post_ellipse_visuals = true;
   m_ellipse_fill_color = "invisible";
   m_ellipse_edge_color = "turquoise";
+  m_ellipse_vert_color = "turquoise";
+  m_ellipse_edge_size = 1;
+  m_ellipse_vert_size = 1;
+  m_ellipse_transparency = 0.15;
 
   m_ellipse_edge_size = 1;
   m_ellipse_transparency = 0.15;
@@ -236,13 +242,23 @@ bool IRIS2D::Iterate()
   handleRequests();
   syncObstacles();
 
-  if (m_iris_in_progress) {
-    runIRIS();
-  } else if (!m_seed_pt_queue.empty()) {
+  // todo: handle splitting IRIS into multiple iterations
+  // if (m_iris_in_progress) {
+  // } else if (!m_seed_pt_queue.empty()) {
+  if (!m_seed_pt_queue.empty()) {
     setIRISProblem(m_seed_pt_queue.front());
     m_seed_pt_queue.pop();
-    m_iris_in_progress = true;
+
     runIRIS();
+    saveIRISRegion();
+
+    // bool iris_complete{runIRIS()};
+    // if (iris_complete) {
+    //   saveIRISRegion();
+    //   m_iris_in_progress = false;
+    // } else {
+    //   m_iris_in_progress = true;
+    // }
   }
 
   AppCastingMOOSApp::PostReport();
@@ -255,7 +271,9 @@ bool IRIS2D::Iterate()
 void IRIS2D::handleRequests()
 {
   if (m_clear_pending) {
+    // todo: clear visuals
     m_safe_regions.clear();
+    m_iris_ellipses.clear();
     if (m_mode != "auto")
       m_active = false;
   } else if (m_run_pending) {
@@ -276,12 +294,12 @@ void IRIS2D::syncObstacles()
   //! disable invalid region checks while testing
   // // if any obstacles are no longer invalid (don't intersect with any obstacles),
   // // remove them from the invalid set
-  // std::vector<std::string> no_longer_invalid;
-  // for (std::string region_name : m_invalid_regions) {
+  // std::vector<int> no_longer_invalid;
+  // for (int region_idx : m_invalid_regions) {
   //   bool still_invalid{false};
   //   // only need to check obstacles being removed, not all obstacles
   //   for (std::string obs_label : m_obstacle_remove_queue) {
-  //     XYPolygon region{m_safe_regions.at(region_name)};
+  //     XYPolygon region{m_safe_regions.at(region_idx)};
   //     XYPolygon obs{m_obstacle_map.at(obs_label)};
 
   //     if (region.intersects(obs)) {  // if any intersections, region is still invalid
@@ -291,18 +309,18 @@ void IRIS2D::syncObstacles()
   //   }
 
   //   if (!still_invalid)
-  //     no_longer_invalid.push_back(region_name);
+  //     no_longer_invalid.push_back(region_idx);
   // }
 
   // // update invalid set after iterating
-  // for (std::string region_name : no_longer_invalid)
-  //   m_invalid_regions.erase(region_name);
+  // for (int region_idx : no_longer_invalid)
+  //   m_invalid_regions.erase(region_idx);
 
   // // if any safe regions intersect new obstacles, mark them as invalid
-  // for (auto const &region : m_safe_regions) {
+  // for (int region_idx{0}; region_idx < m_safe_regions.size(); region_idx++) {
   //   for (auto const& obs : m_obstacle_add_queue) {
-  //     if (region.second.intersects(obs.second)) {
-  //       m_invalid_regions.insert(region.first);
+  //     if (m_safe_regions.at(region_idx).intersects(obs.second)) {
+  //       m_invalid_regions.insert(region_idx);
   //       break;
   //     }
   //   }
@@ -328,15 +346,21 @@ XYPoint IRIS2D::randomSeedPoint()
 
 void IRIS2D::setIRISProblem(const XYPoint &seed)
 {
+  std::string msg{"Cannot build region around x="};
+  msg += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
+  msg += " because this point is inside an obstacle!";
   // make sure seed doesn't intersect any obstacles
   for (auto obs : m_obstacle_map) {
     if (obs.second.contains(seed)) {
-      std::string msg{"Cannot build region around x="};
-      msg += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
       msg += " because this point is inside an obstacle!";
       reportRunWarning(msg);
       return;
     }
+  }
+  if (!m_iris_bounds.contains(seed)) {
+    msg += " because this point is outside the bounds of the IRIS search!";
+    reportRunWarning(msg);
+    return;
   }
 
   // if seed is good, create a new IRIS problem
@@ -348,19 +372,67 @@ void IRIS2D::setIRISProblem(const XYPoint &seed)
 
 bool IRIS2D::runIRIS()
 {
-  //? where to catch iris errors?
-
+  // todo: where to catch iris errors?
+  // todo: post stats on number of iterations, elapsed time
   if (m_current_problem.complete())
     return (true);
 
-  double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
-  return (m_current_problem.run(static_cast<int>(num_iters)));
+  // double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
+  // return (m_current_problem.run(static_cast<int>(num_iters)));
+
+  return (m_current_problem.run(m_max_iters + 1));  // while testing, run to completion
 }
 
 
-void IRIS2D::postIRISPoly()
+void IRIS2D::saveIRISRegion(int idx)
 {
-  //? how to label regions?
+  // create poly and set visual params
+  XYPolygon poly{m_current_problem.getPolygon()};
+  poly.set_color("edge", m_poly_edge_color);
+  poly.set_color("vertex", m_poly_vert_color);
+  poly.set_color("fill", m_poly_fill_color);
+  poly.set_color("label", m_label_color);
+  poly.set_vertex_size(m_poly_vert_size);
+  poly.set_edge_size(m_poly_edge_size);
+  poly.set_transparency(m_poly_transparency);
+
+  // save poly with correct label
+  if (idx == -1) {
+    poly.set_label(m_label_prefix + "_polygon_" + intToString(m_safe_regions.size()));
+    m_safe_regions.push_back(poly);
+  } else {
+    poly.set_label(m_label_prefix + "_polygon_" + intToString(idx));
+    m_safe_regions.at(idx) = poly;
+  }
+
+  // post polygon and visuals
+  Notify(m_iris_region_var, poly.get_spec_pts_label(4));
+  if (m_post_poly_visuals)
+    Notify("VIEW_POLYGON", poly.get_spec());
+
+
+  // create ellipse and set visual params
+  XYPolygon ellipse{m_current_problem.getEllipse()};
+  ellipse.set_color("edge", m_ellipse_edge_color);
+  ellipse.set_color("vertex", m_ellipse_vert_color);
+  ellipse.set_color("fill", m_ellipse_fill_color);
+  ellipse.set_color("label", "invisible");
+  ellipse.set_vertex_size(m_ellipse_vert_size);
+  ellipse.set_edge_size(m_ellipse_edge_size);
+  ellipse.set_transparency(m_ellipse_transparency);
+
+  // save ellipse with correct label
+  if (idx == -1) {
+    ellipse.set_label(m_label_prefix + "_ellipse_" + intToString(m_iris_ellipses.size()));
+    m_iris_ellipses.push_back(ellipse);
+  } else {
+    ellipse.set_label(m_label_prefix + "_ellipse_" + intToString(idx));
+    m_iris_ellipses.at(idx) = ellipse;
+  }
+
+  // post ellipse visuals
+  if (m_post_ellipse_visuals)
+    Notify("VIEW_POLYGON", ellipse.get_spec());
 }
 
 
@@ -393,8 +465,13 @@ bool IRIS2D::OnStartUp()
     } else if ((param == "seed_point_var") || (param == "seed_pt_var")) {
       handled = setNonWhiteVarOnString(m_seed_pt_var, toupper(value));
     // publication config
-    } else if (param == "post_visuals") {
-      handled = setBooleanOnString(m_post_visuals, value);
+    } else if (param == "label_prefix") {
+      handled = setNonWhiteVarOnString(m_label_prefix, value);
+    } else if (param == "post_polygons") {
+      handled = setBooleanOnString(m_post_poly_visuals, value);
+    } else if (param == "post_ellipses") {
+      handled = setBooleanOnString(m_post_ellipse_visuals, value);
+    // todo: remainder of visual params
     // IRIS config
     } else if (param == "mode") {
       std::set<std::string> valid_modes{"manual", "auto", "hybrid"};
@@ -429,7 +506,23 @@ bool IRIS2D::OnStartUp()
   if (m_seed_pt_var.empty())
     m_seed_pt_var = "IRIS_SEED_POINT";
 
-  m_iris_bounds = IRISPolygon(string2Poly(iris_bounds));
+  if (m_label_prefix.empty())
+    m_label_prefix = GetAppName();
+
+  // save IRIS region and post visuals if needed
+  XYPolygon xy_iris_bounds{string2Poly(iris_bounds)};
+  m_iris_bounds = IRISPolygon(xy_iris_bounds);
+  if (m_post_poly_visuals) {
+    xy_iris_bounds.set_label(m_label_prefix + "_bounds");
+    xy_iris_bounds.set_color("edge", m_poly_edge_color);
+    xy_iris_bounds.set_color("vertex", m_poly_vert_color);
+    xy_iris_bounds.set_color("fill", "invisible");
+    xy_iris_bounds.set_color("label", m_label_color);
+    xy_iris_bounds.set_vertex_size(m_poly_vert_size * 2);
+    xy_iris_bounds.set_edge_size(m_poly_edge_size * 2);
+    xy_iris_bounds.set_transparency(1);
+    Notify("VIEW_POLYGON", xy_iris_bounds.get_spec());
+  }
 
   registerVariables();
   return(true);

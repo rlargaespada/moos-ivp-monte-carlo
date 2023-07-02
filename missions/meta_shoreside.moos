@@ -93,9 +93,11 @@ ProcessConfig = pMarineViewer
   appcast_font_size    = large
 
   // Context Pull-Down Menu
-  left_context[$(V1_NAME)] = UEP_START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
-  left_context[$(V1_NAME)] = $(STATION_START_UPDATES_VAR)_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
-  right_context[$(V1_NAME)] = UEP_GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+  left_context[$(V1_NAME)_START_GOAL] = UEP_START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+  left_context[$(V1_NAME)_START_GOAL] = $(STATION_START_UPDATES_VAR)_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
+  right_context[$(V1_NAME)_START_GOAL] = UEP_GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
+
+  left_context[IRIS_SEED] = IRIS_SEED_POINT_ALL = "x=$[XPOS], y=$[YPOS]"
 
   // Exclusion Filter
   // leave empty
@@ -259,6 +261,7 @@ ProcessConfig = uFldShoreBroker
   bridge = src=DRIFT_VECTOR_ADD
   bridge = src=WIND_VECTOR, alias=DRIFT_VECTOR
   bridge = src=WIND_VECTOR_ADD, alias=DRIFT_VECTOR_ADD
+  qbridge = IRIS_SEED_POINT
 }
 
 
