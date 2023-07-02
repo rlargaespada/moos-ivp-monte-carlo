@@ -14,7 +14,6 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "ACTable.h"
 #include "GeomUtils.h"
 #include "MBUtils.h"
 #include "XYFormatUtilsPoly.h"
@@ -242,6 +241,8 @@ bool IRIS2D::Iterate()
 
   // todo: handle splitting IRIS into multiple iterations
   // todo: handle invalid obstacles
+  // todo: report an event when we're running IRIS
+  // todo: run iris while at desired number of regions and in manual should go inactive
   // if (m_iris_in_progress) {
   // } else if (!m_seed_pt_queue.empty()) {
   if (!m_seed_pt_queue.empty()) {
@@ -348,6 +349,7 @@ void IRIS2D::syncObstacles()
 
 
 // todo (future): more intelligently get new seed points
+// see Deits paper on UAV path planning using IRIS
 XYPoint IRIS2D::randomSeedPoint()
 {
   double x, y;
@@ -499,6 +501,11 @@ bool IRIS2D::OnStartUp()
     } else if ((param == "seed_point_var") || (param == "seed_pt_var")) {
       handled = setNonWhiteVarOnString(m_seed_pt_var, toupper(value));
     // publication config
+    } else if (param == "iris_region_var") {
+      handled = setNonWhiteVarOnString(m_iris_region_var, toupper(value));
+    } else if (param == "iris_complete_var") {
+      handled = setNonWhiteVarOnString(m_complete_var, toupper(value));
+    // visual publication config
     } else if (param == "label_prefix") {
       handled = setNonWhiteVarOnString(m_label_prefix, value);
     } else if (param == "post_polygons") {
@@ -588,17 +595,38 @@ void IRIS2D::registerVariables()
 bool IRIS2D::buildReport()
 {
   using std::endl;
-  // todo: this
+  std::string header{"================================"};
 
-  m_msgs << "============================================" << endl;
-  m_msgs << "File:                                       " << endl;
-  m_msgs << "============================================" << endl;
+  m_msgs << header << endl;
+  m_msgs << "Subscriptions:" << endl;
+  m_msgs << "  obs_alert_var: " << m_obs_alert_var << endl;
+  m_msgs << "  seed_point_var: " << m_seed_pt_var << endl;
+  m_msgs << "Publications: " << endl;
+  m_msgs << "  iris_region_var: " << m_iris_region_var << endl;
+  m_msgs << "  iris_complete_var: " << m_complete_var << endl;
+  m_msgs << "  label_prefix: " << m_label_prefix << endl;
+  m_msgs << "  post_polygons: " << boolToString(m_post_poly_visuals) << endl;
+  m_msgs << "  post_ellipses: " << boolToString(m_post_ellipse_visuals) << endl;
 
-  ACTable actab(4);
-  actab << "Alpha | Bravo | Charlie | Delta";
-  actab.addHeaderLines();
-  actab << "one" << "two" << "three" << "four";
-  m_msgs << actab.getFormattedString();
+  m_msgs << header << endl;
+  m_msgs << "IRIS Config:" << endl;
+  m_msgs << "  mode: " << m_mode << endl;
+  m_msgs << "  desired_regions: " << uintToString(m_desired_regions) << endl;
+  m_msgs << "  iris_bounds: " << m_xy_iris_bounds.get_spec_pts(2) << endl;
+  m_msgs << "  max_iters: " << uintToString(m_max_iters) << endl;
+  m_msgs << "  termination_threshold: " << doubleToStringX(m_termination_threshold) << endl;
+
+  m_msgs << header << endl;
+  m_msgs << "IRIS State:" << endl;
+  m_msgs << "  Active: " << boolToString(m_active) << endl;
+  m_msgs << "  Regions Found: " << uintToString(m_safe_regions.size()) << endl;
+  m_msgs << "  Obstacles Tracked: " << uintToString(m_obstacle_map.size()) << endl;
+  m_msgs << "  IRIS in Progress: " << boolToString(m_iris_in_progress) << endl;
+  m_msgs << "  Invalid Regions: " << uintToString(m_invalid_regions.size()) << endl;
+
+  m_msgs << header << endl;
+  m_msgs << "Most Recent IRIS Stats:" << endl;
+  m_msgs << "  Iterations: " << intToString(m_current_problem.itersDone()) << endl;
 
   return(true);
 }
