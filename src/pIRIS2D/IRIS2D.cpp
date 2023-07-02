@@ -49,7 +49,7 @@ IRIS2D::IRIS2D()
   m_poly_vert_color = "blueviolet";
   m_poly_edge_size = 1;
   m_poly_vert_size = 1;
-  m_poly_transparency = 0.05;
+  m_poly_transparency = 0.1;
 
   m_post_ellipse_visuals = true;
   m_ellipse_fill_color = "invisible";
@@ -57,7 +57,7 @@ IRIS2D::IRIS2D()
   m_ellipse_vert_color = "turquoise";
   m_ellipse_edge_size = 1;
   m_ellipse_vert_size = 1;
-  m_ellipse_transparency = 0.05;
+  m_ellipse_transparency = 0.1;
 
   // IRIS config
   m_mode = "manual";  // "auto", "hybrid"
@@ -336,7 +336,7 @@ void IRIS2D::syncObstacles()
   if ((m_obstacle_add_queue.empty()) && (m_obstacle_remove_queue.empty()))
     return;
 
-  // if any obstacles are no longer invalid (don't intersect with any obstacles),
+  // if any regions are no longer invalid (don't intersect with any obstacles),
   // remove them from the invalid set
   std::vector<int> no_longer_invalid;
   for (int region_idx : m_invalid_regions) {
@@ -380,8 +380,6 @@ void IRIS2D::syncObstacles()
 }
 
 
-// todo (future): more intelligently get new seed points
-// see Deits paper on UAV path planning using IRIS for seed pt heuristc
 XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
 {
   double x, y;
@@ -390,15 +388,30 @@ XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
   // any obstacles or existing iris regions
   for (int tries{0}; tries < 100; tries++) {
     randPointInPoly(container, x, y);
+    bool point_ok{true};
 
-    // todo: try to pick points that aren't in existing iris regions
+    // try to pick a point outside existing valid iris regions
+    // this check is more likely to fail since regions are bigger than
+    // obstacles, so check this first
+    if (tries < 90) {  // if we've tried a lot already, waive this check
+      for (int i{0}; i < m_safe_regions.size(); i++) {
+        if (m_invalid_regions.count(i))  // ignore invalid regions
+          continue;
+
+        if (m_safe_regions.at(i).contains(x, y)) {
+          point_ok = false;
+          break;
+        }
+      }
+    }
 
     // check for intersections with obstacles
-    bool point_ok{true};
-    for (auto const &obs : m_obstacle_map) {
-      if (obs.second.contains(x, y)) {
-        point_ok = false;
-        break;
+    if (point_ok) {  // don't bother with this check if the point is bad
+      for (auto const &obs : m_obstacle_map) {
+        if (obs.second.contains(x, y)) {
+          point_ok = false;
+          break;
+        }
       }
     }
 
