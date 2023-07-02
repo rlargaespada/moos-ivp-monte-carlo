@@ -241,6 +241,8 @@ bool IRIS2D::Iterate()
 
   // todo: handle splitting IRIS into multiple iterations
   // todo: report an event when we're running IRIS
+  // todo: handle cases where we get a 2 point polygon for some reason
+  // todo: post iris complete
   // if (m_iris_in_progress) {
   // } else if (!m_seed_pt_queue.empty()) {
   if (!m_seed_pt_queue.empty()) {
@@ -302,7 +304,16 @@ bool IRIS2D::Iterate()
 void IRIS2D::handleRequests()
 {
   if (m_clear_pending) {
-    // todo: clear visuals
+    // clear visuals
+    if (m_post_poly_visuals) {
+      for (XYPolygon region : m_safe_regions)
+        Notify("VIEW_POLYGON", region.get_spec_inactive());
+    }
+    if (m_post_ellipse_visuals) {
+      for (XYPolygon ellipse : m_iris_ellipses)
+        Notify("VIEW_POLYGON", ellipse.get_spec_inactive());
+    }
+
     m_safe_regions.clear();
     m_iris_ellipses.clear();
     m_invalid_regions.clear();
@@ -331,7 +342,7 @@ void IRIS2D::syncObstacles()
   for (int region_idx : m_invalid_regions) {
     bool still_invalid{false};
     // only need to check obstacles being removed, not all obstacles
-    for (std::string obs_label : m_obstacle_remove_queue) {
+    for (std::string const& obs_label : m_obstacle_remove_queue) {
       XYPolygon region{m_safe_regions.at(region_idx)};
       XYPolygon obs{m_obstacle_map.at(obs_label)};
 
@@ -376,11 +387,13 @@ XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
   double x, y;
 
   // try to get a random point in bounds which doesn't intersect
-  // any obstacles
+  // any obstacles or existing iris regions
   for (int tries{0}; tries < 100; tries++) {
     randPointInPoly(container, x, y);
 
-    // check for intersections
+    // todo: try to pick points that aren't in existing iris regions
+
+    // check for intersections with obstacles
     bool point_ok{true};
     for (auto const &obs : m_obstacle_map) {
       if (obs.second.contains(x, y)) {
