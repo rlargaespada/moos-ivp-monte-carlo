@@ -50,7 +50,7 @@ IRIS2D::IRIS2D()
   m_poly_vert_color = "blueviolet";
   m_poly_edge_size = 1;
   m_poly_vert_size = 1;
-  m_poly_transparency = 0.15;
+  m_poly_transparency = 0.05;
 
   m_post_ellipse_visuals = true;
   m_ellipse_fill_color = "invisible";
@@ -58,10 +58,7 @@ IRIS2D::IRIS2D()
   m_ellipse_vert_color = "turquoise";
   m_ellipse_edge_size = 1;
   m_ellipse_vert_size = 1;
-  m_ellipse_transparency = 0.15;
-
-  m_ellipse_edge_size = 1;
-  m_ellipse_transparency = 0.15;
+  m_ellipse_transparency = 0.05;
 
   // IRIS config
   m_mode = "manual";  // "auto", "hybrid"
@@ -244,6 +241,7 @@ bool IRIS2D::Iterate()
   syncObstacles();
 
   // todo: handle splitting IRIS into multiple iterations
+  // todo: handle invalid obstacles
   // if (m_iris_in_progress) {
   // } else if (!m_seed_pt_queue.empty()) {
   if (!m_seed_pt_queue.empty()) {
@@ -262,6 +260,16 @@ bool IRIS2D::Iterate()
     // } else {
     //   m_iris_in_progress = true;
     // }
+  } else if ((m_active) && (m_safe_regions.size() < m_desired_regions)) {
+    XYPoint pt{randomSeedPoint()};
+    if (pt.valid()) {
+      setIRISProblem(pt);
+      runIRIS();
+      saveIRISRegion();
+    }
+
+    if ((m_mode == "manual") && (m_safe_regions.size() >= m_desired_regions))
+      m_active = false;
   }
 
   AppCastingMOOSApp::PostReport();

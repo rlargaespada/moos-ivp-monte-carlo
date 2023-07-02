@@ -11,7 +11,7 @@
 
 void IRISPolygon::fromXYPolygon(const XYPolygon &poly)
 {
-  // todo: use cddlib to do this calculation
+  // todo (future): use cddlib to do this calculation
   // resize A and b so we have one constraint per vertex of polygon
   m_A.resize(poly.size(), Eigen::NoChange);
   m_b.resize(poly.size());
