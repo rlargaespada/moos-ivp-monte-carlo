@@ -60,7 +60,7 @@ class IRIS2D : public AppCastingMOOSApp
   // iris methods
   bool setIRISProblem(const XYPoint &seed, bool check_valid = true);
   bool runIRIS();
-  void saveIRISRegion(int idx = -1);
+  bool saveIRISRegion(int idx = -1);
 
  private:  // Configuration variables
   std::string m_obs_alert_var;  // default: OBSTACLE_ALERT

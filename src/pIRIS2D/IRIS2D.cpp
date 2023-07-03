@@ -206,20 +206,23 @@ bool IRIS2D::Iterate()
 
     if (problem_complete) {
       // if problem is complete, save and post final poly and ellipse
-      saveIRISRegion(m_iris_region_idx);
+      bool region_valid{saveIRISRegion(m_iris_region_idx)};
       m_iris_in_progress = false;
 
       // check completion conditions
-      if ((m_iris_region_idx == -1) && (m_safe_regions.size() == m_desired_regions)) {
-        // if we just added the last region to get to the desired number, post completion
-        Notify(m_complete_var, "now");
-        if (m_mode == "manual")
-          m_active = false;
-      } else if ((m_iris_region_idx > -1) && (m_invalid_regions.empty())) {
-        // if we just replaced the last invalid region, post completion
-        Notify(m_complete_var, "now");
-        if (m_mode == "manual")
-          m_active = false;
+      if (region_valid) {
+        // todo: move these checks into a separate method
+        if ((m_iris_region_idx == -1) && (m_safe_regions.size() == m_desired_regions)) {
+          // if we just added the last region to get to the desired number, post completion
+          Notify(m_complete_var, "now");
+          if (m_mode == "manual")
+            m_active = false;
+        } else if ((m_iris_region_idx > -1) && (m_invalid_regions.empty())) {
+          // if we just replaced the last invalid region, post completion
+          Notify(m_complete_var, "now");
+          if (m_mode == "manual")
+            m_active = false;
+        }
       }
     }
 
@@ -442,13 +445,16 @@ bool IRIS2D::runIRIS()
   if (m_current_problem.itersDone() == 0)
     m_iris_start_time = MOOSTime();
 
-  // todo: choose num_iters based on how long it usually takes to run IRIS
-  double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
+  double time_alloted{1/(GetAppFreq() * m_time_warp)};  // approx. time in s allotted per app iter
+  double num_iters{std::floor(time_alloted / .02)};  // IRIS iters usually take under 0.2s
+  if (num_iters < 1)
+    num_iters = 1;
+
   return (m_current_problem.run(static_cast<int>(num_iters)));
 }
 
 
-void IRIS2D::saveIRISRegion(int idx)
+bool IRIS2D::saveIRISRegion(int idx)
 {
   // parse polygon from IRISProblem and save IRIS stats
   XYPolygon poly{m_current_problem.getPolygon()};
@@ -460,12 +466,12 @@ void IRIS2D::saveIRISRegion(int idx)
   };
 
   m_iris_stats.push_front(stats);
-  while (m_iris_stats.size() > 8)  // limit stats queue to 8 members
+  while (m_iris_stats.size() > 20)  // limit stats queue to 8 members
     m_iris_stats.pop_back();
 
   // if polygon is invalid, return without saving
   if (!poly.is_convex())
-    return;
+    return (false);
 
   // set visual params for polygon
   poly.set_color("edge", m_poly_edge_color);
@@ -514,6 +520,7 @@ void IRIS2D::saveIRISRegion(int idx)
   // post ellipse visuals
   if (m_post_ellipse_visuals)
     Notify("VIEW_POLYGON", ellipse.get_spec(3));
+  return (true);
 }
 
 
