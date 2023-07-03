@@ -28,6 +28,7 @@ class IRISMosekError : public std::exception {
 
 
 class InnerEllipsoidInfeasibleError: public std::exception {
+ public:
   const char * what() const throw() {
     return ("Inner ellipsoid problem is infeasible "
             "(this likely means that the polyhedron has no interior)");

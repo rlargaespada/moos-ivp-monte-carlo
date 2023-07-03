@@ -7,8 +7,6 @@
 
 #include <cdd/setoper.h>
 #include <cdd/cdd.h>
-#include <Eigen/Dense>
-#include <mosek.h>
 #include <cmath>
 #include <iterator>
 #include <set>
@@ -21,6 +19,7 @@
 #include "XYFormatUtilsPoint.h"
 #include "XYPolygon.h"
 #include "XYPoint.h"
+#include "iris_mosek.h"
 #include "IRISPolygon.h"
 #include "IRISProblem.h"
 #include "IRIS2D.h"
@@ -207,7 +206,6 @@ bool IRIS2D::Iterate()
     if (problem_complete) {
       // if problem is complete, save and post final poly and ellipse
       bool region_valid{saveIRISRegion(m_iris_region_idx)};
-      m_iris_in_progress = false;  // iris is done even if region is invalid
 
       // check completion conditions
       if (region_valid && checkFinishConditions()) {
@@ -404,6 +402,7 @@ bool IRIS2D::checkFinishConditions()
 bool IRIS2D::setIRISProblem(const XYPoint &seed, bool check_valid)
 {
   // check that seed is good
+  // todo: move this into a separate method
   if (check_valid) {
     std::string msg1{"Cannot build region around x="};
     msg1 += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
@@ -443,19 +442,38 @@ bool IRIS2D::setIRISProblem(const XYPoint &seed, bool check_valid)
 
 bool IRIS2D::runIRIS()
 {
-  // todo: catch iris errors here and produce run warning
   if (m_current_problem.complete())
     return (true);
 
-  if (m_current_problem.itersDone() == 0)
+  if (m_current_problem.itersDone() == 0)  // running a new problem, save start time
     m_iris_start_time = MOOSTime();
 
+  // calc number of IRIS iterations to execute
   double time_alloted{1/(GetAppFreq() * m_time_warp)};  // approx. time in s allotted per app iter
   double num_iters{std::floor(time_alloted / .02)};  // IRIS iters usually take under 0.2s
   if (num_iters < 1)
     num_iters = 1;
 
-  return (m_current_problem.run(static_cast<int>(num_iters)));
+  // run IRIS. if there's an exception, report run warning and scrap the current problem
+  bool problem_complete{false};
+  try {
+    problem_complete = m_current_problem.run(static_cast<int>(num_iters));
+    m_iris_in_progress = !problem_complete;
+  } catch (const IRISMosekError& execption) {
+    reportRunWarning("Recieved IRIS Mosek error!");
+    reportRunWarning(execption.what());
+
+    problem_complete = false;  // prevents caller from thinking optimization succeeded
+    m_iris_in_progress = false;  // stops app from continuing to work on this problem
+  } catch (const InnerEllipsoidInfeasibleError& execption) {
+    reportRunWarning("Recieved IRIS inner ellipsoid infeasible error!");
+    reportRunWarning(execption.what());
+
+    problem_complete = false;  // prevents caller from thinking optimization succeeded
+    m_iris_in_progress = false;  // stops app from continuing to work on this problem
+  }
+
+  return problem_complete;
 }
 
 
@@ -471,7 +489,7 @@ bool IRIS2D::saveIRISRegion(int idx)
   };
 
   m_iris_stats.push_front(stats);
-  while (m_iris_stats.size() > 20)  // limit stats queue to 8 members
+  while (m_iris_stats.size() > 8)  // limit stats queue to 8 members
     m_iris_stats.pop_back();
 
   // if polygon is invalid, return without saving
