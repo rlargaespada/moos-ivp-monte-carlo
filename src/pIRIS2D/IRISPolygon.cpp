@@ -66,8 +66,11 @@ XYPolygon IRISPolygon::toXYPolygon()
   // convert to V-representation of polygon (vertices and rays)
   dd_ErrorType err;
   dd_PolyhedraPtr poly = dd_DDMatrix2Poly(hrep, &err);
-  if (err != dd_NoError)  // return empty polygon if there was an error
+  if (err != dd_NoError) {  // return empty polygon if there was an error
+    dd_FreeMatrix(hrep);
+    dd_FreePolyhedra(poly);
     return (null_poly);
+  }
 
   // parse out vertices of V-representation and put into a vector of XYPoints
   // save avg x/y to save a point inside the poly
@@ -89,8 +92,8 @@ XYPolygon IRISPolygon::toXYPolygon()
 
   // free memory allocated by cdd
   dd_FreeMatrix(hrep);
-  dd_FreeMatrix(generators);
   dd_FreePolyhedra(poly);
+  dd_FreeMatrix(generators);
 
   // sort poly vertices so they're ordered counter clockwise, makes XYPolygon convex
   // define lambda to compare pairs of vertices by angle from average point inside poly

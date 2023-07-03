@@ -198,7 +198,6 @@ bool IRIS2D::Iterate()
   handleRequests();
   syncObstacles();
 
-  // todo: report an event when we're running IRIS
   // todo: handle cases where we get a 2 point polygon for some reason
 
   // if there's an open IRIS problem, work on it
@@ -344,6 +343,8 @@ void IRIS2D::syncObstacles()
 }
 
 
+// todo (future): more intelligently get new seed points
+// see Deits paper on UAV path planning using IRIS for seed pt heuristc
 XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
 {
   double x, y;
@@ -425,6 +426,7 @@ bool IRIS2D::setIRISProblem(const XYPoint &seed, bool check_valid)
   m_current_problem = IRISProblem(seed, m_iris_bounds, m_max_iters, m_termination_threshold);
   for (auto const &obs : m_obstacle_map)
     m_current_problem.addObstacle(obs.second);
+  reportEvent("Initialized IRISProblem around seed point " + seed.get_spec());
   return (true);
 }
 
@@ -567,13 +569,17 @@ bool IRIS2D::OnStartUp()
       reportUnhandledConfigWarning(orig);
   }
 
+  // set subscription vars if unset
   if (m_obs_alert_var.empty())
     m_obs_alert_var = "OBSTACLE_ALERT";
   if (m_seed_pt_var.empty())
     m_seed_pt_var = "IRIS_SEED_POINT";
 
-  if (m_label_prefix.empty())
+  // additional setup
+  if (m_label_prefix.empty())  // if no prefix is given use name of app
     m_label_prefix = GetAppName();
+  if (m_mode == "auto")
+    m_active = true;  // in auto mode app is always active
 
   // save IRIS bounds and post visuals if needed
   m_xy_iris_bounds = string2Poly(iris_bounds);
@@ -587,8 +593,8 @@ bool IRIS2D::OnStartUp()
     m_xy_iris_bounds.set_color("vertex", m_poly_vert_color);
     m_xy_iris_bounds.set_color("fill", "invisible");
     m_xy_iris_bounds.set_color("label", m_label_color);
-    m_xy_iris_bounds.set_vertex_size(m_poly_vert_size * 2);
-    m_xy_iris_bounds.set_edge_size(m_poly_edge_size * 2);
+    m_xy_iris_bounds.set_vertex_size(m_poly_vert_size * 2);  // make lines a bit thicker
+    m_xy_iris_bounds.set_edge_size(m_poly_edge_size * 2);  // make lines a bit thicker
     m_xy_iris_bounds.set_transparency(1);
     Notify("VIEW_POLYGON", m_xy_iris_bounds.get_spec());
   }
