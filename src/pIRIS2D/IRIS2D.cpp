@@ -207,22 +207,13 @@ bool IRIS2D::Iterate()
     if (problem_complete) {
       // if problem is complete, save and post final poly and ellipse
       bool region_valid{saveIRISRegion(m_iris_region_idx)};
-      m_iris_in_progress = false;
+      m_iris_in_progress = false;  // iris is done even if region is invalid
 
       // check completion conditions
-      if (region_valid) {
-        // todo: move these checks into a separate method
-        if ((m_iris_region_idx == -1) && (m_safe_regions.size() == m_desired_regions)) {
-          // if we just added the last region to get to the desired number, post completion
-          Notify(m_complete_var, "now");
-          if (m_mode == "manual")
-            m_active = false;
-        } else if ((m_iris_region_idx > -1) && (m_invalid_regions.empty())) {
-          // if we just replaced the last invalid region, post completion
-          Notify(m_complete_var, "now");
-          if (m_mode == "manual")
-            m_active = false;
-        }
+      if (region_valid && checkFinishConditions()) {
+        Notify(m_complete_var, "now");
+        if (m_mode == "manual")
+          m_active = false;
       }
     }
 
@@ -391,6 +382,20 @@ XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
   }
 
   return (XYPoint{});  // return invalid point if our attempts fail
+}
+
+
+bool IRIS2D::checkFinishConditions()
+{
+  // if we just added the last region to get to the desired number, post completion
+  if ((m_iris_region_idx == -1) && (m_safe_regions.size() == m_desired_regions))
+    return (true);
+
+  // if we just replaced the last invalid region, post completion
+  if ((m_iris_region_idx > -1) && (m_invalid_regions.empty()))
+    return (true);
+
+  return (false);
 }
 
 

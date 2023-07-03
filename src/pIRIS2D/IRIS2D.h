@@ -56,6 +56,7 @@ class IRIS2D : public AppCastingMOOSApp
   void syncObstacles();
   XYPoint randomSeedPoint(XYPolygon container);
   XYPoint randomSeedPoint() {return randomSeedPoint(m_xy_iris_bounds);}
+  bool checkFinishConditions();
 
   // iris methods
   bool setIRISProblem(const XYPoint &seed, bool check_valid = true);
