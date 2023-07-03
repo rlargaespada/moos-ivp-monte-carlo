@@ -71,6 +71,7 @@ IRIS2D::IRIS2D()
   m_active = false;
 
   m_iris_in_progress = false;
+  m_iris_region_idx = -1;
 
   // set up cdd
   dd_set_global_constants();
@@ -194,99 +195,61 @@ bool IRIS2D::Iterate()
 {
   AppCastingMOOSApp::Iterate();
 
-  /*
-  if currently in the middle of an iris problem
-    continue running problem
-  else if seed point queue isn't empty
-    buildRegion(seed point)
-  else if active and still regions to go
-    buildRegion(random seed), if random seed is invalid don't run iris
-    if manual and last region
-      mark inactive, post complete
-  else if active and invalidate queue isn't empty
-    erase region in invalidate queue
-    buildRegion(center of removed region)
-    if queue is empty
-      post complete
-      if manual
-        mark inactive
-  else if active and manual
-    go inactive
-
-  buildRegion(seed point)
-    set up problem
-      polygon starts out empty
-      ellipse starts out from seed point
-      bounds from pIRIS2D
-      obstacles from newest obstacle map
-      input: seed XYPoint, obstacles map (?), bounds matrix/IRISPoly
-    while below iter limit
-      separating_hyperplanes(problem.obstacles, problem.ellipsoid, new_poly)
-      add bounds as constraints to new_poly
-      save new poly to problem
-      volume = iris::mosek inner_ellipsoid(polygon, ellipsoid)
-      save new volume
-      check termination conditions
-    if done
-      save polygon as XYPolygon
-      post VIEW_OVAL, VIEW_POLYGON
-    otherwise pick it up next time
-
-
-  first pass at IRIS: when posting to seed point, build region
-  */
-
   handleRequests();
   syncObstacles();
 
-  // todo: handle splitting IRIS into multiple iterations
   // todo: report an event when we're running IRIS
   // todo: handle cases where we get a 2 point polygon for some reason
-  // todo: post iris complete
-  // if (m_iris_in_progress) {
-  // } else if (!m_seed_pt_queue.empty()) {
-  if (!m_seed_pt_queue.empty()) {
-    // if we got a seed point in the mail, run IRIS around that point, even if inactive
-    bool problem_set{setIRISProblem(m_seed_pt_queue.front())};
-    m_seed_pt_queue.pop();
 
-    if (problem_set) {  // todo: this should probably be m_iris_in_progress
-      runIRIS();
-      saveIRISRegion();
+  // if there's an open IRIS problem, work on it
+  if (m_iris_in_progress) {
+    bool problem_complete{runIRIS()};
+
+    if (problem_complete) {
+      // if problem is complete, save and post final poly and ellipse
+      saveIRISRegion(m_iris_region_idx);
+      m_iris_in_progress = false;
+
+      // check completion conditions
+      if ((m_iris_region_idx == -1) && (m_safe_regions.size() == m_desired_regions)) {
+        // if we just added the last region to get to the desired number, post completion
+        Notify(m_complete_var, "now");
+        if (m_mode == "manual")
+          m_active = false;
+      } else if ((m_iris_region_idx > -1) && (m_invalid_regions.empty())) {
+        // if we just replaced the last invalid region, post completion
+        Notify(m_complete_var, "now");
+        if (m_mode == "manual")
+          m_active = false;
+      }
     }
 
-    // bool iris_complete{runIRIS()};
-    // if (iris_complete) {
-    //   saveIRISRegion();
-    //   m_iris_in_progress = false;
-    // } else {
-    //   m_iris_in_progress = true;
-    // }
+  // otherwise set up an iris problem to run on the next iteration
+  } else if (!m_seed_pt_queue.empty()) {
+    // if we got a seed point in the mail, run IRIS around that point, even if inactive
+    XYPoint seed{m_seed_pt_queue.front()};
+    m_seed_pt_queue.pop();
+    m_iris_region_idx = -1;  // add new safe region
+    m_iris_in_progress = setIRISProblem(seed);  // if seed is bad IRIS won't run
 
   } else if ((m_active) && (m_safe_regions.size() < m_desired_regions)) {
     // if we still have regions to build to get to the desired number, run IRIS
-    XYPoint pt{randomSeedPoint()};
-    if (pt.valid()) {
-      setIRISProblem(pt);
-      runIRIS();
-      saveIRISRegion();
+    XYPoint seed{randomSeedPoint()};
+    if (seed.valid()) {
+      m_iris_region_idx = -1;  // add new safe region
+      m_iris_in_progress = setIRISProblem(seed, false);
     }
 
-    // in manual mode, stop here
-    if ((m_mode == "manual") && (m_safe_regions.size() >= m_desired_regions))
-      m_active = false;
-
   } else if ((m_active) && (!m_invalid_regions.empty())) {
-    // if any regions are invalid because obstacles changed, build a new region
+    // if any regions are invalid because obstacles changed, replace that region
     int region_idx{*m_invalid_regions.begin()};
     XYPolygon invalid_region{m_safe_regions.at(region_idx)};
     XYPoint seed{randomSeedPoint(invalid_region)};
 
     if (seed.valid()) {
       m_invalid_regions.erase(region_idx);
-      setIRISProblem(seed);
-      runIRIS();
-      saveIRISRegion(region_idx);
+      m_iris_region_idx = region_idx;  // replace invalid region with new one
+      m_iris_in_progress = setIRISProblem(seed, false);
     }
 
   } else if ((m_active) && (m_mode == "manual")) {
@@ -314,6 +277,7 @@ void IRIS2D::handleRequests()
         Notify("VIEW_POLYGON", ellipse.get_spec_inactive());
     }
 
+    // clear saved regions
     m_safe_regions.clear();
     m_iris_ellipses.clear();
     m_invalid_regions.clear();
@@ -393,7 +357,7 @@ XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
     // try to pick a point outside existing valid iris regions
     // this check is more likely to fail since regions are bigger than
     // obstacles, so check this first
-    if (tries < 90) {  // if we've tried a lot already, waive this check
+    if (tries < 95) {  // if we've tried a lot already, waive this check
       for (int i{0}; i < m_safe_regions.size(); i++) {
         if (m_invalid_regions.count(i))  // ignore invalid regions
           continue;
@@ -426,23 +390,35 @@ XYPoint IRIS2D::randomSeedPoint(XYPolygon container)
 
 //---------------------------------------------------------
 
-bool IRIS2D::setIRISProblem(const XYPoint &seed)
+bool IRIS2D::setIRISProblem(const XYPoint &seed, bool check_valid)
 {
-  std::string msg{"Cannot build region around x="};
-  msg += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
-  msg += " because this point is inside an obstacle!";
-  // make sure seed doesn't intersect any obstacles
-  for (auto const &obs : m_obstacle_map) {
-    if (obs.second.contains(seed)) {
-      msg += " because this point is inside an obstacle!";
-      reportRunWarning(msg);
+  // check that seed is good
+  if (check_valid) {
+    std::string msg1{"Cannot build region around x="};
+    msg1 += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
+    std::string msg2;
+
+    // make sure seed is valid
+    if (!seed.valid()) {
+      msg2 = "This seed point is marked invalid!";
+    // make sure seed is inside bounds
+    } else if (!m_iris_bounds.contains(seed)) {
+      msg2 = "This point is outside the bounds of the IRIS search!";
+    // make sure seed doesn't intersect any obstacles
+    } else {
+      for (auto const &obs : m_obstacle_map) {
+        if (obs.second.contains(seed)) {
+          msg2 = "This point is inside an obstacle!";
+          break;
+        }
+      }
+    }
+
+    if (!msg2.empty()) {
+      reportRunWarning(msg2);  // report msg2 first so msg1 appears on top visually
+      reportRunWarning(msg1);
       return (false);
     }
-  }
-  if (!m_iris_bounds.contains(seed)) {
-    msg += " because this point is outside the bounds of the IRIS search!";
-    reportRunWarning(msg);
-    return (false);
   }
 
   // if seed is good, create a new IRIS problem
@@ -460,10 +436,9 @@ bool IRIS2D::runIRIS()
   if (m_current_problem.complete())
     return (true);
 
-  // double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
-  // return (m_current_problem.run(static_cast<int>(num_iters)));
-
-  return (m_current_problem.run(m_max_iters + 1));  // while testing, run to completion
+  // todo: choose num_iters based on how long it usually takes to run IRIS
+  double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
+  return (m_current_problem.run(static_cast<int>(num_iters)));
 }
 
 
@@ -552,14 +527,17 @@ bool IRIS2D::OnStartUp()
       handled = setNonWhiteVarOnString(m_iris_region_var, toupper(value));
     } else if (param == "iris_complete_var") {
       handled = setNonWhiteVarOnString(m_complete_var, toupper(value));
+
     // visual publication config
     } else if (param == "label_prefix") {
       handled = setNonWhiteVarOnString(m_label_prefix, value);
     } else if (param == "post_polygons") {
       handled = setBooleanOnString(m_post_poly_visuals, value);
+
     } else if (param == "post_ellipses") {
       handled = setBooleanOnString(m_post_ellipse_visuals, value);
     // todo: remainder of visual params
+
     // IRIS config
     } else if (param == "mode") {
       std::set<std::string> valid_modes{"manual", "auto", "hybrid"};

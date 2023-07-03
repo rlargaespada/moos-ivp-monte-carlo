@@ -9,8 +9,8 @@
 #include "IRISPolygon.h"
 
 
-const int IRIS_DEFAULT_MAX_ITERS{100};
-const double IRIS_DEFAULT_TERMINATION_THRESHOLD{2e-1};
+const int IRIS_DEFAULT_MAX_ITERS{50};
+const double IRIS_DEFAULT_TERMINATION_THRESHOLD{5e-1};
 
 class IRISProblem
 {

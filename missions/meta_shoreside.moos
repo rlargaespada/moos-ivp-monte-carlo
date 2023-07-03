@@ -17,6 +17,8 @@
 
 #define NUM_OBS_DRIFTING 1
 
+#define IRIS_TESTING true
+
 
 //*******************************************************
 // ShoreSide Configuration File
@@ -93,15 +95,12 @@ ProcessConfig = pMarineViewer
   appcast_font_size    = large
 
   // Context Pull-Down Menu
+  #ifdef IRIS_TESTING true
+  left_context[IRIS_TESTING] = IRIS_SEED_POINT_ALL = "x=$[XPOS], y=$[YPOS]"
+  #endif
   left_context[$(V1_NAME)_START_GOAL] = UEP_START_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
   left_context[$(V1_NAME)_START_GOAL] = $(STATION_START_UPDATES_VAR)_%(V1_NAME) = "station_pt=$[XPOS],$[YPOS]"
   right_context[$(V1_NAME)_START_GOAL] = UEP_GOAL_POS = "vname=$(V1_NAME), x=$[XPOS], y=$[YPOS]"
-
-  left_context[IRIS_TESTING] = IRIS_SEED_POINT_ALL = "x=$[XPOS], y=$[YPOS]"
-  // left_context[IRIS_TESTING] = RUN_IRIS_ALL = "now"
-  right_context[IRIS_TESTING] = RESET_KNOWN_OBSTACLES = "now"
-  right_context[IRIS_TESTING] = RESET_UNKNOWN_OBSTACLES = "now"
-  right_context[IRIS_TESTING] = CLEAR_IRIS_ALL = "now"
 
   // Exclusion Filter
   // leave empty
@@ -119,6 +118,13 @@ ProcessConfig = pMarineViewer
   // no actions for now, just use buttons
 
   // Button Configuration
+  #ifdef IRIS_TESTING true
+  button_one = RUN_IRIS # IRIS_SEED_POINT_ALL = $(START_POS) # IRIS_SEED_POINT_ALL = $(GOAL_POS)
+  button_one = RUN_IRIS # RUN_IRIS_ALL=now
+  button_two = CLEAR_IRIS # CLEAR_IRIS_ALL=now
+  button_three = RESET_OBS # RESET_KNOWN_OBSTACLES=now # RESET_UNKNOWN_OBSTACLES=now
+  button_four = RUN_IRIS_NO_SEED # RUN_IRIS_ALL=now
+  #else
   button_one = LAUNCH_SIM # DEPLOY_ALL=true # MOOS_MANUAL_OVERRIDE_ALL=false
   button_one = RESET_SIM_REQUESTED=all
   button_two = END_SIM # DEPLOY_ALL=false # END_SIM_REQUESTED=all
@@ -126,6 +132,7 @@ ProcessConfig = pMarineViewer
   button_three = RESET_SIM # RESET_SIM_REQUESTED=all
   button_four = RESET_TRIAL # RESET_TRIAL_REQUESTED=all
   button_five = SKIP_TRIAL # SKIP_TRIAL_REQUESTED=all
+  #endif
 }
 
 

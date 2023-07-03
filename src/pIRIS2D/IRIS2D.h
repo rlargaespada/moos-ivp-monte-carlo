@@ -49,7 +49,7 @@ class IRIS2D : public AppCastingMOOSApp
   XYPoint randomSeedPoint() {return randomSeedPoint(m_xy_iris_bounds);}
 
   // iris methods
-  bool setIRISProblem(const XYPoint &seed);
+  bool setIRISProblem(const XYPoint &seed, bool check_valid = true);
   bool runIRIS();
   void saveIRISRegion(int idx = -1);
 
@@ -103,6 +103,7 @@ class IRIS2D : public AppCastingMOOSApp
   std::queue<XYPoint> m_seed_pt_queue;
   IRISProblem m_current_problem;
   bool m_iris_in_progress;
+  int m_iris_region_idx;
 
   // IRIS outputs
   std::vector<XYPolygon> m_safe_regions;

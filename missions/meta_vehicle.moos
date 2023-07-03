@@ -337,6 +337,6 @@ ProcessConfig = pIRIS2D
 
   mode = manual
   desired_regions = 20
-  max_iters = 100
+  max_iters = 50
   iris_bounds = $(SEARCH_BOUNDS)
 }
