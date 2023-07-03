@@ -9,15 +9,24 @@
 #define IRIS2D_HEADER
 
 #include <Eigen/Dense>
+#include <deque>
 #include <map>
 #include <set>
 #include <string>
-#include <queue>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "XYPolygon.h"
 #include "IRISPolygon.h"
 #include "IRISProblem.h"
+
+
+struct IRISStats
+{
+  size_t idx;
+  double duration;
+  int num_iters;
+  bool valid;
+};
 
 
 class IRIS2D : public AppCastingMOOSApp
@@ -100,15 +109,17 @@ class IRIS2D : public AppCastingMOOSApp
   std::set<std::string> m_obstacle_remove_queue;
 
   // IRIS state
-  std::queue<XYPoint> m_seed_pt_queue;
+  std::deque<XYPoint> m_seed_pt_queue;
   IRISProblem m_current_problem;
   bool m_iris_in_progress;
   int m_iris_region_idx;
+  double m_iris_start_time;
 
   // IRIS outputs
   std::vector<XYPolygon> m_safe_regions;
   std::vector<XYPolygon> m_iris_ellipses;
   std::set<int> m_invalid_regions;
+  std::deque<IRISStats> m_iris_stats;
 };
 
 #endif

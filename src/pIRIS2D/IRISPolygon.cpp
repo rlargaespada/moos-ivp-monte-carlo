@@ -45,6 +45,7 @@ void IRISPolygon::fromXYPolygon(const XYPolygon &poly)
 // assumes dd_set_global_constants() has already been called
 XYPolygon IRISPolygon::toXYPolygon()
 {
+  // todo (future): figure out when/why we're getting polygons with just 2 points
   XYPolygon null_poly;
 
   // only works if A and b have the same number of rows

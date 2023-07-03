@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "ACTable.h"
 #include "GeomUtils.h"
 #include "MBUtils.h"
 #include "XYFormatUtilsPoly.h"
@@ -72,6 +73,7 @@ IRIS2D::IRIS2D()
 
   m_iris_in_progress = false;
   m_iris_region_idx = -1;
+  m_iris_start_time = 0;
 
   // set up cdd
   dd_set_global_constants();
@@ -123,7 +125,7 @@ bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
     } else if (key == m_seed_pt_var) {
       XYPoint seed_pt{string2Point(msg.GetString())};
       if (seed_pt.valid())
-        m_seed_pt_queue.push(seed_pt);
+        m_seed_pt_queue.push_back(seed_pt);
       else
         handled = false;
     } else if (key != "APPCAST_REQ") {  // handled by AppCastingMOOSApp
@@ -198,8 +200,6 @@ bool IRIS2D::Iterate()
   handleRequests();
   syncObstacles();
 
-  // todo: handle cases where we get a 2 point polygon for some reason
-
   // if there's an open IRIS problem, work on it
   if (m_iris_in_progress) {
     bool problem_complete{runIRIS()};
@@ -227,26 +227,28 @@ bool IRIS2D::Iterate()
   } else if (!m_seed_pt_queue.empty()) {
     // if we got a seed point in the mail, run IRIS around that point, even if inactive
     XYPoint seed{m_seed_pt_queue.front()};
-    m_seed_pt_queue.pop();
+    m_seed_pt_queue.pop_front();
     m_iris_region_idx = -1;  // add new safe region
     m_iris_in_progress = setIRISProblem(seed);  // if seed is bad IRIS won't run
 
   } else if ((m_active) && (m_safe_regions.size() < m_desired_regions)) {
     // if we still have regions to build to get to the desired number, run IRIS
+    // around a random seed point
     XYPoint seed{randomSeedPoint()};
+
     if (seed.valid()) {
       m_iris_region_idx = -1;  // add new safe region
       m_iris_in_progress = setIRISProblem(seed, false);
     }
 
   } else if ((m_active) && (!m_invalid_regions.empty())) {
-    // if any regions are invalid because obstacles changed, replace that region
+    // if any regions are invalid because obstacles changed, replace a region
+    // by running IRIS around a random point inside the region
     int region_idx{*m_invalid_regions.begin()};
     XYPolygon invalid_region{m_safe_regions.at(region_idx)};
     XYPoint seed{randomSeedPoint(invalid_region)};
 
     if (seed.valid()) {
-      m_invalid_regions.erase(region_idx);
       m_iris_region_idx = region_idx;  // replace invalid region with new one
       m_iris_in_progress = setIRISProblem(seed, false);
     }
@@ -434,9 +436,11 @@ bool IRIS2D::setIRISProblem(const XYPoint &seed, bool check_valid)
 bool IRIS2D::runIRIS()
 {
   // todo: catch iris errors here and produce run warning
-  // todo: post stats on number of iterations, elapsed time
   if (m_current_problem.complete())
     return (true);
+
+  if (m_current_problem.itersDone() == 0)
+    m_iris_start_time = MOOSTime();
 
   // todo: choose num_iters based on how long it usually takes to run IRIS
   double num_iters{std::floor(m_max_iters/(GetAppFreq() * m_time_warp))};
@@ -446,8 +450,24 @@ bool IRIS2D::runIRIS()
 
 void IRIS2D::saveIRISRegion(int idx)
 {
-  // create poly and set visual params
+  // parse polygon from IRISProblem and save IRIS stats
   XYPolygon poly{m_current_problem.getPolygon()};
+  IRISStats stats{
+    idx == -1 ? m_safe_regions.size() : idx,
+    MOOSTime() - m_iris_start_time,  // duration
+    m_current_problem.itersDone(),  // num_iters
+    poly.is_convex()  // valid
+  };
+
+  m_iris_stats.push_front(stats);
+  while (m_iris_stats.size() > 8)  // limit stats queue to 8 members
+    m_iris_stats.pop_back();
+
+  // if polygon is invalid, return without saving
+  if (!poly.is_convex())
+    return;
+
+  // set visual params for polygon
   poly.set_color("edge", m_poly_edge_color);
   poly.set_color("vertex", m_poly_vert_color);
   poly.set_color("fill", m_poly_fill_color);
@@ -461,6 +481,7 @@ void IRIS2D::saveIRISRegion(int idx)
     poly.set_label(m_label_prefix + "_polygon_" + intToString(m_safe_regions.size()));
     m_safe_regions.push_back(poly);
   } else {
+    m_invalid_regions.erase(idx);
     poly.set_label(m_label_prefix + "_polygon_" + intToString(idx));
     m_safe_regions.at(idx) = poly;
   }
@@ -656,8 +677,15 @@ bool IRIS2D::buildReport()
   m_msgs << "  Invalid Regions: " << uintToString(m_invalid_regions.size()) << endl;
 
   m_msgs << header << endl;
-  m_msgs << "Most Recent IRIS Stats:" << endl;
-  m_msgs << "  Iterations: " << intToString(m_current_problem.itersDone()) << endl;
+  m_msgs << "Most Recent IRIS Stats" << endl;
+  ACTable actab(4);
+  actab << "Region # | Build Time | Iterations | Valid";
+  actab.addHeaderLines();
+  for (const IRISStats & s : m_iris_stats) {
+    actab << uintToString(s.idx) << doubleToStringX(s.duration, 3) + "s" <<
+      intToString(s.num_iters) << boolToString(s.valid);
+  }
+  m_msgs << actab.getFormattedString();
 
   return(true);
 }
