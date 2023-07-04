@@ -29,7 +29,6 @@ struct IRISStats
 };
 
 
-// todo (future): consider breaking up handleRequests(), others into smaller methods
 class IRIS2D : public AppCastingMOOSApp
 {
  public:
@@ -60,7 +59,8 @@ class IRIS2D : public AppCastingMOOSApp
   bool checkFinishConditions();
 
   // iris methods
-  bool setIRISProblem(const XYPoint &seed, bool check_valid = true);
+  bool seedOK(const XYPoint &seed);
+  void setIRISProblem(const XYPoint &seed);
   bool runIRIS();
   bool saveIRISRegion(int idx = -1);
 

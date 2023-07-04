@@ -220,8 +220,11 @@ bool IRIS2D::Iterate()
     // if we got a seed point in the mail, run IRIS around that point, even if inactive
     XYPoint seed{m_seed_pt_queue.front()};
     m_seed_pt_queue.pop_front();
-    m_iris_region_idx = -1;  // add new safe region
-    m_iris_in_progress = setIRISProblem(seed);  // if seed is bad IRIS won't run
+    if (seedOK(seed)) {
+      m_iris_region_idx = -1;  // add new safe region
+      setIRISProblem(seed);
+      m_iris_in_progress = true;
+    }
 
   } else if ((m_active) && (m_safe_regions.size() < m_desired_regions)) {
     // if we still have regions to build to get to the desired number, run IRIS
@@ -230,7 +233,8 @@ bool IRIS2D::Iterate()
 
     if (seed.valid()) {
       m_iris_region_idx = -1;  // add new safe region
-      m_iris_in_progress = setIRISProblem(seed, false);
+      setIRISProblem(seed);
+      m_iris_in_progress = true;
     }
 
   } else if ((m_active) && (!m_invalid_regions.empty())) {
@@ -242,7 +246,8 @@ bool IRIS2D::Iterate()
 
     if (seed.valid()) {
       m_iris_region_idx = region_idx;  // replace invalid region with new one
-      m_iris_in_progress = setIRISProblem(seed, false);
+      setIRISProblem(seed);
+      m_iris_in_progress = true;
     }
 
   } else if ((m_active) && (m_mode == "manual")) {
@@ -399,44 +404,44 @@ bool IRIS2D::checkFinishConditions()
 
 //---------------------------------------------------------
 
-bool IRIS2D::setIRISProblem(const XYPoint &seed, bool check_valid)
+bool IRIS2D::seedOK(const XYPoint &seed)
 {
-  // check that seed is good
-  // todo: move this into a separate method
-  if (check_valid) {
-    std::string msg1{"Cannot build region around x="};
-    msg1 += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
-    std::string msg2;
+  std::string msg1{"Cannot build region around x="};
+  msg1 += doubleToStringX(seed.x()) + ", y=" + doubleToStringX(seed.y());
+  std::string msg2;
 
-    // make sure seed is valid
-    if (!seed.valid()) {
-      msg2 = "This seed point is marked invalid!";
-    // make sure seed is inside bounds
-    } else if (!m_iris_bounds.contains(seed)) {
-      msg2 = "This point is outside the bounds of the IRIS search!";
-    // make sure seed doesn't intersect any obstacles
-    } else {
-      for (auto const &obs : m_obstacle_map) {
-        if (obs.second.contains(seed)) {
-          msg2 = "This point is inside an obstacle!";
-          break;
-        }
+  // make sure seed is valid
+  if (!seed.valid()) {
+    msg2 = "This seed point is marked invalid!";
+  // make sure seed is inside bounds
+  } else if (!m_iris_bounds.contains(seed)) {
+    msg2 = "This point is outside the bounds of the IRIS search!";
+  // make sure seed doesn't intersect any obstacles
+  } else {
+    for (auto const &obs : m_obstacle_map) {
+      if (obs.second.contains(seed)) {
+        msg2 = "This point is inside an obstacle!";
+        break;
       }
-    }
-
-    if (!msg2.empty()) {
-      reportRunWarning(msg2);  // report msg2 first so msg1 appears on top visually
-      reportRunWarning(msg1);
-      return (false);
     }
   }
 
-  // if seed is good, create a new IRIS problem
+  if (!msg2.empty()) {
+    reportRunWarning(msg2);  // report msg2 first so msg1 appears on top visually
+    reportRunWarning(msg1);
+    return (false);
+  }
+
+  return (true);
+}
+
+
+void IRIS2D::setIRISProblem(const XYPoint &seed)
+{
   m_current_problem = IRISProblem(seed, m_iris_bounds, m_max_iters, m_termination_threshold);
   for (auto const &obs : m_obstacle_map)
     m_current_problem.addObstacle(obs.second);
   reportEvent("Initialized IRISProblem around seed point " + seed.get_spec());
-  return (true);
 }
 
 
