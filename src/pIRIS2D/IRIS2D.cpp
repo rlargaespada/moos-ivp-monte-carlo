@@ -585,16 +585,41 @@ bool IRIS2D::OnStartUp()
       handled = setNonWhiteVarOnString(m_iris_region_var, toupper(value));
     } else if (param == "iris_complete_var") {
       handled = setNonWhiteVarOnString(m_complete_var, toupper(value));
-
-    // visual publication config
     } else if (param == "label_prefix") {
       handled = setNonWhiteVarOnString(m_label_prefix, value);
+    // visual publication config
+    } else if ((param == "label_color") && isColor(value)) {
+      handled = setColorOnString(m_label_color, value);
+
     } else if (param == "post_polygons") {
       handled = setBooleanOnString(m_post_poly_visuals, value);
+    } else if ((param == "poly_fill_color") && isColor(value)) {
+      handled = setColorOnString(m_poly_fill_color, value);
+    } else if ((param == "poly_edge_color") && isColor(value)) {
+      handled = setColorOnString(m_poly_edge_color, value);
+    } else if ((param == "poly_vert_color") && isColor(value)) {
+      handled = setColorOnString(m_poly_vert_color, value);
+    } else if (param == "poly_edge_size") {
+      handled = setNonNegDoubleOnString(m_poly_edge_size, value);
+    } else if (param == "poly_vert_size") {
+      handled = setNonNegDoubleOnString(m_poly_vert_size, value);
+    } else if (param == "poly_transparency") {
+      handled = setNonNegDoubleOnString(m_poly_transparency, value);
 
     } else if (param == "post_ellipses") {
       handled = setBooleanOnString(m_post_ellipse_visuals, value);
-    // todo: remainder of visual params
+    } else if ((param == "ellipse_fill_color") && isColor(value)) {
+      handled = setColorOnString(m_ellipse_fill_color, value);
+    } else if ((param == "ellipse_edge_color") && isColor(value)) {
+      handled = setColorOnString(m_ellipse_edge_color, value);
+    } else if ((param == "ellipse_vert_color") && isColor(value)) {
+      handled = setColorOnString(m_ellipse_vert_color, value);
+    } else if (param == "ellipse_edge_size") {
+      handled = setNonNegDoubleOnString(m_ellipse_edge_size, value);
+    } else if (param == "ellipse_vert_size") {
+      handled = setNonNegDoubleOnString(m_ellipse_vert_size, value);
+    } else if (param == "ellipse_transparency") {
+      handled = setNonNegDoubleOnString(m_ellipse_transparency, value);
 
     // IRIS config
     } else if (param == "mode") {
