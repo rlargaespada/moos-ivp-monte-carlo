@@ -222,6 +222,7 @@ bool IRIS2D::Iterate()
     m_seed_pt_queue.pop_front();
     if (seedOK(seed)) {
       m_iris_region_idx = -1;  // add new safe region
+      // todo (future): for seed point queue, want final region to contain the seed point
       setIRISProblem(seed);
       m_iris_in_progress = true;
     }
@@ -283,6 +284,7 @@ void IRIS2D::handleRequests()
 
     if (m_mode != "auto")
       m_active = false;
+    reportEvent("All IRIS regions cleared!");
   } else if (m_run_pending) {
     m_active = true;  // always true in auto mode
   }
@@ -438,10 +440,17 @@ bool IRIS2D::seedOK(const XYPoint &seed)
 
 void IRIS2D::setIRISProblem(const XYPoint &seed)
 {
+  if (!m_xy_iris_bounds.is_convex()) {
+    reportRunWarning("Cannot run IRIS because bounding polygon has not been set properly!");
+    m_active = false;
+    return;
+  }
+
   m_current_problem = IRISProblem(seed, m_iris_bounds, m_max_iters, m_termination_threshold);
   for (auto const &obs : m_obstacle_map)
     m_current_problem.addObstacle(obs.second);
   reportEvent("Initialized IRISProblem around seed point " + seed.get_spec());
+  m_iris_in_progress = true;
 }
 
 
@@ -664,8 +673,10 @@ bool IRIS2D::OnStartUp()
 
   // save IRIS bounds and post visuals if needed
   m_xy_iris_bounds = string2Poly(iris_bounds);
-  if (!m_xy_iris_bounds.is_convex())
+  if (!m_xy_iris_bounds.is_convex()) {
     reportConfigWarning("Invalid IRIS bounds provided");
+    m_active = false;
+  }
   m_iris_bounds = IRISPolygon(m_xy_iris_bounds);
 
   if (m_post_poly_visuals) {
