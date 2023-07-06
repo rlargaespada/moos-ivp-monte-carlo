@@ -135,7 +135,6 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        GOAL_POS="${V1_GOAL_POS}" \
        HDG_ON_RESET=$HDG_ON_RESET \
        EXPORT_FILE="${EXPORT_FILE}" \
-       PLANNER=$PLANNER \
        USE_BENCHMARK=$USE_BENCHMARK \
        DRIFT_VEC=${DRIFT_VECTOR} \
        WIND_VEC=${WIND_VECTOR}
