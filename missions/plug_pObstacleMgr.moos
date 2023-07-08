@@ -7,7 +7,7 @@ ProcessConfig = pObstacleMgr
   CommsTick = 4
 
   post_dist_to_polys = close
-  alert_range = 30   //? set by OBM_ALERT_REQUEST?
+  alert_range = 30   // set by OBM_ALERT_REQUEST from obstacle avoidance behavior
   given_max_duration = 180
 
   general_alert = name=gen_alert, update_var=$(PLANNER_OBS_ALERT_VAR), alert_range=2000

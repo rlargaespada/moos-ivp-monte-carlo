@@ -336,7 +336,8 @@ ProcessConfig = pIRIS2D
   seed_point_var = IRIS_SEED_POINT
 
   mode = manual
-  desired_regions = 20
-  max_iters = 50
+  desired_regions = 20  // default
+  max_iters = 50  // default
+  termination_threshold = 0.5  // default
   iris_bounds = $(SEARCH_BOUNDS)
 }
