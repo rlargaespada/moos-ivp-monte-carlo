@@ -1,0 +1,9 @@
+//------------------------------------------------
+// pGCS2D config block
+
+ProcessConfig = pGCS2D
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+

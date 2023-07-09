@@ -60,6 +60,86 @@ FILE(GLOB IVP_LIBRARY_DIRS ${MOOSIVP_SOURCE_TREE_BASE}/lib )
 LINK_DIRECTORIES(${IVP_LIBRARY_DIRS})
 
 #======================================================================
+# Find External Libraries
+#======================================================================
+
+unset(GCS_MISSING_COMPONENTS)  # requires Eigen3, cddlib, mosek, mosek fusion
+message(STATUS "Finding external libraries...")
+list(APPEND CMAKE_MESSAGE_INDENT "  ")
+
+
+# find Eigen3 using find_package
+find_package(Eigen3 3.4 NO_MODULE)
+if (TARGET Eigen3::Eigen)
+   message(STATUS "Eigen3 include directory: ${EIGEN3_INCLUDE_DIR}")
+else()
+   message(WARNING "Cannot find Eigen3 package version 3.4!")
+   list(APPEND GCS_MISSING_COMPONENTS Eigen3)
+endif()
+
+
+# find cdd library and include dir
+find_library(CDD_LIBRARY NAMES cdd)
+if(CDD_LIBRARY)
+   message(STATUS "cdd library: ${CDD_LIBRARY}")
+else()
+   message(WARNING "Could NOT find cdd")
+   list(APPEND GCS_MISSING_COMPONENTS "cddlib")
+endif()
+
+find_path(CDD_INCLUDE_DIR NAMES cdd/cdd.h)
+if(CDD_INCLUDE_DIR)
+   message(STATUS "cdd include directory: ${CDD_INCLUDE_DIR}")
+else()
+   message(WARNING "Could NOT find cdd/cdd.h")
+   list(APPEND GCS_MISSING_COMPONENTS "cddlib headers")
+endif()
+
+
+# find mosek and mosek fusion libraries
+# look for mosek include directory
+FIND_PATH(MOSEK_INCLUDE_DIR mosek.h
+  PATHS /usr/local/mosek/10.0/tools/platform/linux64x86/h/
+        $ENV{HOME}/mosek/10.0/tools/platform/linux64x86/h/
+)
+SET(MOSEK_SEARCH_PATHS "${MOSEK_INCLUDE_DIR}" "${MOSEK_INCLUDE_DIR}/../bin" "${MOSEK_INCLUDE_DIR}/lib")
+if(MOSEK_INCLUDE_DIR)
+   message(STATUS "MOSEK include directory: ${MOSEK_INCLUDE_DIR}")
+else()
+   message(WARNING "Could NOT find MOSEK include directory!")
+   list(APPEND GCS_MISSING_COMPONENTS "MOSEK include directory")
+endif()
+
+# look for mosek c library
+FIND_LIBRARY(MOSEK_C_LIB  NAMES mosek64 PATHS ${MOSEK_SEARCH_PATHS} NO_DEFAULT_PATH DPATH_SUFFIXES a lib dylib)
+if(MOSEK_C_LIB)
+   message(STATUS "MOSEK C library: ${MOSEK_C_LIB}")
+else()
+   message(WARNING "Could NOT find MOSEK C library!")
+   list(APPEND GCS_MISSING_COMPONENTS "MOSEK C library")
+endif()
+
+# look for mosek fusion library
+FIND_LIBRARY(MOSEK_FUSION_LIB  NAMES fusion64 PATHS ${MOSEK_SEARCH_PATHS} NO_DEFAULT_PATH DPATH_SUFFIXES a lib dylib)
+if(MOSEK_FUSION_LIB)
+   message(STATUS "MOSEK fusion library: ${MOSEK_FUSION_LIB}")
+else()
+   message(WARNING "Could NOT find MOSEK fusion library!")
+   list(APPEND GCS_MISSING_COMPONENTS "MOSEK fusion library")
+endif()
+
+
+# report final status
+list(POP_BACK CMAKE_MESSAGE_INDENT)
+if(GCS_MISSING_COMPONENTS)
+   message(WARNING "cannot build pGCS2D or pIRIS2D due to the following missing dependencies:")
+   message(WARNING "missing components: ${GCS_MISSING_COMPONENTS}")
+else()
+   message(STATUS "all components found")
+endif()
+
+
+#======================================================================
 # Specify Compiler Flags
 #======================================================================
 IF( ${WIN32} )
