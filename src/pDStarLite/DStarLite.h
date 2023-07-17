@@ -21,16 +21,6 @@
 #include "XYSegList.h"
 
 
-enum class PlannerMode
-{
-  IDLE,
-  REQUEST_PENDING,
-  PLANNING_IN_PROGRESS,
-  PLANNING_FAILED,
-  IN_TRANSIT,
-  PATH_COMPLETE,
-};
-
 typedef std::pair<double, double> dsl_key;  // keys in D* Lite consist of two doubles
 
 
@@ -116,6 +106,17 @@ class DStarLite : public AppCastingMOOSApp
 
   // D* Lite config
   int m_max_iters;
+
+ private:  // Mode Enum
+  enum class PlannerMode
+  {
+    IDLE,
+    REQUEST_PENDING,
+    PLANNING_IN_PROGRESS,
+    PLANNING_FAILED,
+    IN_TRANSIT,
+    PATH_COMPLETE,
+  };
 
  private:  // State variables
   // start, goal, and vehicle positions as XYPoints

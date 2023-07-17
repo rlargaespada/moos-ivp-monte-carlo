@@ -20,17 +20,6 @@
 #include "XYSegList.h"
 
 
-enum class PlannerMode
-{
-  IDLE,
-  REQUEST_PENDING,
-  PLANNING_IN_PROGRESS,
-  PLANNING_FAILED,
-  IN_TRANSIT,
-  PATH_COMPLETE,
-};
-
-
 class NullPlanner : public AppCastingMOOSApp
 {
  public:
@@ -86,6 +75,17 @@ class NullPlanner : public AppCastingMOOSApp
   std::string m_path_complete_var;  // PATH_COMPLETE
   std::string m_path_stats_var;  // PATH_STATS
   std::string m_path_failed_var;  // PATH_FAILED
+
+ private:  // Mode Enum
+  enum class PlannerMode
+  {
+    IDLE,
+    REQUEST_PENDING,
+    PLANNING_IN_PROGRESS,
+    PLANNING_FAILED,
+    IN_TRANSIT,
+    PATH_COMPLETE,
+  };
 
  private:  // State variables
   // start, goal, and vehicle positions as XYPoints
