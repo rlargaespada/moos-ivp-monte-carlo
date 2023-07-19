@@ -45,16 +45,19 @@ for ARGI; do
         echo "    File is placed in the \"./${METRICS_DIR}/<planner>/\" directory."
         echo "  --no_obs_avoid                                   "
         echo "    Do not use pObstacleMgr obstacle avoidance behaviors during trials."
-        echo "  --drift_vector=<heading>,<magnitude>             "
-        echo "    Vector defining water currents affecting obstacle "
-        echo "    and vehicle motion. Default is no drifts.      "
-        echo "  --wind_vector=<heading>,<magnitude>              "
-        echo "    Vector defining winds affecting vehicle motion only. "
-        echo "    Default is no winds.                           "
+        echo "  --drift_vector=<heading>,<magnitude> or \"random\"  "
+        echo "    Vector defining constant water currents affecting "
+        echo "    obstacle and vehicle motion. Default is no drifts."
+        echo "    Random drifts are generated with a random angle and"
+        echo "    magnitude between 0 and 1 m/s."
+        echo "  --wind_vector=<heading>,<magnitude> or \"random\"   "
+        echo "    Vector defining cpnstant winds affecting vehicle motion"
+        echo "    only. Default is no winds. Random winds are generated"
+        echo "    with a random angle and magnitude between 0 and 1 m/s. "
         echo "  --random_gusts                                   "
-        echo "    Add random gusts of wind disturbing vehicle motion."
-        echo "    Gusts are produced with a random direction and a"
-        echo "    random magnitude between 0.5 and 2."
+        echo "    Add random varying gusts of wind disturbing vehicle"
+        echo "    motion. Gusts are generated with a random direction"
+        echo "    and a random magnitude between 0.5 and 2.      "
         exit 0;
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
         TIME_WARP=$ARGI
@@ -82,8 +85,20 @@ for ARGI; do
         USE_OBS_AVOID="false"
     elif [ "${ARGI::15}" = "--drift_vector=" ] ; then
         DRIFT_VECTOR="${ARGI#*=}"
+        if [ ${DRIFT_VECTOR,,} = "random" ] ; then
+            DRIFT_TYPE="random"
+            DRIFT_VECTOR=""
+        else
+            DRIFT_TYPE="given"
+        fi
     elif [ "${ARGI::14}" = "--wind_vector=" ] ; then
         WIND_VECTOR="${ARGI#*=}"
+        if [ ${WIND_VECTOR,,} = "random" ] ; then
+            WIND_TYPE="random"
+            WIND_VECTOR=""
+        else
+            WIND_TYPE="given"
+        fi
     elif [ "${ARGI}" = "--random_gusts" ] ; then
         RANDOM_GUSTS="true"
     else 
@@ -137,7 +152,9 @@ nsplug ${MISSIONS_DIR}/meta_shoreside.moos targ_shoreside.moos -i -f \
        EXPORT_FILE="${EXPORT_FILE}" \
        USE_BENCHMARK=$USE_BENCHMARK \
        DRIFT_VEC=${DRIFT_VECTOR} \
-       WIND_VEC=${WIND_VECTOR}
+       DRIFT_TYPE=$DRIFT_TYPE \
+       WIND_VEC=${WIND_VECTOR} \
+       WIND_TYPE=${WIND_TYPE}
 
 nsplug ${MISSIONS_DIR}/meta_vehicle.moos targ_$V1_NAME.moos -i -f \
        --path="${LAYOUT_DIR}:${MAP_DIR}:${MISSIONS_DIR}" \

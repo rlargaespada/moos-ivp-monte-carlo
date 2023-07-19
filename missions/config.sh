@@ -13,7 +13,9 @@ EXPORT_FILE="uEvalPlanner_Metrics"
 
 USE_OBS_AVOID="true"
 DRIFT_VECTOR=""
+DRIFT_TYPE="none"
 WIND_VECTOR=""
+WIND_TYPE="none"
 RANDOM_GUSTS="false"
 
 METRICS_DIR="metrics"

@@ -57,6 +57,13 @@ Processconfig = ANTLER
   Run = uFldPathCheck         @ NewConsole = false
 
   Run = uEvalPlanner          @ NewConsole = false
+
+  #ifdef DRIFT_TYPE random
+  Run = uTimerScript          @ NewConsole = false ~ uTimerScript_RANDOM_DRIFT
+  #endif
+  #ifdef WIND_TYPE random
+  Run = uTimerScript          @ NewConsole = false ~ uTimerScript_RANDOM_WIND
+  #endif
 }
 
 
@@ -493,11 +500,18 @@ ProcessConfig = uEvalPlanner
   #endif
 
   // drift and wind vector config
-  #ifdef DRIFT_VEC
+  #ifdef DRIFT_TYPE random
+  initflag = SEND_RANDOM_DRIFT=true  // start timerscript
+  endflag = DRIFT_VECTOR=0,0  // stop drift at end of session
+  #elseifdef DRIFT_TYPE given
   initflag = DRIFT_VECTOR_ADD=$(DRIFT_VEC)
   endflag = DRIFT_VECTOR=0,0  // stop drift at end of session
   #endif
-  #ifdef WIND_VEC
+
+  #ifdef WIND_TYPE random
+  initflag = SEND_RANDOM_WIND=true  // start timerscript
+  endflag = WIND_VECTOR=0,0  // stop wind at end of session
+  #elseifdef WIND_TYPE given
   initflag = WIND_VECTOR_ADD=$(WIND_VEC)
   endflag = WIND_VECTOR=0,0  // stop wind at end of session
   #endif
@@ -505,4 +519,44 @@ ProcessConfig = uEvalPlanner
   // export config
   file = $(EXPORT_FILE)
   use_timestamp = false
+}
+
+
+ProcessConfig = uTimerScript_RANDOM_DRIFT
+{
+  AppTick   = 2
+  CommsTick = 2
+  condition = SEND_RANDOM_DRIFT=true
+  paused        = false
+  reset_max     = unlimited
+  reset_time    = end
+  script_name   = RANDOM_DRIFT
+  script_atomic = false
+  upon_awake = restart
+
+  randvar = varname=ANG, min=0,   max=359, key=at_reset
+  randvar = varname=MAG, min=0, max=1, key=at_reset
+
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],$[MAG]", time=0
+  event = var=SEND_RANDOM_DRIFT, val="false", time=1
+}
+
+
+ProcessConfig = uTimerScript_RANDOM_WIND
+{
+  AppTick   = 2
+  CommsTick = 2
+  condition = SEND_RANDOM_WIND=true
+  paused        = false
+  reset_max     = unlimited
+  reset_time    = end
+  script_name   = RANDOM_WIND
+  script_atomic = false
+  upon_awake = restart
+
+  randvar = varname=ANG, min=0,   max=359, key=at_reset
+  randvar = varname=MAG, min=0, max=1, key=at_reset
+
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],$[MAG]", time=0
+  event = var=SEND_RANDOM_WIND, val="false", time=1
 }
