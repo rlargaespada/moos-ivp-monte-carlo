@@ -23,15 +23,15 @@ SET(SRC
 ADD_EXECUTABLE(pIRIS2D ${SRC})
 
 TARGET_LINK_LIBRARIES(pIRIS2D
-   ${MOOS_LIBRARIES}
-   geometry
-   apputil
-   mbutil
-   m
-   pthread
-   Eigen3::Eigen
-   ${CDD_LIBRARY}
-   ${MOSEK_C_LIB})
+  ${MOOS_LIBRARIES}
+  geometry
+  apputil
+  mbutil
+  m
+  pthread
+  Eigen3::Eigen
+  ${CDD_LIBRARY}
+  ${MOSEK_C_LIB})
 
 TARGET_INCLUDE_DIRECTORIES(pIRIS2D PUBLIC
   ${CDD_INCLUDE_DIR}

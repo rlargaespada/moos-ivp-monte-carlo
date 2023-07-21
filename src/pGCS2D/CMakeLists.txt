@@ -17,17 +17,18 @@ SET(SRC
 ADD_EXECUTABLE(pGCS2D ${SRC})
 
 TARGET_LINK_LIBRARIES(pGCS2D
-   ${MOOS_LIBRARIES}
-   geometry
-   apputil
-   mbutil
-   m
-   pthread
-   Eigen3::Eigen
-   ${CDD_LIBRARY}
-   ${MOSEK_C_LIB}
-   ${MOSEK_FUSION_LIB})
+  ${MOOS_LIBRARIES}
+  geometry
+  apputil
+  mbutil
+  m
+  pthread
+  Eigen3::Eigen
+  ${CDD_LIBRARY}
+  ${MOSEK_C_LIB}
+  ${MOSEK_FUSION_LIB})
 
 TARGET_INCLUDE_DIRECTORIES(pGCS2D PUBLIC
   ${CDD_INCLUDE_DIR}
-  ${MOSEK_INCLUDE_DIR})
+  ${MOSEK_INCLUDE_DIR}
+  ${BEZIER_INCLUDE_DIR})

@@ -59,12 +59,30 @@ INCLUDE_DIRECTORIES(${IVP_INCLUDE_DIRS})
 FILE(GLOB IVP_LIBRARY_DIRS ${MOOSIVP_SOURCE_TREE_BASE}/lib )
 LINK_DIRECTORIES(${IVP_LIBRARY_DIRS})
 
+
+#======================================================================
+# Update submodules as needed
+#======================================================================
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
+
 #======================================================================
 # Find External Libraries
 #======================================================================
 
-unset(GCS_MISSING_COMPONENTS)  # requires Eigen3, cddlib, mosek, mosek fusion
-message(STATUS "Finding external libraries...")
+unset(GCS_MISSING_COMPONENTS)  # requires Eigen3, cddlib, mosek, mosek fusion, bezier
+message(STATUS "Finding external dependencies...")
 list(APPEND CMAKE_MESSAGE_INDENT "  ")
 
 
@@ -129,13 +147,23 @@ else()
 endif()
 
 
+# look for bezier library
+find_path(BEZIER_INCLUDE_DIR bezier.h PATHS ${PROJECT_SOURCE_DIR}/extern/bezier/include/)
+if(BEZIER_INCLUDE_DIR)
+   message(STATUS "bezier include directory: ${BEZIER_INCLUDE_DIR}")
+else()
+   message(WARNING "Could NOT find bezier.h ")
+   list(APPEND GCS_MISSING_COMPONENTS "bezier")
+endif()
+
+
 # report final status
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 if(GCS_MISSING_COMPONENTS)
    message(WARNING "cannot build pGCS2D or pIRIS2D due to the following missing dependencies:")
    message(WARNING "missing components: ${GCS_MISSING_COMPONENTS}")
 else()
-   message(STATUS "all components found")
+   message(STATUS "All components found!")
 endif()
 
 

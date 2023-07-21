@@ -1,0 +1,3 @@
+[submodule "extern/bezier"]
+	path = extern/bezier
+	url = git@github.com:oysteinmyrmo/bezier.git
