@@ -11,10 +11,12 @@
 #----------------------------------------------------------
 #  Part 1: Pull global var defaults from config files
 #----------------------------------------------------------
-# define upper level param directories
-LAYOUT_DIR=$(dirname $PWD)  # layout directory is one level up
-MAP_DIR=$(dirname $LAYOUT_DIR)  # map directory is two levels up
-MISSIONS_DIR=$(dirname $MAP_DIR)  # missions directory is three levels up
+# make sure differeent directories are defined
+if [ -z "$LAYOUT_DIR"  -o -z "$MAP_DIR" -o -z "$MISSIONS_DIR" ] ; then
+    echo "Cannot run script because the locations of configuration scripts"
+    echo "have not been defined"
+    exit 1
+fi
 
 # source config vars from upper level dirs
 source ${MISSIONS_DIR}/config.sh
@@ -59,7 +61,7 @@ for ARGI; do
         echo "    motion. Gusts are generated with a random direction"
         echo "    and a random magnitude between 0.5 and 2.      "
         exit 0;
-    elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ]; then 
+    elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ] ; then
         TIME_WARP=$ARGI
     elif [ "${ARGI}" = "--just_make" -o "${ARGI}" = "-j" ] ; then
         JUST_MAKE="true"
