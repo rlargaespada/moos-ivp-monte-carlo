@@ -17,3 +17,4 @@ From this directory, change to the monte carlo mission directory using `cd missi
 <!-- TODO: ADD INSTALLATION INSTRUCTIONS FOR EIGEN3, MOSEK, CDD, Bezier-->
 <!--EIGEN3: sudo apt-get install libeigen3-dev might work, or download and extract, then run instructions in eigen-3.4.0/INSTALL-->
 <!-- CDD: sudo apt-get install libcdd-dev or from [github](https://github.com/cddlib/cddlib)-->
+<!-- Bezier: https://github.com/oysteinmyrmo/bezier/tree/master -->

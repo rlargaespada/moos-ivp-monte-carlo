@@ -1,0 +1,7 @@
+#ifndef GCS2D_GCSEDGE_HEADER
+#define GCS2D_GCSEDGE_HEADER
+
+class GCSEdge
+{};
+
+#endif  // GCS2D_GCSEDGE_HEADER

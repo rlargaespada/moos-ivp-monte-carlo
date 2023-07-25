@@ -9,6 +9,9 @@ if(GCS_MISSING_COMPONENTS)
 endif()
 
 SET(SRC
+  GCSVertex.cpp
+  GCSEdge.cpp
+  GraphOfConvexSets.cpp
   GCS2D.cpp
   GCS2D_Info.cpp
   main.cpp

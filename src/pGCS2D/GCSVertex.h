@@ -1,0 +1,7 @@
+#ifndef GCS2D_GCSVERTEX_HEADER
+#define GCS2D_GCSVERTEX_HEADER
+
+class GCSVertex
+{};
+
+#endif  // GCS2D_GCSVERTEX_HEADER
