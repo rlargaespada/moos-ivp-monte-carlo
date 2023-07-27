@@ -16,14 +16,6 @@
 #include "XYPoint.h"
 
 
-enum class SimRequest
-{
-  PENDING,
-  OPEN,
-  CLOSED,
-};
-
-
 struct TrialData
 {
   int trial_num{0};  // trial index out of all trials completed
@@ -149,6 +141,14 @@ class EvalPlanner : public AppCastingMOOSApp
   std::string expandMacros(std::string sval);
   void postFlags(const std::vector<VarDataPair>& flags);
   bool cleanupSim();
+
+ private:  // request state enum
+  enum class SimRequest
+  {
+    PENDING,
+    OPEN,
+    CLOSED,
+  };
 
  private:  // Configuration variables
   // vehicle data

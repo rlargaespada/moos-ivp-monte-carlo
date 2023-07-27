@@ -65,11 +65,14 @@ class IRIS2D : public AppCastingMOOSApp
   bool saveIRISRegion(int idx = -1);
 
  private:  // Configuration variables
+  std::string m_run_iris_var;  // default: RUN_IRIS
+  std::string m_clear_iris_var;  // default: CLEAR_IRIS
+
   std::string m_obs_alert_var;  // default: OBSTACLE_ALERT
   std::string m_seed_pt_var;  // default: IRIS_SEED_POINT
 
-  std::string m_iris_region_var;  // IRIS_REGION
-  std::string m_complete_var;  // IRIS_COMPLETE
+  std::string m_iris_region_var;  // default: IRIS_REGION
+  std::string m_complete_var;  // default: IRIS_COMPLETE
 
   // Visual params for rendering IRIS regions
   std::string m_label_prefix;

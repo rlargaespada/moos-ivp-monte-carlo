@@ -38,8 +38,6 @@ NullPlanner::NullPlanner()
 
   // publication config
   m_prefix = "";
-  m_post_visuals = true;
-
   m_path_found_var = "PATH_FOUND";
   m_path_complete_var = "PATH_COMPLETE";
   m_path_stats_var = "PATH_STATS";
@@ -442,8 +440,6 @@ bool NullPlanner::OnStartUp()
       handled = addVarDataPairOnString(m_traverse_flags, value);
     } else if ((param == "end_flag") || (param == "endflag")) {
       handled = addVarDataPairOnString(m_end_flags, value);
-    } else if (param == "post_visuals") {
-      handled = setBooleanOnString(m_post_visuals, value);
     }
 
     if (!handled)

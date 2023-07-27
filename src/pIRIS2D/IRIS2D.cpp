@@ -32,6 +32,8 @@ IRIS2D::IRIS2D()
 {
   //* Config Variables
   // vars to subscribe to, all are set in onStartup();
+  m_run_iris_var = "";
+  m_clear_iris_var = "";
   m_obs_alert_var = "";
   m_seed_pt_var = "";
 
@@ -112,9 +114,9 @@ bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
     bool   mstr  = msg.IsString();
 #endif
 
-    if (key == "RUN_IRIS") {
+    if (key == m_run_iris_var) {
       m_run_pending = true;
-    } else if (key == "CLEAR_IRIS") {
+    } else if (key == m_clear_iris_var) {
       m_run_pending = false;
       m_clear_pending = true;
     } else if (key == m_obs_alert_var) {
@@ -584,8 +586,12 @@ bool IRIS2D::OnStartUp()
     std::string value = line;
 
     bool handled = false;
-    // vars to subscribe to
-    if (param == "obs_alert_var") {
+    // subscription config
+    if (param == "iris_run_var") {
+      handled = setNonWhiteVarOnString(m_run_iris_var, toupper(value));
+    } else if (param == "iris_clear_var") {
+      handled = setNonWhiteVarOnString(m_clear_iris_var, toupper(value));
+    } else if (param == "obs_alert_var") {
       handled = setNonWhiteVarOnString(m_obs_alert_var, toupper(value));
     } else if ((param == "seed_point_var") || (param == "seed_pt_var")) {
       handled = setNonWhiteVarOnString(m_seed_pt_var, toupper(value));
@@ -660,6 +666,10 @@ bool IRIS2D::OnStartUp()
   }
 
   // set subscription vars if unset
+  if (m_run_iris_var.empty())
+    m_run_iris_var = "RUN_IRIS";
+  if (m_clear_iris_var.empty())
+    m_clear_iris_var = "CLEAR_IRIS";
   if (m_obs_alert_var.empty())
     m_obs_alert_var = "OBSTACLE_ALERT";
   if (m_seed_pt_var.empty())
@@ -702,8 +712,10 @@ bool IRIS2D::OnStartUp()
 void IRIS2D::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
-  Register("RUN_IRIS", 0);
-  Register("CLEAR_IRIS", 0);
+  if (!m_run_iris_var.empty())
+    Register(m_run_iris_var, 0);
+  if (!m_clear_iris_var.empty())
+    Register(m_clear_iris_var, 0);
   Register("OBM_RESOLVED", 0);
   if (!m_obs_alert_var.empty())
     Register(m_obs_alert_var, 0);

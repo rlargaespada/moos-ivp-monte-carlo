@@ -68,7 +68,6 @@ class NullPlanner : public AppCastingMOOSApp
   std::vector<VarDataPair> m_init_plan_flags;
   std::vector<VarDataPair> m_traverse_flags;
   std::vector<VarDataPair> m_end_flags;
-  bool m_post_visuals;
 
   // publications variable names, not configurable by user
   std::string m_path_found_var;  // PATH_FOUND
