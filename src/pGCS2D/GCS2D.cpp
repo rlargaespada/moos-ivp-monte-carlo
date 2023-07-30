@@ -62,6 +62,7 @@ GCS2D::GCS2D()
   m_planning_end_time = 0;
   m_path_len_traversed = 0;
   m_next_path_idx = 0;
+  m_gcs_step = GCSStep::BUILD_GRAPH;
 }
 
 
@@ -122,7 +123,7 @@ bool GCS2D::OnNewMail(MOOSMSG_LIST &NewMail)
 
     // pIRIS2D interface
     } else if (key == m_clear_iris_var) {
-      m_safe_regions.clear();
+      clearIRISRegions();
     } else if (key == m_iris_region_var) {
       newIRISRegion(msg.GetString());
     } else if (key == m_iris_complete_var) {
@@ -206,13 +207,182 @@ bool GCS2D::OnConnectToServer()
 bool GCS2D::Iterate()
 {
   AppCastingMOOSApp::Iterate();
-  // Do your thing here!
+
+  bool path_found{false};
+
+  switch (m_mode) {
+    case (PlannerMode::REQUEST_PENDING):  // new path request
+      // post new plan messages
+      Notify(m_prefix + m_path_found_var, "false");
+      Notify(m_prefix + m_path_complete_var, "false");
+      Notify(m_prefix + m_path_failed_var, "false");
+      postFlags(m_init_plan_flags);
+
+      // clear planning state data
+      m_planning_start_time = MOOSTime();
+      m_path_len_traversed = 0;
+      m_path.clear();
+
+      // begin building GCS
+      m_gcs_step = GCSStep::BUILD_GRAPH;  // go back to first gcs step
+      path_found = planPath();
+      break;
+    // if already planning a path, pick up from where we left off
+    case (PlannerMode::GCS_IN_PROGRESS):
+      path_found = planPath();
+      break;
+    case (PlannerMode::PATH_COMPLETE):  // if path is complete, cleanup
+      Notify(m_prefix + m_path_complete_var, "true");
+      postFlags(m_end_flags);
+      m_mode = PlannerMode::IDLE;
+      break;
+    default:  // IDLE, IRIS_IN_PROGRESS, PLANNING_FAILED, IN_TRANSIT
+      // do nothing in these modes, waiting for mail from other apps
+      break;
+  }
+
+  // notify that path has been found
+  if (path_found) {
+    m_planning_end_time = MOOSTime();
+    m_mode = PlannerMode::IN_TRANSIT;
+    postPath();
+  }
+
   AppCastingMOOSApp::PostReport();
   return(true);
 }
 
 
 //---------------------------------------------------------
+
+void GCS2D::clearIRISRegions()
+{
+  m_safe_regions.clear();
+  m_iris_file.clear();  // not using this anymore if IRIS is cleared
+}
+
+bool GCS2D::requestIRISRegions()
+{
+  // todo: make sure there's a pIRIS2D app running, otherwise report run warning and return false
+  return (Notify(m_run_iris_var, "now"));
+}
+
+
+bool GCS2D::buildGraph()
+{
+  return (true);
+}
+
+
+bool GCS2D::populateModel()
+{
+  return (true);
+}
+
+
+bool GCS2D::planPath()
+{
+  bool path_found{false};
+
+  switch (m_mode) {
+    // initial request to start planning
+    case (PlannerMode::REQUEST_PENDING):
+      // check if we need to run IRIS
+      if ((m_run_iris_on_new_path) || (m_safe_regions.empty())) {
+        if (requestIRISRegions()) {
+          m_mode = PlannerMode::IRIS_IN_PROGRESS;
+          m_gcs_step = GCSStep::BUILD_GRAPH;  // force gcs back to first step
+        } else {
+          handlePlanningFail("Failed to request IRIS regions!");
+          m_gcs_step = GCSStep::FAILED;
+        }
+
+      // if we don't need to run IRIS, start by building graph
+      } else {
+        // if graph was built successfully, move onto the next step next iteration
+        if (buildGraph()) {
+          m_mode = PlannerMode::GCS_IN_PROGRESS;
+            // m_gcs_step = GCSStep::PREPROCESS_GRAPH;  // todo: implement preprocessing
+          m_gcs_step = GCSStep::POPULATE_MODEL;
+        // otherwise report failure
+        } else {
+          handlePlanningFail("Failed to build GCS!");
+          m_gcs_step = GCSStep::FAILED;
+        }
+      }
+
+      break;
+
+    // subsequent requests to continue planning
+    case (PlannerMode::GCS_IN_PROGRESS):
+      switch (m_gcs_step) {
+        case (GCSStep::BUILD_GRAPH):
+          // if graph was built successfully, move onto the next step next iteration
+          if (buildGraph()) {
+            // m_gcs_step = GCSStep::PREPROCESS_GRAPH;  // todo: implement preprocessing
+            m_gcs_step = GCSStep::POPULATE_MODEL;
+          // otherwise report failure
+          } else {
+            handlePlanningFail("Failed to build GCS!");
+            m_gcs_step = GCSStep::FAILED;
+          }
+          break;
+
+        case (GCSStep::POPULATE_MODEL):
+          // if model was populated successfully, move onto the next step next iteration
+          if (populateModel()) {
+            m_gcs_step = GCSStep::START_MOSEK;
+          // otherwise report failure
+          } else {
+            handlePlanningFail("Failed to populate MOSEK model!");
+            m_gcs_step = GCSStep::FAILED;
+          }
+          break;
+
+        case (GCSStep::START_MOSEK):
+          // if preconditions are met, start MOSEK optimization
+          if (!checkPlanningPreconditions()) {
+            handlePlanningFail();  // checkPlanningPreconditions posts its own warnings
+            m_gcs_step = GCSStep::FAILED;
+          } else {
+            // todo: start mosek in separate thread
+            m_gcs_step = GCSStep::MOSEK_RUNNING;
+          }
+          break;
+
+        case (GCSStep::MOSEK_RUNNING):
+          // todo: check if mosek is done or not
+          // todo: if it's not done, increment some counter
+          // todo: if it's done, parse out path, return true if it succeeds
+          // todo: implement convex rounding
+
+          // placeholders while testing
+          path_found = true;
+          m_path.add_vertex(m_start_point);
+          m_path.add_vertex(m_goal_point);
+          break;
+        default:  // shouldn't get here
+          break;
+      }
+
+      break;
+
+    // in all other modes, do nothing
+    default:
+      break;
+  }
+
+  return (path_found);
+}
+
+
+//---------------------------------------------------------
+
+bool GCS2D::checkPlanningPreconditions()
+{
+  return (true);
+}
+
 
 void GCS2D::handlePlanningFail(const std::string& warning_msg)
 {
@@ -308,6 +478,8 @@ bool GCS2D::OnStartUp()
     if (!readRegionsFromFile()) {
       reportConfigWarning("Could not read safe regions from " + m_iris_file);
       m_iris_file.clear();  // clear to force use of pIRIS2D
+    } else {
+    m_run_iris_on_new_path = false;  // if file was ok, force this to false
     }
   }
   checkConfigAssertions();
@@ -354,8 +526,6 @@ void GCS2D::checkConfigAssertions()
           }
     }
   }
-
-  // todo: if m_iris_file.empty(), make sure there's a pIRIS2D app running
 }
 
 
@@ -408,6 +578,30 @@ std::string GCS2D::printPlannerMode()
     return ("IN_TRANSIT");
   case PlannerMode::PATH_COMPLETE:
     return ("PATH_COMPLETE");
+  default:
+    return ("UNKNOWN");
+  }
+}
+
+
+std::string GCS2D::printGCSStep()
+{
+  switch (m_gcs_step)
+  {
+  case (GCSStep::BUILD_GRAPH):
+    return ("BUILD_GRAPH");
+  case (GCSStep::PREPROCESS_GRAPH):
+    return ("PREPROCESS_GRAPH");
+  case (GCSStep::POPULATE_MODEL):
+    return ("POPULATE_MODEL");
+  case (GCSStep::START_MOSEK):
+    return ("START_MOSEK");
+  case (GCSStep::MOSEK_RUNNING):
+    return ("MOSEK_RUNNING");
+  case (GCSStep::CONVEX_ROUNDING):
+    return ("CONVEX_ROUNDING");
+  case (GCSStep::FAILED):
+    return ("FAILED");
   default:
     return ("UNKNOWN");
   }
@@ -531,6 +725,7 @@ bool GCS2D::buildReport()
   m_msgs << header << endl;
   if ((m_mode == PlannerMode::IRIS_IN_PROGRESS) || (m_mode == PlannerMode::GCS_IN_PROGRESS)) {
     m_msgs << "PLANNING IN PROGRESS" << endl;
+    m_msgs << "GCS Step: " << printGCSStep() << endl;
     return (true);
   }
 

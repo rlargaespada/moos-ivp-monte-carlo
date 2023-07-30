@@ -50,9 +50,9 @@ class GCS2D : public AppCastingMOOSApp
 
   // iterate loop helpers
   void clearIRISRegions();
-  void requestIRISRegions();  // todo: handle timing so we clear IRIS and then run IRIS
-  void buildGraph();
-  void populateModel();
+  bool requestIRISRegions();
+  bool buildGraph();
+  bool populateModel();
   // todo: pull any other preconditions from gcs code
   bool checkPlanningPreconditions();  // todo: graph needs start and goal, edges from these/ model
 
@@ -65,6 +65,7 @@ class GCS2D : public AppCastingMOOSApp
 
   // state publishing
   std::string printPlannerMode();
+  std::string printGCSStep();
   void postFlags(const std::vector<VarDataPair>& flags);
 
  private:  // Configuration variables
@@ -103,7 +104,7 @@ class GCS2D : public AppCastingMOOSApp
   unsigned int m_derivative_regularization_order;
   GraphOfConvexSetsOptions m_options;
 
- private:  // Mode Enum
+ private:  // State Enums
   enum class PlannerMode
   {
     IDLE,
@@ -113,6 +114,17 @@ class GCS2D : public AppCastingMOOSApp
     PLANNING_FAILED,
     IN_TRANSIT,
     PATH_COMPLETE,
+  };
+
+  enum class GCSStep
+  {
+    BUILD_GRAPH,
+    PREPROCESS_GRAPH,
+    POPULATE_MODEL,
+    START_MOSEK,
+    MOSEK_RUNNING,
+    CONVEX_ROUNDING,
+    FAILED,
   };
 
  private:  // State variables
@@ -134,6 +146,7 @@ class GCS2D : public AppCastingMOOSApp
   // GCS state
   std::map<std::string, XYPolygon> m_safe_regions;
   GraphOfConvexSets m_gcs;  // todo: if we have regions already, reuse existing graph edges
+  GCSStep m_gcs_step;
 };
 
 #endif
