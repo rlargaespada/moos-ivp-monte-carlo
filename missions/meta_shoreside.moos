@@ -131,6 +131,7 @@ ProcessConfig = pMarineViewer
   button_two = CLEAR_IRIS # CLEAR_IRIS_ALL=now
   button_three = RESET_OBS # RESET_KNOWN_OBSTACLES=now # RESET_UNKNOWN_OBSTACLES=now
   button_four = RUN_IRIS_NO_SEED # RUN_IRIS_ALL=now
+  button_five = REBUILD_IRIS # REBUILD_IRIS_ALL=now
   #else
   button_one = LAUNCH_SIM # DEPLOY_ALL=true # MOOS_MANUAL_OVERRIDE_ALL=false
   button_one = RESET_SIM_REQUESTED=all
@@ -280,6 +281,7 @@ ProcessConfig = uFldShoreBroker
   bridge = src=WIND_VECTOR, alias=DRIFT_VECTOR
   bridge = src=WIND_VECTOR_ADD, alias=DRIFT_VECTOR_ADD
   qbridge = IRIS_SEED_POINT
+  qbridge = REBUILD_IRIS
   qbridge = RUN_IRIS
   qbridge = CLEAR_IRIS
 }

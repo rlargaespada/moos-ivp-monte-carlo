@@ -32,6 +32,7 @@ IRIS2D::IRIS2D()
 {
   //* Config Variables
   // vars to subscribe to, all are set in onStartup();
+  m_rebuild_iris_var = "";
   m_run_iris_var = "";
   m_clear_iris_var = "";
   m_obs_alert_var = "";
@@ -114,10 +115,12 @@ bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
     bool   mstr  = msg.IsString();
 #endif
 
-    if (key == m_run_iris_var) {
+    if (key == m_rebuild_iris_var) {
+      m_run_pending = true;
+      m_clear_pending = true;
+    } else if (key == m_run_iris_var) {
       m_run_pending = true;
     } else if (key == m_clear_iris_var) {
-      m_run_pending = false;
       m_clear_pending = true;
     } else if (key == m_obs_alert_var) {
       handled = handleObstacleAlert(msg.GetString());
@@ -255,6 +258,7 @@ bool IRIS2D::Iterate()
 
   } else if ((m_active) && (m_mode == "manual")) {
     // nothing to do, go back to inactive
+    Notify(m_complete_var, "now");
     m_active = false;
   }
 
@@ -287,9 +291,10 @@ void IRIS2D::handleRequests()
     if (m_mode != "auto")
       m_active = false;
     reportEvent("All IRIS regions cleared!");
-  } else if (m_run_pending) {
-    m_active = true;  // always true in auto mode
   }
+
+  if (m_run_pending)
+    m_active = true;  // always true in auto mode
 
   m_clear_pending = false;
   m_run_pending = false;
@@ -587,7 +592,9 @@ bool IRIS2D::OnStartUp()
 
     bool handled = false;
     // subscription config
-    if (param == "iris_run_var") {
+    if (param == "iris_rebuild_var") {
+      handled = setNonWhiteVarOnString(m_rebuild_iris_var, toupper(value));
+    } else if (param == "iris_run_var") {
       handled = setNonWhiteVarOnString(m_run_iris_var, toupper(value));
     } else if (param == "iris_clear_var") {
       handled = setNonWhiteVarOnString(m_clear_iris_var, toupper(value));
@@ -666,6 +673,8 @@ bool IRIS2D::OnStartUp()
   }
 
   // set subscription vars if unset
+  if (m_rebuild_iris_var.empty())
+    m_rebuild_iris_var = "REBUILD_IRIS";
   if (m_run_iris_var.empty())
     m_run_iris_var = "RUN_IRIS";
   if (m_clear_iris_var.empty())
@@ -712,6 +721,8 @@ bool IRIS2D::OnStartUp()
 void IRIS2D::registerVariables()
 {
   AppCastingMOOSApp::RegisterVariables();
+  if (!m_rebuild_iris_var.empty())
+    Register(m_rebuild_iris_var, 0);
   if (!m_run_iris_var.empty())
     Register(m_run_iris_var, 0);
   if (!m_clear_iris_var.empty())
@@ -734,6 +745,9 @@ bool IRIS2D::buildReport()
 
   m_msgs << header << endl;
   m_msgs << "Subscriptions:" << endl;
+  m_msgs << "  iris_rebuild_var: " << m_rebuild_iris_var << endl;
+  m_msgs << "  iris_run_var: " << m_run_iris_var << endl;
+  m_msgs << "  iris_clear_var: " << m_clear_iris_var << endl;
   m_msgs << "  obs_alert_var: " << m_obs_alert_var << endl;
   m_msgs << "  seed_point_var: " << m_seed_pt_var << endl;
   m_msgs << "Publications: " << endl;

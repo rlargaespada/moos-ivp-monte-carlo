@@ -65,6 +65,7 @@ class IRIS2D : public AppCastingMOOSApp
   bool saveIRISRegion(int idx = -1);
 
  private:  // Configuration variables
+  std::string m_rebuild_iris_var;  // default: REBUILD_IRIS
   std::string m_run_iris_var;  // default: RUN_IRIS
   std::string m_clear_iris_var;  // default: CLEAR_IRIS
 

@@ -333,10 +333,11 @@ ProcessConfig = pIRIS2D
   CommsTick	 = 4
 
   // vars to subscribe for
+  iris_rebuild_var = REBUILD_IRIS  // default
   iris_run_var = RUN_IRIS  // default
   iris_cLEAR_var = CLEAR_IRIS  // default
   obs_alert_var = $(PLANNER_OBS_ALERT_VAR)
-  seed_point_var = IRIS_SEED_POINT
+  seed_point_var = IRIS_SEED_POINT  // default
 
   // publications
   iris_region_var = IRIS_REGION
@@ -371,10 +372,10 @@ ProcessConfig = pGCS2D
 
   // pIRIS2D interface config
   rerun_iris_on_path_request = true
-  iris_run_var = RUN_IRIS  // default
-  iris_cLEAR_var = CLEAR_IRIS  // default
-  iris_region_var = IRIS_REGION
-  iris_complete_var = IRIS_COMPLETE
+  iris_run_var = REBUILD_IRIS  // force pIRIS2D to start from scratch
+  iris_clear_var = CLEAR_IRIS  // default
+  iris_region_var = IRIS_REGION  // default
+  iris_complete_var = IRIS_COMPLETE  // default
 
   // gcs config
   use_bezier = true
