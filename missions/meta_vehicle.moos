@@ -54,6 +54,7 @@ Processconfig = ANTLER
   Run = pDStarLite       @ NewConsole = false
   #elseifdef PLANNER gcs
   Run = pIRIS2D          @ NewConsole = false
+  Run = pGCS2D           @ NewConsole = false
   #endif
 }
 
@@ -332,12 +333,56 @@ ProcessConfig = pIRIS2D
   CommsTick	 = 4
 
   // vars to subscribe for
+  iris_run_var = RUN_IRIS  // default
+  iris_cLEAR_var = CLEAR_IRIS  // default
   obs_alert_var = $(PLANNER_OBS_ALERT_VAR)
   seed_point_var = IRIS_SEED_POINT
 
+  // publications
+  iris_region_var = IRIS_REGION
+  iris_complete_var = IRIS_COMPLETE
+
+  // visuals
+  post_ellipses = false
+
+  // optimization config
   mode = manual
   desired_regions = 20  // default
   max_iters = 50  // default
   termination_threshold = 0.5  // default
   iris_bounds = $(SEARCH_BOUNDS)
+}
+
+
+//------------------------------------------
+// pGCS2D config block
+ProcessConfig = pGCS2D
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  path_request_var = $(PATH_REQUEST_VAR)
+  wpt_complete_var = WAYPOINTS_COMPLETE
+
+  // publication config
+  init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS]
+
+  // pIRIS2D interface config
+  rerun_iris_on_path_request = true
+  iris_run_var = RUN_IRIS  // default
+  iris_cLEAR_var = CLEAR_IRIS  // default
+  iris_region_var = IRIS_REGION
+  iris_complete_var = IRIS_COMPLETE
+
+  // gcs config
+  use_bezier = true
+  bezier_order = 3
+  bezier_continuity = 1
+  path_length_weight = 1
+  derivative_regularization_weight = .1
+  derivative_regularization_order = 2
+
+  // optimization options are all defaults
 }

@@ -8,6 +8,7 @@
 #ifndef GCS2D_HEADER
 #define GCS2D_HEADER
 
+#include <map>
 #include <string>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
@@ -39,21 +40,24 @@ class GCS2D : public AppCastingMOOSApp
   void registerVariables();
 
   // mail handling
-  bool setEndpoints(std::string request);
-  bool newIRISRegion(std::string spec);
+  bool setEndpoints(const std::string& request);
   void handleNewWpt(int new_wpt_idx);
+  void newIRISRegion(const std::string& spec);
 
   // config handling
   bool readRegionsFromFile();
+  void checkConfigAssertions();
 
   // iterate loop helpers
+  void clearIRISRegions();
   void requestIRISRegions();  // todo: handle timing so we clear IRIS and then run IRIS
   void buildGraph();
   void populateModel();
-  bool checkPlanningPreconditions();  // todo: graph needs start and goal, edges from these/ model
   // todo: pull any other preconditions from gcs code
+  bool checkPlanningPreconditions();  // todo: graph needs start and goal, edges from these/ model
+
   bool planPath();
-  void handlePlanningFail(std::string warning_msg = "");
+  void handlePlanningFail(const std::string& warning_msg = "");
 
   // path publishing
   std::string getPathStats();
@@ -70,19 +74,18 @@ class GCS2D : public AppCastingMOOSApp
 
   // IRIS interface
   std::string m_iris_file;  // default: unset
-  bool m_run_iris_on_new_path;  // default: true unless m_iris_file is set, else false
+  bool m_run_iris_on_new_path;  // default: false
   // todo: handle cases where we get an iris file and this var, if we get a file this is ignored
   std::string m_run_iris_var;  // default: RUN_IRIS
   std::string m_clear_iris_var;  // default: CLEAR_IRIS
   std::string m_iris_region_var;  // default: IRIS_REGION
-  std::string m_complete_var;  // default: IRIS_COMPLETE
+  std::string m_iris_complete_var;  // default: IRIS_COMPLETE
 
   // publication config
   std::string m_prefix;
   std::vector<VarDataPair> m_init_plan_flags;
   std::vector<VarDataPair> m_traverse_flags;
   std::vector<VarDataPair> m_end_flags;
-  bool m_post_visuals;
 
   // publications variable names, not configurable by user
   std::string m_path_found_var;  // PATH_FOUND
@@ -92,6 +95,12 @@ class GCS2D : public AppCastingMOOSApp
 
   // GCS config
   bool m_use_bezier_gcs;
+  unsigned int m_bezier_order;
+  unsigned int m_bezier_continuity_req;
+  double m_path_length_weight;  // todo: should be able to apply separately in x and y
+  // todo: should be able to apply these many times (use a vector? of pairs?)
+  double m_derivative_regularization_weight;
+  unsigned int m_derivative_regularization_order;
   GraphOfConvexSetsOptions m_options;
 
  private:  // Mode Enum
@@ -116,11 +125,14 @@ class GCS2D : public AppCastingMOOSApp
   PlannerMode m_mode;
   double m_planning_start_time;
   double m_planning_end_time;
+
+  // path state data
   double m_path_len_traversed;
+  int m_next_path_idx;
   XYSegList m_path;
 
   // GCS state
-  std::vector<XYPolygon> m_safe_regions;
+  std::map<std::string, XYPolygon> m_safe_regions;
   GraphOfConvexSets m_gcs;  // todo: if we have regions already, reuse existing graph edges
 };
 

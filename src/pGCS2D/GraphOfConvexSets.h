@@ -23,9 +23,9 @@
 
 struct GraphOfConvexSetsOptions {
   bool convex_relaxation{true};
-  int max_rounded_paths{10};
+  unsigned int max_rounded_paths{10};
   bool preprocessing{true};
-  int max_rounding_trials{100};
+  unsigned int max_rounding_trials{100};
   double flow_tolerance{1e-5};
   int rounding_seed{0};
 
@@ -50,7 +50,7 @@ class GraphOfConvexSets
   std::vector<GCSEdge> incidentEdges(std::string name);
   std::vector<GCSEdge> incidentEdges(GCSVertex vertex);
 
-  void addSourceTarget();
+  void addSourceTarget();  //! make sure costs are applied correctly (do this in constructor?)
   void findStartGoalEdges();
 
   void addVertex();
