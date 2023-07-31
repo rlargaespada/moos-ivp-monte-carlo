@@ -106,8 +106,6 @@ class GraphOfConvexSets
 
   std::map<std::string, std::unique_ptr<GCSVertex>> m_vertices;
   std::map<std::string, std::unique_ptr<GCSEdge>> m_edges;
-  GCSVertex m_source;
-  GCSVertex m_target;
 
   GraphOfConvexSetsOptions m_options;
   mosek::fusion::Model::t m_model;
