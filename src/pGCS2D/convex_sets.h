@@ -29,6 +29,9 @@ namespace ConvexSets {
 class PointSet : public ConvexSet
 {
  public:
+  explicit PointSet(const XYPoint& pt) : m_pt(pt) {}
+
+ public:
   int dim() const {return (2);}  // points are in 2D
   const XYPoint& point() const {return (m_pt);}
 

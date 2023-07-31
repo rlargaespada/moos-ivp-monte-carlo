@@ -42,7 +42,9 @@ class GCSVertex
   std::vector<GCSEdge*> m_incoming_edges;
   std::vector<GCSEdge*> m_outgoing_edges;
 
-  // todo (future): ell, costs, constraints
+  friend class GraphOfConvexSets;
+
+  // todo (future): ell, add costs/constraints
 };
 
 #endif  // GCS2D_GCSVERTEX_HEADER
