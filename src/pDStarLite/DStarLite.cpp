@@ -31,7 +31,7 @@
 #include "XYSquare.h"
 
 
-// todo: optimize with more consts and references
+// todo: optimize with more consts and references, use emplaces
 // todo: create a base class for planning apps
 //---------------------------------------------------------
 // Constructor()

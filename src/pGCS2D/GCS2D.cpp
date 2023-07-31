@@ -48,7 +48,6 @@ GCS2D::GCS2D()
   m_path_failed_var = "PATH_FAILED";
 
   // GCS config
-  m_use_bezier_gcs = true;
   m_bezier_order = 2;
   m_bezier_continuity_req = 0;
   m_path_length_weight = 1;
@@ -261,6 +260,7 @@ void GCS2D::clearIRISRegions()
   m_iris_file.clear();  // not using this anymore if IRIS is cleared
 }
 
+
 bool GCS2D::requestIRISRegions()
 {
   // todo: make sure there's a pIRIS2D app running, otherwise report run warning and return false
@@ -442,8 +442,6 @@ bool GCS2D::OnStartUp()
     } else if (param == "iris_complete_var") {
       handled = setNonWhiteVarOnString(m_iris_complete_var, toupper(value));
     // GCS config
-    } else if (param == "use_bezier") {
-      handled = setBooleanOnString(m_use_bezier_gcs, value);
     } else if (param == "bezier_order") {
       handled = setPosUIntOnString(m_bezier_order, value);
     } else if (param == "bezier_continuity") {
@@ -507,24 +505,22 @@ bool GCS2D::readRegionsFromFile()
 
 void GCS2D::checkConfigAssertions()
 {
-  if (m_use_bezier_gcs) {
-    // can only differentiate a bezier curve (order - 1) times, so limit continuity constraints
-    if (m_bezier_continuity_req > m_bezier_order - 1) {
-      reportConfigWarning("Path derivative ontinuity constraints exceed Bezier order; "
-                          "limiting constraints to {bezier_order} - 1.");
-      m_bezier_continuity_req = m_bezier_order - 1;
-    }
+  // can only differentiate a bezier curve (order - 1) times, so limit continuity constraints
+  if (m_bezier_continuity_req > m_bezier_order - 1) {
+    reportConfigWarning("Path derivative ontinuity constraints exceed Bezier order; "
+                        "limiting constraints to {bezier_order} - 1.");
+    m_bezier_continuity_req = m_bezier_order - 1;
+  }
 
-    // make sure derivative regularization, if used, applies to correct derivatives
-    if (m_derivative_regularization_weight > 0) {
-      if ((m_derivative_regularization_order < 2) ||
-          (m_derivative_regularization_order > m_bezier_order)) {
-            reportConfigWarning("Derivative regularization is not of order >= 2 and <= "
-                                "Bezier order. Disabling derivative regularization.");
-            m_derivative_regularization_weight = 0;
-            m_derivative_regularization_order = 0;
-          }
-    }
+  // make sure derivative regularization, if used, applies to valid derivatives
+  if (m_derivative_regularization_weight > 0) {
+    if ((m_derivative_regularization_order < 2) ||
+        (m_derivative_regularization_order > m_bezier_order)) {
+          reportConfigWarning("Derivative regularization is not of order >= 2 and <= "
+                              "Bezier order. Disabling derivative regularization.");
+          m_derivative_regularization_weight = 0;
+          m_derivative_regularization_order = 0;
+        }
   }
 }
 
@@ -695,19 +691,14 @@ bool GCS2D::buildReport()
 
   m_msgs << header << endl;
   m_msgs << "GCS Config:" << endl;
-  m_msgs << "  Use Bezier: " << boolToString(m_use_bezier_gcs) << endl;
-  if (m_use_bezier_gcs) {
-    m_msgs << "  Bezier Order: " << uintToString(m_bezier_order) << endl;
-    m_msgs << "  Bezier Continuity Requirement: " << uintToString(m_bezier_continuity_req) << endl;
-    m_msgs << "  Path Length Weight: " << doubleToStringX(m_path_length_weight, 3) << endl;
-    m_msgs << "  Derivative Regularization Weight: " <<
-      doubleToStringX(m_derivative_regularization_weight, 3) << endl;
-    m_msgs << "  Derivative Regularization Order: " <<
-      doubleToStringX(m_derivative_regularization_order, 3) << endl;
-    // todo: add gcs optimization options to report
-  } else {
-    m_msgs << "  Path Length Weight: " << doubleToStringX(m_path_length_weight, 3) << endl;
-  }
+  m_msgs << "  Bezier Order: " << uintToString(m_bezier_order) << endl;
+  m_msgs << "  Bezier Continuity Requirement: " << uintToString(m_bezier_continuity_req) << endl;
+  m_msgs << "  Path Length Weight: " << doubleToStringX(m_path_length_weight, 3) << endl;
+  m_msgs << "  Derivative Regularization Weight: " <<
+    doubleToStringX(m_derivative_regularization_weight, 3) << endl;
+  m_msgs << "  Derivative Regularization Order: " <<
+    doubleToStringX(m_derivative_regularization_order, 3) << endl;
+  // todo: add gcs optimization options to report
 
   m_msgs << header << endl;
   m_msgs << "IRIS Config:" << endl;

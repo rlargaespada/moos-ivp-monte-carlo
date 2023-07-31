@@ -95,7 +95,6 @@ class GCS2D : public AppCastingMOOSApp
   std::string m_path_failed_var;  // PATH_FAILED
 
   // GCS config
-  bool m_use_bezier_gcs;
   unsigned int m_bezier_order;
   unsigned int m_bezier_continuity_req;
   double m_path_length_weight;  // todo: should be able to apply separately in x and y
