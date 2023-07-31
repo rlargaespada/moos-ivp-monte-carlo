@@ -48,7 +48,7 @@ GCS2D::GCS2D()
   m_path_failed_var = "PATH_FAILED";
 
   // GCS config
-  m_bezier_order = 2;
+  m_bezier_order = 1;
   m_bezier_continuity_req = 0;
   m_path_length_weight = 1;
   m_derivative_regularization_weight = 0;
@@ -236,6 +236,7 @@ bool GCS2D::Iterate()
       m_mode = PlannerMode::IDLE;
       break;
     default:  // IDLE, IRIS_IN_PROGRESS, PLANNING_FAILED, IN_TRANSIT
+      // todo: implement replanning while IN_TRANSIT
       // do nothing in these modes, waiting for mail from other apps
       break;
   }
@@ -360,6 +361,7 @@ bool GCS2D::planPath()
           path_found = true;
           m_path.add_vertex(m_start_point);
           m_path.add_vertex(m_goal_point);
+          m_gcs_step = GCSStep::COMPLETE;
           break;
         default:  // shouldn't get here
           break;

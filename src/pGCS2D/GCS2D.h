@@ -8,8 +8,8 @@
 #ifndef GCS2D_HEADER
 #define GCS2D_HEADER
 
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "VarDataPair.h"
@@ -54,7 +54,7 @@ class GCS2D : public AppCastingMOOSApp
   bool buildGraph();
   bool populateModel();
   // todo: pull any other preconditions from gcs code
-  bool checkPlanningPreconditions();  // todo: graph needs start and goal, edges from these/ model
+  bool checkPlanningPreconditions();  // todo: graph needs start and goal, edges from these, model
 
   bool planPath();
   void handlePlanningFail(const std::string& warning_msg = "");
@@ -76,7 +76,6 @@ class GCS2D : public AppCastingMOOSApp
   // IRIS interface
   std::string m_iris_file;  // default: unset
   bool m_run_iris_on_new_path;  // default: false
-  // todo: handle cases where we get an iris file and this var, if we get a file this is ignored
   std::string m_run_iris_var;  // default: RUN_IRIS
   std::string m_clear_iris_var;  // default: CLEAR_IRIS
   std::string m_iris_region_var;  // default: IRIS_REGION
@@ -123,6 +122,7 @@ class GCS2D : public AppCastingMOOSApp
     START_MOSEK,
     MOSEK_RUNNING,
     CONVEX_ROUNDING,
+    COMPLETE,
     FAILED,
   };
 
@@ -143,7 +143,7 @@ class GCS2D : public AppCastingMOOSApp
   XYSegList m_path;
 
   // GCS state
-  std::map<std::string, XYPolygon> m_safe_regions;
+  std::unordered_map<std::string, XYPolygon> m_safe_regions;
   GraphOfConvexSets m_gcs;  // todo: if we have regions already, reuse existing graph edges
   GCSStep m_gcs_step;
 };

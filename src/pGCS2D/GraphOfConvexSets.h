@@ -41,7 +41,8 @@ class GraphOfConvexSets
   // todo: constructor from regions
   // todo: constructor from regions + edges
   // todo: constructor from regions + edges + continuity + order (separate class?)
-  // todo: constructor from existing graph to reuse vertices and edges with a new model
+  // todo: constructor from existing graph to
+  // todo: reuse vertices and edges with a new model (transfer ownership?)
  public:
   std::vector<GCSEdge> incomingEdges(std::string name);
   std::vector<GCSEdge> incomingEdges(GCSVertex vertex);

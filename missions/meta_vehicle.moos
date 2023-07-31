@@ -378,7 +378,6 @@ ProcessConfig = pGCS2D
   iris_complete_var = IRIS_COMPLETE  // default
 
   // gcs config
-  use_bezier = true
   bezier_order = 3
   bezier_continuity = 1
   path_length_weight = 1
