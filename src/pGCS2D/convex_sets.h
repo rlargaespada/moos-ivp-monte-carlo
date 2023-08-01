@@ -4,6 +4,7 @@
 //* system headers
 #include <Eigen/Dense>
 #include <memory>
+#include <utility>
 
 //* external dependencies
 #include "fusion.h"
@@ -61,8 +62,7 @@ class PointSet : public ConvexSet
 class PolyhedronSet : public ConvexSet
 {
  public:
-  explicit PolyhedronSet(const XYPolygon& poly);
-  PolyhedronSet(const XYPolygon& poly, int power);
+  explicit PolyhedronSet(const XYPolygon& poly, int power = 1);
 
  public:
   const Eigen::MatrixXd& A() const {return m_A;}
@@ -88,13 +88,15 @@ class PolyhedronSet : public ConvexSet
 
   // todo: requres cddlib to join XYPolys
   // PolyhedronSet cartesianProduct(const PolyhedronSet& other);
-  PolyhedronSet cartesianPower(int power) const;
+  // PolyhedronSet cartesianPower(int power) const;
 
  protected:
   virtual std::unique_ptr<ConvexSet> makeClone() const {
     return std::unique_ptr<PolyhedronSet> (new PolyhedronSet(*this));}
 
  private:
+  void fromXYPolygon(const XYPolygon &poly);
+  std::pair<Eigen::MatrixXd, Eigen::VectorXd> getCartesianPower(int n);
   const XYPolygon m_poly;
 
   Eigen::MatrixXd m_A;  // todo: use Mosek matrices?

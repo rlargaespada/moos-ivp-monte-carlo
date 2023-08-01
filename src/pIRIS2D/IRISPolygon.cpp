@@ -15,7 +15,7 @@ void IRISPolygon::fromXYPolygon(const XYPolygon &poly)
   // resize A and b so we have one constraint per vertex of polygon
   m_A.resize(poly.size(), Eigen::NoChange);
   m_b.resize(poly.size());
-  Eigen::Vector2d poly_center{poly.get_center_x(), poly.get_center_y()};
+  Eigen::Vector2d poly_center{poly.get_centroid_x(), poly.get_centroid_y()};
 
   // fill in A and b using lines formed by adjacent vertices of polygon
   for (int i{0}; i < poly.size(); i++) {
