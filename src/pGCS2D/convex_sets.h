@@ -1,8 +1,11 @@
 #ifndef GCS2D_CONVEX_SETS_HEADER
 #define GCS2D_CONVEX_SETS_HEADER
 
-//* external dependencies
+//* system headers
 #include <Eigen/Dense>
+#include <memory>
+
+//* external dependencies
 #include "fusion.h"
 
 //* local dependences
@@ -21,7 +24,10 @@ class ConvexSet
   virtual void addMembershipConstraint(
     mosek::fusion::Model::t M,
     mosek::fusion::Variable::t x) const = 0;
- private:
+  std::unique_ptr<ConvexSet> clone() const {return (makeClone());}
+
+ protected:
+  virtual std::unique_ptr<ConvexSet> makeClone() const = 0;
 };
 
 namespace ConvexSets {
@@ -32,7 +38,7 @@ class PointSet : public ConvexSet
   explicit PointSet(const XYPoint& pt) : m_pt(pt) {}
 
  public:
-  int dim() const {return (2);}  // points are in 2D
+  virtual int dim() const {return (2);}  // points are in 2D
   const XYPoint& point() const {return (m_pt);}
 
   virtual void addPerspectiveConstraint(
@@ -42,6 +48,10 @@ class PointSet : public ConvexSet
   virtual void addMembershipConstraint(
     mosek::fusion::Model::t M,
     mosek::fusion::Variable::t x) const;
+
+ protected:
+  virtual std::unique_ptr<ConvexSet> makeClone() const {
+    return std::unique_ptr<PointSet> (new PointSet(*this));}
 
  private:
   const XYPoint m_pt;
@@ -79,6 +89,10 @@ class PolyhedronSet : public ConvexSet
   // todo: requres cddlib to join XYPolys
   // PolyhedronSet cartesianProduct(const PolyhedronSet& other);
   PolyhedronSet cartesianPower(int power) const;
+
+ protected:
+  virtual std::unique_ptr<ConvexSet> makeClone() const {
+    return std::unique_ptr<PolyhedronSet> (new PolyhedronSet(*this));}
 
  private:
   const XYPolygon m_poly;
