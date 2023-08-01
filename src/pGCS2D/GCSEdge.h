@@ -14,9 +14,6 @@ class GraphOfConvexSets;  // forward declaration
 class GCSEdge
 {
  public:
-  // todo: constructors
-
- public:
   const std::string& name() const {return m_name;}
   const GCSVertex& u() const {return (*m_u);}
   GCSVertex& u() {return (*m_u);}
@@ -27,17 +24,22 @@ class GCSEdge
   // xu, xv?
   // todo: get solution, get solution phiXu, get soluton phiXv
 
-
-  // todo: add constraint to model?
+  // todo: add constraint to model
   void addPhiConstraint(bool phi) {m_phi_constraint = phi ? 1 : 0;}
   void clearPhiConstraint() {m_phi_constraint = -1;}
 
  private:
+  GCSEdge(
+    std::string name,
+    GCSVertex* u,
+    GCSVertex* v,
+    mosek::fusion::Model::t M,
+    bool relaxation = false);
+
   const std::string m_name;
   GCSVertex* const m_u;
   GCSVertex* const m_v;
 
-  // todo: need model?
   mosek::fusion::Variable::t m_phi;
   mosek::fusion::Variable::t m_y;
   mosek::fusion::Variable::t m_z;
