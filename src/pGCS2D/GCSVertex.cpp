@@ -14,6 +14,7 @@
 GCSVertex::GCSVertex(std::string name, const ConvexSet& set)
   : m_name(std::move(name)),
     m_set(set.clone()) {
+  assert(!m_name.empty());
   m_x.conservativeResize(m_set->dim());
   m_x.setConstant(std::nan("0"));
 }

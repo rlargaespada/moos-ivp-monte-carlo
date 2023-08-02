@@ -17,6 +17,10 @@ using mosek::fusion::Model;
 //---------------------------------------------------------
 // Constructors
 
+int GraphOfConvexSets::s_vertex_id{0};
+int GraphOfConvexSets::s_edge_id{0};
+
+
 // default constructor, empty graph, no model, invalid order and continuity
 GraphOfConvexSets::GraphOfConvexSets()
   : m_dimension(-1),
@@ -28,7 +32,7 @@ GraphOfConvexSets::GraphOfConvexSets()
 
 
 GraphOfConvexSets::GraphOfConvexSets(
-  const std::unordered_map<std::string, XYPolygon>& regions,
+  const std::vector<XYPolygon>& regions,
   int order,
   int continuity,
   const XYPoint& source,
@@ -48,13 +52,16 @@ GraphOfConvexSets::GraphOfConvexSets(
   // save source, target, regions?
 
   for (const auto& region : regions)
-    addVertex(region.second, region.first);
+    addVertex(region);
 
   // if edges not provided, find edges
   // add edges
   // find source and target edges
   // add source and target vertices and edges
 
+  // print testing
+  // for (const auto& v : m_vertices)
+  //   std::cout << v.first << ": " << v.second->name() << std::endl;
   // m_model->writeTaskStream("ptf", std::cout);
 }
 
@@ -62,15 +69,17 @@ GraphOfConvexSets::GraphOfConvexSets(
 //---------------------------------------------------------
 // Methods for Changing Graph
 
-GCSVertex* GraphOfConvexSets::addVertex(const XYPolygon& region, std::string name)
+GCSVertex* GraphOfConvexSets::addVertex(const XYPolygon& region)
 {
+  std::string name{region.get_label()};
   if (name.empty())
-    name = "v" + std::to_string(m_vertices.size());
+    name = std::to_string(m_vertices.size());
+  name.insert(0, "v");  // prepend names with v
 
-  // todo: make sure vertex name isn't in graph already, what would the effects be?
-  // todo: handle cases where vertices are removed
   ConvexSets::PolyhedronSet set{region, m_order};  // add vertices as cartesian products
-  auto emplace_result{m_vertices.emplace(name, new GCSVertex(name, set))};
-  // todo: check emplace worked: emplece_result.second is a bool
+  auto emplace_result{m_vertices.emplace(s_vertex_id, new GCSVertex(name, set))};
+  if (emplace_result.second)
+    s_vertex_id++;
+  // todo: handle when emplace fails
   return (emplace_result.first->second.get());
 }

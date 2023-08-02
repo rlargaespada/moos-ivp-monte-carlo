@@ -10,7 +10,6 @@
 
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
 #include "VarDataPair.h"
@@ -144,7 +143,7 @@ class GCS2D : public AppCastingMOOSApp
   XYSegList m_path;
 
   // GCS state
-  std::unordered_map<std::string, XYPolygon> m_safe_regions;
+  std::vector<XYPolygon> m_safe_regions;
 // todo: if we have regions already, reuse existing graph edges
   std::unique_ptr<GraphOfConvexSets> m_gcs;
   GCSStep m_gcs_step;

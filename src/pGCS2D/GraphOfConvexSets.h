@@ -5,7 +5,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 //* external dependencies
@@ -50,7 +49,7 @@ class GraphOfConvexSets
  public:
   GraphOfConvexSets();
   GraphOfConvexSets(
-    const std::unordered_map<std::string, XYPolygon>& regions,
+    const std::vector<XYPolygon>& regions,
     int order,
     int continuity,
     const XYPoint& source,
@@ -71,8 +70,8 @@ class GraphOfConvexSets
   // const std::vector<GCSEdge> incidentEdges(const std::string& name) const;
   // const std::vector<GCSEdge> incidentEdges(GCSVertex vertex) const;
 
-  GCSVertex* addVertex(const XYPolygon& region, std::string name = "");
-  void findEdges();
+  GCSVertex* addVertex(const XYPolygon& region);
+  void findEdges(const std::vector<XYPolygon>& regions);
   void addEdge();
 
   void removeVertex(const std::string& name);
@@ -105,12 +104,15 @@ class GraphOfConvexSets
   void relaxationRounding();
 
  private:
+  static int s_vertex_id;
+  static int s_edge_id;
+
   const int m_order;
   const int m_continuity;
   const int m_dimension;
 
-  std::map<std::string, std::unique_ptr<GCSVertex>> m_vertices;
-  std::map<std::string, std::unique_ptr<GCSEdge>> m_edges;
+  std::map<int, std::unique_ptr<GCSVertex>> m_vertices;
+  std::map<int, std::unique_ptr<GCSEdge>> m_edges;
 
   const GraphOfConvexSetsOptions m_options;
   mosek::fusion::Model::t m_model;

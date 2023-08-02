@@ -182,7 +182,7 @@ void GCS2D::newIRISRegion(const std::string& spec)
   if (region.is_convex()) {
     if (region.get_label().empty())  // add a label if one's not supplied
       region.set_label("region_" + std::to_string(m_safe_regions.size()));
-    m_safe_regions[region.get_label()] = region;
+    m_safe_regions.push_back(region);
   } else {
     reportRunWarning("Invalid IRIS region: " + spec);
   }

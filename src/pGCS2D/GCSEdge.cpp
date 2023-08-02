@@ -1,3 +1,4 @@
+#include <cassert>
 #include <utility>
 
 #include "fusion.h"
@@ -15,6 +16,7 @@ GCSEdge::GCSEdge(std::string name, GCSVertex* u, GCSVertex* v, Model::t M, bool 
     m_u(u),
     m_v(v)
 {
+  assert(!m_name.empty());
   if (relaxation)
     m_phi = M->variable("phi_" + m_name, Domain::inRange(0, 1));
   else
