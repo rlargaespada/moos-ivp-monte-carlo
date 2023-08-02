@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 //* external dependencies
@@ -47,13 +48,14 @@ struct GraphOfConvexSetsOptions {
 class GraphOfConvexSets
 {
  public:
-  GraphOfConvexSets() {m_model = nullptr;}  // default constructor, no model
+  GraphOfConvexSets();
   GraphOfConvexSets(
-    const std::vector<XYPolygon>& regions,
+    const std::unordered_map<std::string, XYPolygon>& regions,
     int order,
     int continuity,
-    XYPoint source,
-    XYPoint target);
+    const XYPoint& source,
+    const XYPoint& target,
+    const GraphOfConvexSetsOptions& options);  // actual constructor
 
   // todo: add optional existing edges to constructor
   // todo: constructor from existing graph to reuse vertices
@@ -62,14 +64,14 @@ class GraphOfConvexSets
   ~GraphOfConvexSets() {if (!(m_model == nullptr)) m_model->dispose();}
 
  public:
-  std::vector<GCSEdge> incomingEdges(const std::string& name);
-  std::vector<GCSEdge> incomingEdges(GCSVertex vertex);
-  std::vector<GCSEdge> outgoingEdges(const std::string& name);
-  std::vector<GCSEdge> outgoingEdges(GCSVertex vertex);
-  std::vector<GCSEdge> incidentEdges(const std::string& name);
-  std::vector<GCSEdge> incidentEdges(GCSVertex vertex);
+  // const std::vector<GCSEdge> incomingEdges(const std::string& name) const;
+  // const std::vector<GCSEdge> incomingEdges(GCSVertex vertex) const;
+  // const std::vector<GCSEdge> outgoingEdges(const std::string& name) const;
+  // const std::vector<GCSEdge> outgoingEdges(GCSVertex vertex) const;
+  // const std::vector<GCSEdge> incidentEdges(const std::string& name) const;
+  // const std::vector<GCSEdge> incidentEdges(GCSVertex vertex) const;
 
-  GCSVertex* addVertex();
+  GCSVertex* addVertex(const XYPolygon& region, std::string name = "");
   void findEdges();
   void addEdge();
 
@@ -77,8 +79,8 @@ class GraphOfConvexSets
   void removeVertex(GCSVertex* vertex);
   void removeEdge();
 
-  void vertices();
-  void edges();
+  void vertices() const;
+  void edges() const;
 
   // todo: phi constraints
 
@@ -91,6 +93,8 @@ class GraphOfConvexSets
   void addSourceTarget();
   void findStartGoalEdges();
 
+  void addContinuityConstraints();
+
   void addPerspectiveCost();
   void addPerspectiveConstraint();
 
@@ -101,13 +105,14 @@ class GraphOfConvexSets
   void relaxationRounding();
 
  private:
-  int order;
-  int continuity;
+  const int m_order;
+  const int m_continuity;
+  const int m_dimension;
 
   std::map<std::string, std::unique_ptr<GCSVertex>> m_vertices;
   std::map<std::string, std::unique_ptr<GCSEdge>> m_edges;
 
-  GraphOfConvexSetsOptions m_options;
+  const GraphOfConvexSetsOptions m_options;
   mosek::fusion::Model::t m_model;
 };
 

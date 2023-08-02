@@ -8,6 +8,7 @@
 #ifndef GCS2D_HEADER
 #define GCS2D_HEADER
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -94,12 +95,12 @@ class GCS2D : public AppCastingMOOSApp
   std::string m_path_failed_var;  // PATH_FAILED
 
   // GCS config
-  unsigned int m_bezier_order;
-  unsigned int m_bezier_continuity_req;
+  int m_bezier_order;
+  int m_bezier_continuity_req;
   double m_path_length_weight;  // todo: should be able to apply separately in x and y
   // todo: should be able to apply these many times (use a vector? of pairs?)
   double m_derivative_regularization_weight;
-  unsigned int m_derivative_regularization_order;
+  int m_derivative_regularization_order;
   GraphOfConvexSetsOptions m_options;
 
  private:  // State Enums
@@ -144,7 +145,8 @@ class GCS2D : public AppCastingMOOSApp
 
   // GCS state
   std::unordered_map<std::string, XYPolygon> m_safe_regions;
-  GraphOfConvexSets m_gcs;  // todo: if we have regions already, reuse existing graph edges
+// todo: if we have regions already, reuse existing graph edges
+  std::unique_ptr<GraphOfConvexSets> m_gcs;
   GCSStep m_gcs_step;
 };
 

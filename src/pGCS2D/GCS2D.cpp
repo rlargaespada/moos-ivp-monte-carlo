@@ -6,8 +6,8 @@
 /************************************************************/
 
 #include <algorithm>
-#include <vector>
 #include <iterator>
+#include <vector>
 #include "ACTable.h"
 #include "GeomUtils.h"
 #include "MacroUtils.h"
@@ -271,6 +271,13 @@ bool GCS2D::requestIRISRegions()
 
 bool GCS2D::buildGraph()
 {
+  m_gcs = std::unique_ptr<GraphOfConvexSets> (new GraphOfConvexSets(
+    m_safe_regions,
+    m_bezier_order,
+    m_bezier_continuity_req,
+    m_start_point,
+    m_goal_point,
+    m_options));
   return (true);
 }
 
@@ -445,15 +452,15 @@ bool GCS2D::OnStartUp()
       handled = setNonWhiteVarOnString(m_iris_complete_var, toupper(value));
     // GCS config
     } else if (param == "bezier_order") {
-      handled = setPosUIntOnString(m_bezier_order, value);
+      handled = setIntOnString(m_bezier_order, value);
     } else if (param == "bezier_continuity") {
-      handled = setUIntOnString(m_bezier_continuity_req, value);
+      handled = setIntOnString(m_bezier_continuity_req, value);
     } else if (param == "path_length_weight") {
       handled = setNonNegDoubleOnString(m_path_length_weight, value);
     } else if (param == "derivative_regularization_weight") {
       handled = setNonNegDoubleOnString(m_derivative_regularization_weight, value);
     } else if (param == "derivative_regularization_order") {
-      handled = setUIntOnString(m_derivative_regularization_order, value);
+      handled = setIntOnString(m_derivative_regularization_order, value);
     // optimization options
     } else if (param == "relaxation") {
       handled = setBooleanOnString(m_options.convex_relaxation, value);
@@ -507,6 +514,17 @@ bool GCS2D::readRegionsFromFile()
 
 void GCS2D::checkConfigAssertions()
 {
+  // ordr and continuity must be at least 1 and 0 respectively
+  if (m_bezier_order < 1) {
+    reportConfigWarning("Cannot have bezier order < 1, setting to 1.");
+    m_bezier_order = 1;
+  }
+
+  if (m_bezier_continuity_req < 0) {
+    reportConfigWarning("Cannot have bezier continuity < 0, setting to 0.");
+    m_bezier_continuity_req = 1;
+  }
+
   // can only differentiate a bezier curve (order - 1) times, so limit continuity constraints
   if (m_bezier_continuity_req > m_bezier_order - 1) {
     reportConfigWarning("Path derivative ontinuity constraints exceed Bezier order; "
@@ -693,13 +711,13 @@ bool GCS2D::buildReport()
 
   m_msgs << header << endl;
   m_msgs << "GCS Config:" << endl;
-  m_msgs << "  Bezier Order: " << uintToString(m_bezier_order) << endl;
-  m_msgs << "  Bezier Continuity Requirement: " << uintToString(m_bezier_continuity_req) << endl;
+  m_msgs << "  Bezier Order: " << intToString(m_bezier_order) << endl;
+  m_msgs << "  Bezier Continuity Requirement: " << intToString(m_bezier_continuity_req) << endl;
   m_msgs << "  Path Length Weight: " << doubleToStringX(m_path_length_weight, 3) << endl;
   m_msgs << "  Derivative Regularization Weight: " <<
     doubleToStringX(m_derivative_regularization_weight, 3) << endl;
   m_msgs << "  Derivative Regularization Order: " <<
-    doubleToStringX(m_derivative_regularization_order, 3) << endl;
+    intToString(m_derivative_regularization_order) << endl;
   // todo: add gcs optimization options to report
 
   m_msgs << header << endl;

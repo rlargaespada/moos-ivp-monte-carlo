@@ -29,7 +29,7 @@ void PolyhedronSet::fromXYPolygon(const XYPolygon &poly)
 {
   // todo (future): use cddlib to do this calculation
   // resize A and b so we have one constraint per vertex of polygon
-  m_A.resize(poly.size(), Eigen::NoChange);
+  m_A.resize(poly.size(), 2);
   m_b.resize(poly.size());
   Eigen::Vector2d poly_center{poly.get_centroid_x(), poly.get_centroid_y()};
 
@@ -64,7 +64,6 @@ std::pair<Eigen::MatrixXd, Eigen::VectorXd> PolyhedronSet::getCartesianPower(int
   Eigen::VectorXd b_power{m_b.replicate(n, 1)};
   return std::pair<Eigen::MatrixXd, Eigen::VectorXd>{A_power, b_power};
 }
-
 
 
 PolyhedronSet::PolyhedronSet(const XYPolygon& poly, int power)
