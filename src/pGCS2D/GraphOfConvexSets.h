@@ -72,14 +72,16 @@ class GraphOfConvexSets
   // const std::vector<GCSEdge> incidentEdges(GCSVertex vertex) const;
 
   GCSVertex* addVertex(const XYPolygon& region);
-  GCSEdge* addEdge();
+  GCSEdge* addEdge(GCSVertex* u, GCSVertex* v, std::string name);
 
   void removeVertex(const std::string& name);
   void removeVertex(GCSVertex* vertex);
   void removeEdge();
 
-  void vertices() const;
-  void edges() const;
+  std::vector<GCSVertex*> vertices();
+  std::vector<const GCSVertex*> vertices() const;
+  std::vector<GCSEdge*> edges();
+  std::vector<const GCSEdge*> edges() const;
 
   // todo: phi constraints
 

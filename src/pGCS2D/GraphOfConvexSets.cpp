@@ -105,3 +105,50 @@ std::vector<std::pair<VertexId, VertexId>> GraphOfConvexSets::findEdges(
 
   return (edges_between_regions);
 }
+
+
+//---------------------------------------------------------
+// Accessors
+
+std::vector<GCSVertex*> GraphOfConvexSets::vertices()
+{
+  std::vector<GCSVertex*> vertices;
+  vertices.reserve(m_vertices.size());
+  for (const auto& v : m_vertices) {
+    vertices.push_back(v.second.get());
+  }
+  return vertices;
+}
+
+
+std::vector<const GCSVertex*> GraphOfConvexSets::vertices() const
+{
+  std::vector<const GCSVertex*> vertices;
+  vertices.reserve(m_vertices.size());
+  for (const auto& v : m_vertices) {
+    vertices.push_back(v.second.get());
+  }
+  return vertices;
+}
+
+
+std::vector<GCSEdge*> GraphOfConvexSets::edges()
+{
+  std::vector<GCSEdge*> edges;
+  edges.reserve(m_edges.size());
+  for (const auto& e : m_edges) {
+    edges.push_back(e.second.get());
+  }
+  return edges;
+}
+
+
+std::vector<const GCSEdge*> GraphOfConvexSets::edges() const
+{
+  std::vector<const GCSEdge*> edges;
+  edges.reserve(m_edges.size());
+  for (const auto& e : m_edges) {
+    edges.push_back(e.second.get());
+  }
+  return edges;
+}
