@@ -54,14 +54,18 @@ GraphOfConvexSets::GraphOfConvexSets(
   for (const auto& region : regions)
     addVertex(region);
 
-  // if edges not provided, find edges
+  const std::vector<std::pair<VertexId, VertexId>> edges_between_regions{findEdges(regions)};
+
+
   // add edges
   // find source and target edges
   // add source and target vertices and edges
 
   // print testing
+  // for (const auto& e : edges_between_regions)
+  //   std::cout << e.first << "," << e.second << std::endl;
   // for (const auto& v : m_vertices)
-  //   std::cout << v.first << ": " << v.second->name() << std::endl;
+  //   std::cout << v.second->id() << ": " << v.second->name() << std::endl;
   // m_model->writeTaskStream("ptf", std::cout);
 }
 
@@ -77,9 +81,27 @@ GCSVertex* GraphOfConvexSets::addVertex(const XYPolygon& region)
   name.insert(0, "v");  // prepend names with v
 
   ConvexSets::PolyhedronSet set{region, m_order};  // add vertices as cartesian products
-  auto emplace_result{m_vertices.emplace(s_vertex_id, new GCSVertex(name, set))};
+  auto emplace_result{m_vertices.emplace(s_vertex_id, new GCSVertex(s_vertex_id, name, set))};
   if (emplace_result.second)
     s_vertex_id++;
   // todo: handle when emplace fails
   return (emplace_result.first->second.get());
+}
+
+
+std::vector<std::pair<VertexId, VertexId>> GraphOfConvexSets::findEdges(
+  const std::vector<XYPolygon>& regions) const
+{
+  std::vector<std::pair<VertexId, VertexId>> edges_between_regions;
+  for (size_t i = 0; i < regions.size(); ++i) {
+    for (size_t j = i + 1; j < regions.size(); ++j) {
+      if (regions[i].intersects(regions[j])) {
+        // Regions are overlapping, add edge.
+        edges_between_regions.emplace_back(i, j);
+        edges_between_regions.emplace_back(j, i);
+      }
+    }
+  }
+
+  return (edges_between_regions);
 }

@@ -11,8 +11,15 @@
 using mosek::fusion::Model;
 using mosek::fusion::Domain;
 
-GCSEdge::GCSEdge(std::string name, GCSVertex* u, GCSVertex* v, Model::t M, bool relaxation)
-  : m_name(std::move(name)),
+GCSEdge::GCSEdge(
+  EdgeId id,
+  std::string name,
+  GCSVertex* u,
+  GCSVertex* v,
+  Model::t M,
+  bool relaxation)
+  : m_id(id),
+    m_name(std::move(name)),
     m_u(u),
     m_v(v)
 {

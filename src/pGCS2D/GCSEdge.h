@@ -8,12 +8,14 @@
 #include "GCSVertex.h"
 
 
+typedef int EdgeId;
 class GraphOfConvexSets;  // forward declaration
 
 
 class GCSEdge
 {
  public:
+  const VertexId id() const {return (m_id);}
   const std::string& name() const {return m_name;}
   const GCSVertex& u() const {return (*m_u);}
   GCSVertex& u() {return (*m_u);}
@@ -30,12 +32,14 @@ class GCSEdge
 
  private:
   GCSEdge(
+    EdgeId id,
     std::string name,
     GCSVertex* u,
     GCSVertex* v,
     mosek::fusion::Model::t M,
     bool relaxation = false);
 
+  const EdgeId m_id;
   const std::string m_name;
   GCSVertex* const m_u;
   GCSVertex* const m_v;

@@ -11,8 +11,9 @@
 //---------------------------------------------------------
 // Constructors
 
-GCSVertex::GCSVertex(std::string name, const ConvexSet& set)
-  : m_name(std::move(name)),
+GCSVertex::GCSVertex(VertexId id, std::string name, const ConvexSet& set)
+  : m_id(id),
+    m_name(std::move(name)),
     m_set(set.clone()) {
   assert(!m_name.empty());
   m_x.conservativeResize(m_set->dim());

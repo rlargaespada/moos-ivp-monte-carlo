@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 //* external dependencies
@@ -71,8 +72,7 @@ class GraphOfConvexSets
   // const std::vector<GCSEdge> incidentEdges(GCSVertex vertex) const;
 
   GCSVertex* addVertex(const XYPolygon& region);
-  void findEdges(const std::vector<XYPolygon>& regions);
-  void addEdge();
+  GCSEdge* addEdge();
 
   void removeVertex(const std::string& name);
   void removeVertex(GCSVertex* vertex);
@@ -89,8 +89,10 @@ class GraphOfConvexSets
   void getSolutionPath();
 
  private:
-  void addSourceTarget();
+  std::vector<std::pair<VertexId, VertexId>> findEdges(const std::vector<XYPolygon>& regions) const;
   void findStartGoalEdges();
+
+  void addSourceTarget();
 
   void addContinuityConstraints();
 
@@ -104,8 +106,8 @@ class GraphOfConvexSets
   void relaxationRounding();
 
  private:
-  static int s_vertex_id;
-  static int s_edge_id;
+  static VertexId s_vertex_id;
+  static EdgeId s_edge_id;
 
   const int m_order;
   const int m_continuity;
