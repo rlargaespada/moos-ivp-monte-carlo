@@ -52,20 +52,27 @@ GraphOfConvexSets::GraphOfConvexSets(
   // save source, target, regions?
 
   for (const auto& region : regions)
-    addVertex(region);
+    addVertex(region, region.get_label());
 
-  const std::vector<std::pair<VertexId, VertexId>> edges_between_regions{findEdges(regions)};
+  const std::vector<std::pair<int, int>> edges_between_regions{findEdges(regions)};
+  std::vector<GCSVertex*> vertex_vector{vertices()};
+  for (auto e : edges_between_regions) {
+    GCSVertex* u{vertex_vector.at(e.first)};
+    GCSVertex* v{vertex_vector.at(e.second)};
+    addEdge(u, v, u->name() + "->" + v->name());
+  }
 
-
-  // add edges
   // find source and target edges
   // add source and target vertices and edges
 
   // print testing
-  // for (const auto& e : edges_between_regions)
-  //   std::cout << e.first << "," << e.second << std::endl;
+
   // for (const auto& v : m_vertices)
   //   std::cout << v.second->id() << ": " << v.second->name() << std::endl;
+  // for (const auto& e : edges_between_regions)
+  //   std::cout << e.first << "," << e.second << std::endl;
+  // for (const auto& e : m_edges)
+  //   std::cout << e.second->id() << ": " << e.second->name() << std::endl;
   // m_model->writeTaskStream("ptf", std::cout);
 }
 
@@ -73,26 +80,26 @@ GraphOfConvexSets::GraphOfConvexSets(
 //---------------------------------------------------------
 // Methods for Changing Graph
 
-GCSVertex* GraphOfConvexSets::addVertex(const XYPolygon& region)
+GCSVertex* GraphOfConvexSets::addVertex(const XYPolygon& region, std::string name)
 {
-  std::string name{region.get_label()};
   if (name.empty())
     name = std::to_string(m_vertices.size());
-  name.insert(0, "v");  // prepend names with v
+  name.insert(0, "v_");  // prepend names with v_
 
+  VertexId id{getNewVertexId()};
   ConvexSets::PolyhedronSet set{region, m_order};  // add vertices as cartesian products
-  auto emplace_result{m_vertices.emplace(s_vertex_id, new GCSVertex(s_vertex_id, name, set))};
+  auto emplace_result{m_vertices.emplace(id, new GCSVertex(s_vertex_id, name, set))};
   if (emplace_result.second)
-    s_vertex_id++;
-  // todo: handle when emplace fails
-  return (emplace_result.first->second.get());
+    return (emplace_result.first->second.get());
+  else  // todo: raise a warning or assert here?
+    return (nullptr);
 }
 
 
-std::vector<std::pair<VertexId, VertexId>> GraphOfConvexSets::findEdges(
+std::vector<std::pair<int, int>> GraphOfConvexSets::findEdges(
   const std::vector<XYPolygon>& regions) const
 {
-  std::vector<std::pair<VertexId, VertexId>> edges_between_regions;
+  std::vector<std::pair<int, int>> edges_between_regions;
   for (size_t i = 0; i < regions.size(); ++i) {
     for (size_t j = i + 1; j < regions.size(); ++j) {
       if (regions[i].intersects(regions[j])) {
@@ -104,6 +111,29 @@ std::vector<std::pair<VertexId, VertexId>> GraphOfConvexSets::findEdges(
   }
 
   return (edges_between_regions);
+}
+
+
+GCSEdge* GraphOfConvexSets::addEdge(GCSVertex* u, GCSVertex* v, std::string name)
+{
+  assert(u != nullptr);
+  assert(v != nullptr);
+
+  if (name.empty())
+    name = std::to_string(m_edges.size());
+  name.insert(0, "e_");  // prepend names with e_
+
+  EdgeId id{getNewEdgeId()};
+  auto emplace_result{m_edges.emplace(id, new GCSEdge(
+    id, name, u, v, m_model, m_options.convex_relaxation))};
+  if (emplace_result.second) {
+    GCSEdge* e{emplace_result.first->second.get()};
+    u->addOutgoingEdge(e);
+    v->addIncomingEdge(e);
+    return (e);
+  } else {  // todo: raise a warning or assert here?
+    return (nullptr);
+  }
 }
 
 

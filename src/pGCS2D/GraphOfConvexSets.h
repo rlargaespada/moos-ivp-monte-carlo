@@ -71,8 +71,8 @@ class GraphOfConvexSets
   // const std::vector<GCSEdge> incidentEdges(const std::string& name) const;
   // const std::vector<GCSEdge> incidentEdges(GCSVertex vertex) const;
 
-  GCSVertex* addVertex(const XYPolygon& region);
-  GCSEdge* addEdge(GCSVertex* u, GCSVertex* v, std::string name);
+  GCSVertex* addVertex(const XYPolygon& region, std::string name = "");
+  GCSEdge* addEdge(GCSVertex* u, GCSVertex* v, std::string name = "");
 
   void removeVertex(const std::string& name);
   void removeVertex(GCSVertex* vertex);
@@ -91,7 +91,10 @@ class GraphOfConvexSets
   void getSolutionPath();
 
  private:
-  std::vector<std::pair<VertexId, VertexId>> findEdges(const std::vector<XYPolygon>& regions) const;
+  VertexId getNewVertexId() {return (s_vertex_id++);}
+  EdgeId getNewEdgeId() {return (s_edge_id++);}
+
+  std::vector<std::pair<int, int>> findEdges(const std::vector<XYPolygon>& regions) const;
   void findStartGoalEdges();
 
   void addSourceTarget();
