@@ -47,7 +47,7 @@ class GCSEdge
   mosek::fusion::Variable::t m_phi;
   mosek::fusion::Variable::t m_y;
   mosek::fusion::Variable::t m_z;
-  mosek::fusion::Variable::t m_ell;
+  mosek::fusion::Variable::t m_ell;  // todo: does this need to be a vector?
 
   int m_phi_constraint;
 

@@ -56,7 +56,7 @@ GraphOfConvexSets::GraphOfConvexSets(
   // add a vertex for each input region
   for (const auto& region : regions)
     // add regions as cartesian products
-    addVertex(ConvexSets::PolyhedronSet{region, m_order}, region.get_label());
+    addVertex(ConvexSets::PolyhedronSet{region, m_order + 1}, region.get_label());
 
   // find edges between regions and add edges to graph
   const std::vector<std::pair<int, int>> edges_between_regions{findEdges(regions)};
@@ -182,6 +182,11 @@ void GraphOfConvexSets::removeVertex(GCSVertex* vertex)
   for (auto it{m_edges.begin()}; it != m_edges.end();) {
     if ((it->second->u().id() == id) ||
         (it->second->v().id() == id)) {
+      // remove edge variables from model
+      it->second->m_phi->remove();
+      it->second->m_z->remove();
+      it->second->m_z->remove();
+      it->second->m_ell->remove();
       it = m_edges.erase(it);
     } else {
       ++it;
@@ -197,6 +202,10 @@ void GraphOfConvexSets::removeEdge(GCSEdge* edge)
   assert(m_edges.count(edge->id()) > 0);
   edge->u().removeOutgoingEdge(edge);
   edge->v().removeIncomingEdge(edge);
+  edge->m_phi->remove();
+  edge->m_z->remove();
+  edge->m_z->remove();
+  edge->m_ell->remove();
   m_edges.erase(edge->id());
 }
 
