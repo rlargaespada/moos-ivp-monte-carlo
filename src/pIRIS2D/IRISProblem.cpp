@@ -53,6 +53,7 @@ bool IRISProblem::run(int num_iters)
 {
   double area;
   int iters{0};
+  // todo: handle option to terminate if seed is no longer contained
 
   while (iters < num_iters) {
     // run iris iteration

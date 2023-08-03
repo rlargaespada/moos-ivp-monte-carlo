@@ -24,12 +24,13 @@ GCSEdge::GCSEdge(
     m_v(v)
 {
   assert(!m_name.empty());
+  std::string str_id{std::to_string(m_id)};
   if (relaxation)
-    m_phi = M->variable("phi_" + m_id, Domain::inRange(0, 1));
+    m_phi = M->variable("phi_" + str_id, Domain::inRange(0, 1));
   else
-    m_phi = M->variable("phi_" + m_id, Domain::binary());
+    m_phi = M->variable("phi_" + str_id, Domain::binary());
 
-  m_y = M->variable("y_" + m_id, m_u->dim());
-  m_z = M->variable("z_" + m_id, m_v->dim());
-  m_ell = M->variable("ell_" + m_id, 1);  // todo: is just one ok?
+  m_y = M->variable("y_" + str_id, m_u->dim());
+  m_z = M->variable("z_" + str_id, m_v->dim());
+  m_ell = M->variable("ell_" + str_id, 1);  // todo: is just one ok?
 }

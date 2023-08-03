@@ -108,7 +108,7 @@ GCSVertex* GraphOfConvexSets::addVertex(const ConvexSet& set, std::string name)
   name.insert(0, "v_");  // prepend names with v_
 
   VertexId id{getNewVertexId()};
-  auto emplace_result{m_vertices.emplace(id, new GCSVertex(s_vertex_id, name, set))};
+  auto emplace_result{m_vertices.emplace(id, new GCSVertex(id, name, set))};
   if (emplace_result.second)
     return (emplace_result.first->second.get());
   else  // todo: raise a warning or assert here?
