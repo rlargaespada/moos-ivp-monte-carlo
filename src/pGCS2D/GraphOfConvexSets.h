@@ -64,14 +64,7 @@ class GraphOfConvexSets
   ~GraphOfConvexSets() {if (!(m_model == nullptr)) m_model->dispose();}
 
  public:
-  // const std::vector<GCSEdge> incomingEdges(const std::string& name) const;
-  // const std::vector<GCSEdge> incomingEdges(GCSVertex vertex) const;
-  // const std::vector<GCSEdge> outgoingEdges(const std::string& name) const;
-  // const std::vector<GCSEdge> outgoingEdges(GCSVertex vertex) const;
-  // const std::vector<GCSEdge> incidentEdges(const std::string& name) const;
-  // const std::vector<GCSEdge> incidentEdges(GCSVertex vertex) const;
-
-  GCSVertex* addVertex(const XYPolygon& region, std::string name = "");
+  GCSVertex* addVertex(const ConvexSet& set, std::string name = "");
   GCSEdge* addEdge(GCSVertex* u, GCSVertex* v, std::string name = "");
 
   void removeVertex(const std::string& name);
@@ -95,9 +88,10 @@ class GraphOfConvexSets
   EdgeId getNewEdgeId() {return (s_edge_id++);}
 
   std::vector<std::pair<int, int>> findEdges(const std::vector<XYPolygon>& regions) const;
-  void findStartGoalEdges();
-
-  void addSourceTarget();
+  std::pair<std::vector<int>, std::vector<int>> findStartGoalEdges(
+    const std::vector<XYPolygon>& regions,
+    const XYPoint& start,
+    const XYPoint& goal) const;
 
   void addContinuityConstraints();
 
@@ -120,6 +114,8 @@ class GraphOfConvexSets
 
   std::map<int, std::unique_ptr<GCSVertex>> m_vertices;
   std::map<int, std::unique_ptr<GCSEdge>> m_edges;
+  GCSVertex* m_source;
+  GCSVertex* m_target;
 
   const GraphOfConvexSetsOptions m_options;
   mosek::fusion::Model::t m_model;

@@ -1,5 +1,6 @@
 #include <cassert>
 #include <string>
+#include <vector>
 
 #include "fusion.h"
 
@@ -25,10 +26,11 @@ int GraphOfConvexSets::s_edge_id{0};
 GraphOfConvexSets::GraphOfConvexSets()
   : m_dimension(-1),
     m_order(-1),
-    m_continuity(-1)
-{
-  m_model = nullptr;
-}
+    m_continuity(-1),
+    m_source(nullptr),
+    m_target(nullptr),
+    m_model(nullptr)
+{}
 
 
 GraphOfConvexSets::GraphOfConvexSets(
@@ -41,6 +43,8 @@ GraphOfConvexSets::GraphOfConvexSets(
   : m_dimension(2),  // we're always in 2D
     m_order(order),
     m_continuity(continuity),
+    m_source(nullptr),
+    m_target(nullptr),
     m_options(options)
 {
   assert(m_order > 0);
@@ -49,11 +53,12 @@ GraphOfConvexSets::GraphOfConvexSets(
 
   m_model = new Model("gcs");
 
-  // save source, target, regions?
-
+  // add a vertex for each input region
   for (const auto& region : regions)
-    addVertex(region, region.get_label());
+    // add regions as cartesian products
+    addVertex(ConvexSets::PolyhedronSet{region, m_order}, region.get_label());
 
+  // find edges between regions and add edges to graph
   const std::vector<std::pair<int, int>> edges_between_regions{findEdges(regions)};
   std::vector<GCSVertex*> vertex_vector{vertices()};
   for (auto e : edges_between_regions) {
@@ -62,15 +67,31 @@ GraphOfConvexSets::GraphOfConvexSets(
     addEdge(u, v, u->name() + "->" + v->name());
   }
 
-  // find source and target edges
-  // add source and target vertices and edges
+  // add start and goal to graph
+  GCSVertex* m_source = addVertex(ConvexSets::PointSet(source), "source");
+  GCSVertex* m_target = addVertex(ConvexSets::PointSet(target), "target");
+
+  // find edges from start/to goal and add edges
+  auto start_goal_edges{findStartGoalEdges(regions, source, target)};
+  // todo: handle case where there's no start/goal edges
+  for (int i : start_goal_edges.first) {
+    GCSVertex* v{vertex_vector.at(i)};
+    addEdge(m_source, v, "source->" + v->name());
+  }
+  for (int i : start_goal_edges.second) {
+    GCSVertex* u{vertex_vector.at(i)};
+    addEdge(u, m_target, u->name() + "->target");
+  }
 
   // print testing
-
   // for (const auto& v : m_vertices)
   //   std::cout << v.second->id() << ": " << v.second->name() << std::endl;
   // for (const auto& e : edges_between_regions)
   //   std::cout << e.first << "," << e.second << std::endl;
+  // for (int i : start_goal_edges.first)
+  //   std::cout << "start->" << vertex_vector.at(i)->name() << std::endl;
+  // for (int i : start_goal_edges.second)
+  //   std::cout << vertex_vector.at(i)->name() << "->target" << std::endl;
   // for (const auto& e : m_edges)
   //   std::cout << e.second->id() << ": " << e.second->name() << std::endl;
   // m_model->writeTaskStream("ptf", std::cout);
@@ -80,14 +101,13 @@ GraphOfConvexSets::GraphOfConvexSets(
 //---------------------------------------------------------
 // Methods for Changing Graph
 
-GCSVertex* GraphOfConvexSets::addVertex(const XYPolygon& region, std::string name)
+GCSVertex* GraphOfConvexSets::addVertex(const ConvexSet& set, std::string name)
 {
   if (name.empty())
     name = std::to_string(m_vertices.size());
   name.insert(0, "v_");  // prepend names with v_
 
   VertexId id{getNewVertexId()};
-  ConvexSets::PolyhedronSet set{region, m_order};  // add vertices as cartesian products
   auto emplace_result{m_vertices.emplace(id, new GCSVertex(s_vertex_id, name, set))};
   if (emplace_result.second)
     return (emplace_result.first->second.get());
@@ -134,6 +154,22 @@ GCSEdge* GraphOfConvexSets::addEdge(GCSVertex* u, GCSVertex* v, std::string name
   } else {  // todo: raise a warning or assert here?
     return (nullptr);
   }
+}
+
+
+std::pair<std::vector<int>, std::vector<int>> GraphOfConvexSets::findStartGoalEdges(
+  const std::vector<XYPolygon>& regions,
+  const XYPoint& start,
+  const XYPoint& goal) const
+{
+  std::vector<int> start_edges, goal_edges;
+  for (size_t i{0}; i < regions.size(); ++i) {
+    if (regions[i].contains(start))
+      start_edges.push_back(i);
+    if (regions[i].contains(goal))
+      goal_edges.push_back(i);
+  }
+  return std::pair<std::vector<int>, std::vector<int>> {start_edges, goal_edges};
 }
 
 
