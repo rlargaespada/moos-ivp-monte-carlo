@@ -70,10 +70,16 @@ class GraphOfConvexSets
   void removeVertex(GCSVertex* vertex);
   void removeEdge(GCSEdge* edge);
 
+  int order() const {return (m_order);}
+  int continuity() const{return (m_continuity);}
+  int dimension() const {return (m_dimension);}
   std::vector<GCSVertex*> vertices();
   std::vector<const GCSVertex*> vertices() const;
   std::vector<GCSEdge*> edges();
   std::vector<const GCSEdge*> edges() const;
+  const GCSVertex* const source() const {return (m_source);}
+  const GCSVertex* const target() const {return (m_target);}
+  const GraphOfConvexSetsOptions options() const {return (m_options);}
 
   // todo: phi constraints
 
