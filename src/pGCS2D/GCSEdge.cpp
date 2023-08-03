@@ -25,11 +25,11 @@ GCSEdge::GCSEdge(
 {
   assert(!m_name.empty());
   if (relaxation)
-    m_phi = M->variable("phi_" + m_name, Domain::inRange(0, 1));
+    m_phi = M->variable("phi_" + m_id, Domain::inRange(0, 1));
   else
-    m_phi = M->variable("phi_" + m_name, Domain::binary());
+    m_phi = M->variable("phi_" + m_id, Domain::binary());
 
-  m_y = M->variable("y_" + m_name, m_u->dim());
-  m_z = M->variable("z_" + m_name, m_v->dim());
-  m_ell = M->variable("ell_" + m_name, 1);  // todo: is just one ok?
+  m_y = M->variable("y_" + m_id, m_u->dim());
+  m_z = M->variable("z_" + m_id, m_v->dim());
+  m_ell = M->variable("ell_" + m_id, 1);  // todo: is just one ok?
 }
