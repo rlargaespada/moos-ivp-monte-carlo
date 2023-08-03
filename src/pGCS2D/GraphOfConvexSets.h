@@ -67,9 +67,8 @@ class GraphOfConvexSets
   GCSVertex* addVertex(const ConvexSet& set, std::string name = "");
   GCSEdge* addEdge(GCSVertex* u, GCSVertex* v, std::string name = "");
 
-  void removeVertex(const std::string& name);
   void removeVertex(GCSVertex* vertex);
-  void removeEdge();
+  void removeEdge(GCSEdge* edge);
 
   std::vector<GCSVertex*> vertices();
   std::vector<const GCSVertex*> vertices() const;

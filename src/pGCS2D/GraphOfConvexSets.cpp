@@ -173,6 +173,34 @@ std::pair<std::vector<int>, std::vector<int>> GraphOfConvexSets::findStartGoalEd
 }
 
 
+void GraphOfConvexSets::removeVertex(GCSVertex* vertex)
+{
+  assert(vertex != nullptr);
+  VertexId id{vertex->id()};
+  assert(m_vertices.count(id) > 0);
+
+  for (auto it{m_edges.begin()}; it != m_edges.end();) {
+    if ((it->second->u().id() == id) ||
+        (it->second->v().id() == id)) {
+      it = m_edges.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  m_vertices.erase(id);
+}
+
+
+void GraphOfConvexSets::removeEdge(GCSEdge* edge)
+{
+  assert(edge != nullptr);
+  assert(m_edges.count(edge->id()) > 0);
+  edge->u().removeOutgoingEdge(edge);
+  edge->v().removeIncomingEdge(edge);
+  m_edges.erase(edge->id());
+}
+
+
 //---------------------------------------------------------
 // Accessors
 
