@@ -2,6 +2,8 @@
 #define GCS2D_GRAPHOFCONVEXSETS_HEADER
 
 //* system headers
+#include <Eigen/Dense>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -88,6 +90,9 @@ class GraphOfConvexSets
   void solveGCS();
   void getSolutionPath();
 
+  // development and debugging
+  void printModel() {m_model->writeTaskStream("ptf", std::cout);}
+
  private:
   VertexId getNewVertexId() {return (s_vertex_id++);}
   EdgeId getNewEdgeId() {return (s_edge_id++);}
@@ -98,7 +103,11 @@ class GraphOfConvexSets
     const XYPoint& start,
     const XYPoint& goal) const;
 
+  std::shared_ptr<monty::ndarray<double, 2>> toMosekArray(const Eigen::MatrixXi& M);
+  std::shared_ptr<monty::ndarray<double, 2>> toMosekArray(const Eigen::MatrixXd& M);
+
   void addContinuityConstraints();
+  void addContinuityConstraint(int deriv, const Eigen::MatrixXi& Aeq);
 
   void addPerspectiveCost();
   void addPerspectiveConstraint();

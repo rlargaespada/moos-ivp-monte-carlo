@@ -1,4 +1,6 @@
+#include <Eigen/Dense>
 #include <cassert>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,7 +15,13 @@
 #include "GraphOfConvexSets.h"
 
 
+using mosek::fusion::Domain;
+using mosek::fusion::Expr;
+using mosek::fusion::Matrix;
 using mosek::fusion::Model;
+using mosek::fusion::Variable;
+using mosek::fusion::Var;
+
 
 //---------------------------------------------------------
 // Constructors
@@ -68,8 +76,8 @@ GraphOfConvexSets::GraphOfConvexSets(
   }
 
   // add start and goal to graph
-  GCSVertex* m_source = addVertex(ConvexSets::PointSet(source), "source");
-  GCSVertex* m_target = addVertex(ConvexSets::PointSet(target), "target");
+  m_source = addVertex(ConvexSets::PointSet(source), "source");
+  m_target = addVertex(ConvexSets::PointSet(target), "target");
 
   // find edges from start/to goal and add edges
   auto start_goal_edges{findStartGoalEdges(regions, source, target)};
@@ -254,4 +262,152 @@ std::vector<const GCSEdge*> GraphOfConvexSets::edges() const
     edges.push_back(e.second.get());
   }
   return edges;
+}
+
+
+//---------------------------------------------------------
+// Adding Constraints
+
+bool GraphOfConvexSets::populateModel()
+{
+  addContinuityConstraints();
+  // printModel();
+  return (true);
+}
+
+
+void GraphOfConvexSets::addContinuityConstraints()
+{
+  int vertex_dim{m_dimension * (m_order + 1)};
+  int scale_factor = 1;
+  int dim{m_dimension};  // rneame to make typing easier
+
+  /*
+  Build up coefficient matrix for continuity constraints for each derivative.
+  Matrix enforces that last control point of each curve u equals the first control
+  point of the next curve v.
+
+  From Bezier curve derivative laws: coefficient matrix matches rows of
+  Pascal's triangle, scaled by curve order. Signs of each coefficient alternate.
+
+  Examples:
+    curve of order 3, derivative 1:
+      (3!/(3 - 1)!) * [ 0  0  0  0  3  0 -3  0 -3  0  3  0  0  0  0  0 ]
+      (3!/(3 - 1)!) * [ 0  0  0  0  0  3  0 -3  0 -3  0  3  0  0  0  0 ]
+    curve of order 4, derivative 3:
+      (4!/(4 - 3)!) * [ 0  0  1  0 -3  0  3  0 -1  0 -1  0  3  0 -3  0  1  0  0  0 ]
+      (4!/(4 - 3)!) * [ 0  0  0  1  0 -3  0  3  0 -1  0 -1  0  3  0 -3  0  1  0  0 ]
+  */
+
+  for (int deriv{0}; deriv <= m_continuity; deriv++) {
+    // matrices are zero to start
+    Eigen::MatrixXi Aeq_u{Eigen::MatrixXi::Zero(dim, vertex_dim)};
+    Eigen::MatrixXi Aeq_v{Eigen::MatrixXi::Zero(dim, vertex_dim)};
+
+    int pascal{1}, num_coeff{deriv + 1};
+    int sign{deriv % 2 == 0 ? 1 : -1};  // sign of coefficients alternates
+
+    // calculate members of pascal's triangle, row (deriv + 1)
+    Eigen::RowVectorXi pascal_coeffs(Eigen::RowVectorXi::Zero(num_coeff));
+    for (int i{1}; i <= num_coeff; i++) {
+      pascal_coeffs(i - 1) = (sign * pascal);
+      pascal = pascal * (num_coeff - i) / i;  // next pascal coefficient
+      sign *= -1;  // invert sign
+    }
+
+    // insert pascal coefficents into matrices
+    for (int d{0}; d < dim; d++) {
+      Aeq_u(d, Eigen::seqN(Eigen::last - dim + d + 1, num_coeff, -dim)) = pascal_coeffs.reverse();
+      Aeq_v(d, Eigen::seqN(d, num_coeff, dim)) = pascal_coeffs;
+    }
+
+    // scale matrix by derivative
+    Aeq_u *= scale_factor;
+    Aeq_u *= -1;  // u matrix is negative, want v - u = 0
+    Aeq_v *= scale_factor;
+    scale_factor *= (m_order - deriv);
+
+    Eigen::MatrixXi Aeq(m_dimension, 2 * vertex_dim);
+    Aeq << Aeq_u, Aeq_v;
+
+    // add continuity constraints to all edges except from source/to target
+    addContinuityConstraint(deriv, Aeq);
+  }
+
+  // build source->vertex continuity constraint matrix
+  Eigen::MatrixXi src_Aeq(Eigen::MatrixXi::Zero(dim, 1 + dim + vertex_dim));
+  // first col is 0, next block is -I for source y, next block is I for vertex z
+  src_Aeq.block(0, 1, dim, dim) = -Eigen::MatrixXi::Identity(dim, dim);
+  src_Aeq.block(0, 1 + dim, dim, dim) = Eigen::MatrixXi::Identity(dim, dim);
+  auto src_Aeq_mosek{toMosekArray(src_Aeq)};
+
+  // add continuity constraints on source edges
+  for (auto e : m_source->outgoing_edges()) {
+    mosek::fusion::Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
+    std::string name{"e_" + std::to_string(e->id()) + "_continuity"};
+    m_model->constraint(name, Expr::mul(src_Aeq_mosek, phi_y_z), Domain::equalsTo(0));
+  }
+
+  // build vertex->target continuity constraint matrix
+  Eigen::MatrixXi targ_Aeq(Eigen::MatrixXi::Zero(dim, 1 + dim + vertex_dim));
+  // first col is 0, next block is -I for vertex y, last block is I for target z
+  targ_Aeq.block(0, 1 + vertex_dim - dim, dim, dim) = -Eigen::MatrixXi::Identity(dim, dim);
+  targ_Aeq.rightCols(dim) = Eigen::MatrixXi::Identity(dim, dim);
+  auto targ_Aeq_mosek{toMosekArray(targ_Aeq)};
+
+  // add continuity constraints on target edges
+  for (auto e : m_target->incoming_edges()) {
+    mosek::fusion::Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
+    std::string name{"e_" + std::to_string(e->id()) + "_continuity"};
+    m_model->constraint(name, Expr::mul(targ_Aeq_mosek, phi_y_z), Domain::equalsTo(0));
+  }
+}
+
+
+void GraphOfConvexSets::addContinuityConstraint(int deriv, const Eigen::MatrixXi& Aeq)
+{
+  // add extra column to Aeq for to build perspective constraint
+  Eigen::MatrixXi Aeq_ext(Aeq.rows(), Aeq.cols() + 1);
+  Aeq_ext.col(0).setConstant(0);
+  Aeq_ext.rightCols(Aeq.cols()) = Aeq;
+  auto Aeq_mosek{toMosekArray(Aeq_ext)};
+
+  // constrain all edges that aren't from source or to target
+  std::vector<GCSEdge*> edge_vector{edges()};
+  for (auto e : edge_vector) {
+    if ((e->u().id() == m_source->id()) || (e->v().id() == m_target->id()))
+      continue;
+    mosek::fusion::Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
+    std::string name{"e_" + std::to_string(e->id()) + "_continuity_" + std::to_string(deriv)};
+    m_model->constraint(name, Expr::mul(Aeq_mosek, phi_y_z), Domain::equalsTo(0));
+  }
+}
+
+//---------------------------------------------------------
+// Utilities
+
+std::shared_ptr<monty::ndarray<double, 2>> GraphOfConvexSets::toMosekArray(const Eigen::MatrixXi& M)
+{
+  // first convert matrix to a vector of vectors so mosek can parse it
+  std::vector<std::vector<double>> M_vec(M.rows());
+  // todo: this can probably be more efficient
+  for (int i{0}; i < M.rows(); i++) {
+    M_vec.at(i).resize(M.cols());
+    for (int j{0}; j < M.cols(); j++)
+      M_vec.at(i).at(j) = M(i, j);
+  }
+  return (monty::new_array_ptr<double>(M_vec));
+}
+
+
+std::shared_ptr<monty::ndarray<double, 2>> GraphOfConvexSets::toMosekArray(const Eigen::MatrixXd& M)
+{
+  std::vector<std::vector<double>> M_vec(M.rows());
+  // todo: this can probably be more efficient
+  for (int i{0}; i < M.rows(); i++) {
+    M_vec.at(i).resize(M.cols());
+    for (int j{0}; j < M.cols(); j++)
+      M_vec.at(i).at(j) = M(i, j);
+  }
+  return (monty::new_array_ptr<double>(M_vec));
 }
