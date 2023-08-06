@@ -20,6 +20,7 @@ using mosek::fusion::Domain;
 using mosek::fusion::Expr;
 using mosek::fusion::Matrix;
 using mosek::fusion::Model;
+using mosek::fusion::ObjectiveSense;
 using mosek::fusion::Variable;
 using mosek::fusion::Var;
 
@@ -66,7 +67,7 @@ GraphOfConvexSets::GraphOfConvexSets(
 
   // add a vertex for each input region
   for (const auto& region : regions)
-    // add regions as cartesian products
+    // add regions as cartesian power of region polygons
     addVertex(ConvexSets::PolyhedronSet{region, m_order + 1}, region.get_label());
 
   // find edges between regions and add edges to graph
@@ -432,7 +433,31 @@ void GraphOfConvexSets::addPathLengthCost(Eigen::MatrixXd weight_matrix)
 
 bool GraphOfConvexSets::populateModel()
 {
+  addObjective();
+  // todo: handle phi constraints
+  addSpatialNonNegativityConstraints();
   return (true);
+}
+
+
+void GraphOfConvexSets::addObjective()
+{
+  // get a vector of all edge ells
+  std::vector<Variable::t> ell_vec;
+  for (auto& edge : m_edges)
+    ell_vec.insert(ell_vec.end(), edge.second->m_ell.begin(), edge.second->m_ell.end());
+  Variable::t ell_vars{Var::vstack(monty::new_array_ptr<Variable::t>(ell_vec))};
+
+  // objective is to minimize all ells
+  m_model->objective("min_cost", ObjectiveSense::Minimize, Expr::sum(ell_vars));
+}
+
+
+void GraphOfConvexSets::addSpatialNonNegativityConstraints()
+{
+  for (auto& edge : m_edges) {
+    GCSEdge* e{edge.second.get()};
+  }
 }
 
 

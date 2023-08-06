@@ -113,6 +113,9 @@ class GraphOfConvexSets
 
   void addContinuityConstraint(int deriv, const Eigen::MatrixXi& Aeq);
 
+  void addObjective();
+  void addSpatialNonNegativityConstraints();
+
   void addConservationOfFlowConstraints();
   void addDegreeConstraints();
   void addCyclicConstraints();
