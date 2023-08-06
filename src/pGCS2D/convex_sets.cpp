@@ -1,23 +1,54 @@
+#include <Eigen/Dense>
+#include <vector>
+
+#include "fusion.h"
+
 #include "convex_sets.h"
 
 
 namespace ConvexSets
 {
 
+using mosek::fusion::Domain;
+using mosek::fusion::Expr;
+using mosek::fusion::Model;
+using mosek::fusion::Var;
+using mosek::fusion::Variable;
+
+
 //---------------------------------------------------------
 // PointSet
 
 void PointSet::addPerspectiveConstraint(
-  mosek::fusion::Model::t M,
-  mosek::fusion::Variable::t scale,
-  mosek::fusion::Variable::t x
+  Model::t M,
+  Variable::t scale,
+  Variable::t x,
+  const std::string& name
 ) const
-{}  // todo
+{
+  int d{dim()};
+  Eigen::MatrixXd Aeq(d, d + 1);
+  Aeq.leftCols(d) = Eigen::MatrixXd::Identity(d, d);
+  Aeq.col(d) = -m_x;
+
+  // convert Eigen Matrix to MOSEK array
+  std::vector<std::vector<double>> Aeq_vec(Aeq.rows());
+  for (int i{0}; i < Aeq.rows(); i++) {
+    Aeq_vec.at(i).resize(Aeq.cols());
+    for (int j{0}; j < Aeq.cols(); j++)
+      Aeq_vec.at(i).at(j) = Aeq(i, j);
+  }
+  auto Abar_mosek{monty::new_array_ptr<double>(Aeq_vec)};
+
+  Variable::t vars{Var::vstack(x, scale)};
+  M->constraint(name, Expr::mul(Abar_mosek, vars), Domain::equalsTo(0));
+}
 
 
 void PointSet::addMembershipConstraint(
-  mosek::fusion::Model::t M,
-  mosek::fusion::Variable::t x
+  Model::t M,
+  Variable::t x,
+  const std::string& name
 ) const
 {}  // todo
 
@@ -106,19 +137,37 @@ bool PolyhedronSet::contains(double x, double y) const
 
 
 void PolyhedronSet::addPerspectiveConstraint(
-  mosek::fusion::Model::t M,
-  mosek::fusion::Variable::t scale,
-  mosek::fusion::Variable::t x
+  Model::t M,
+  Variable::t scale,
+  Variable::t x,
+  const std::string& name
 ) const
-{}  // todo
+{
+  // A x <= t b, written as [A,-b][x;scale] <= 0
+  Eigen::MatrixXd Abar(m_A.rows(), m_A.cols() + 1);
+  Abar.leftCols(m_A.cols()) = m_A;
+  Abar.col(m_A.cols()) = -m_b;
+
+  // convert Eigen Matrix to MOSEK array
+  std::vector<std::vector<double>> Abar_vec(Abar.rows());
+  for (int i{0}; i < Abar.rows(); i++) {
+    Abar_vec.at(i).resize(Abar.cols());
+    for (int j{0}; j < Abar.cols(); j++)
+      Abar_vec.at(i).at(j) = Abar(i, j);
+  }
+  auto Abar_mosek{monty::new_array_ptr<double>(Abar_vec)};
+
+  Variable::t vars{Var::vstack(x, scale)};
+  M->constraint(name, Expr::mul(Abar_mosek, vars), Domain::lessThan(0));
+}
 
 
 void PolyhedronSet::addMembershipConstraint(
-  mosek::fusion::Model::t M,
-  mosek::fusion::Variable::t x
+  Model::t M,
+  Variable::t x,
+  const std::string& name
 ) const
 {}  // todo
-
 
 
 }  // namespace ConvexSets

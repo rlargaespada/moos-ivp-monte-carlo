@@ -18,7 +18,7 @@
 
 using mosek::fusion::Domain;
 using mosek::fusion::Expr;
-using mosek::fusion::Matrix;
+// using mosek::fusion::Matrix;
 using mosek::fusion::Model;
 using mosek::fusion::ObjectiveSense;
 using mosek::fusion::Variable;
@@ -457,12 +457,19 @@ void GraphOfConvexSets::addSpatialNonNegativityConstraints()
 {
   for (auto& edge : m_edges) {
     GCSEdge* e{edge.second.get()};
+    std::string name_base{"e_" + e->strId() + "_spatial_nonneg_"};
+    if (e->u().dim() > 0)
+      e->u().set().addPerspectiveConstraint(m_model, e->m_phi, e->m_y, name_base + "_y");
+    if (e->v().dim() > 0)
+      e->v().set().addPerspectiveConstraint(m_model, e->m_phi, e->m_z, name_base + "_z");
   }
 }
 
 
 //---------------------------------------------------------
 // Utilities
+
+// todo: put these in a utils file so they can be used in convex_sets.cpp
 
 std::shared_ptr<monty::ndarray<double, 2>> GraphOfConvexSets::toMosekArray(const Eigen::MatrixXi& M)
 {
