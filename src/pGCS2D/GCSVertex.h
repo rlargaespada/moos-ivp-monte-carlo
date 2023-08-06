@@ -18,6 +18,7 @@ class GCSVertex
 {
  public:
   const VertexId id() const {return (m_id);}
+  const std::string strId() const {return (std::to_string(m_id));}
   const std::string& name() const {return (m_name);}
   int dim() const {return (m_set->dim());}
   const ConvexSet& set() const {return (*m_set);}

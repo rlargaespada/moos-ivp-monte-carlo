@@ -86,6 +86,11 @@ class GraphOfConvexSets
   // todo: phi constraints
 
   void preprocessGraph();
+
+  void addContinuityConstraints();
+  void addPathLengthCost(double weight);
+  void addPathLengthCost(Eigen::MatrixXd weight_matrix);
+
   bool populateModel();
   void solveGCS();
   void getSolutionPath();
@@ -106,11 +111,7 @@ class GraphOfConvexSets
   std::shared_ptr<monty::ndarray<double, 2>> toMosekArray(const Eigen::MatrixXi& M);
   std::shared_ptr<monty::ndarray<double, 2>> toMosekArray(const Eigen::MatrixXd& M);
 
-  void addContinuityConstraints();
   void addContinuityConstraint(int deriv, const Eigen::MatrixXi& Aeq);
-
-  void addPerspectiveCost();
-  void addPerspectiveConstraint();
 
   void addConservationOfFlowConstraints();
   void addDegreeConstraints();
@@ -125,6 +126,7 @@ class GraphOfConvexSets
   const int m_order;
   const int m_continuity;
   const int m_dimension;
+  const int m_vertex_dim;
 
   std::map<int, std::unique_ptr<GCSVertex>> m_vertices;
   std::map<int, std::unique_ptr<GCSEdge>> m_edges;

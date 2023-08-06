@@ -1,4 +1,5 @@
 #include <cassert>
+#include <string>
 #include <utility>
 
 #include "fusion.h"
@@ -8,8 +9,10 @@
 //---------------------------------------------------------
 // Constructors
 
-using mosek::fusion::Model;
 using mosek::fusion::Domain;
+using mosek::fusion::Model;
+using mosek::fusion::Variable;
+
 
 GCSEdge::GCSEdge(
   EdgeId id,
@@ -21,16 +24,28 @@ GCSEdge::GCSEdge(
   : m_id(id),
     m_name(std::move(name)),
     m_u(u),
-    m_v(v)
+    m_v(v),
+    m_model(M)
 {
   assert(!m_name.empty());
-  std::string str_id{std::to_string(m_id)};
+  std::string str_id{strId()};
   if (relaxation)
-    m_phi = M->variable("phi_" + str_id, Domain::inRange(0, 1));
+    m_phi = m_model->variable("phi_" + str_id, Domain::inRange(0, 1));
   else
-    m_phi = M->variable("phi_" + str_id, Domain::binary());
+    m_phi = m_model->variable("phi_" + str_id, Domain::binary());
 
-  m_y = M->variable("y_" + str_id, m_u->dim());
-  m_z = M->variable("z_" + str_id, m_v->dim());
-  m_ell = M->variable("ell_" + str_id, 1);  // todo: is just one ok?
+  m_y = m_model->variable("y_" + str_id, m_u->dim());
+  m_z = m_model->variable("z_" + str_id, m_v->dim());
+}
+
+
+//---------------------------------------------------------
+// Utilities
+
+std::pair<const std::string, Variable::t> GCSEdge::addCostVar()
+{
+  std::string name{"ell_" + strId() + "_" + std::to_string(m_ell.size())};
+  auto ell{m_model->variable(name, 1)};
+  m_ell.push_back(ell);
+  return (std::pair<const std::string, Variable::t> {name, ell});
 }

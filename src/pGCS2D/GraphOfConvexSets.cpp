@@ -2,6 +2,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "fusion.h"
@@ -35,6 +36,7 @@ GraphOfConvexSets::GraphOfConvexSets()
   : m_dimension(-1),
     m_order(-1),
     m_continuity(-1),
+    m_vertex_dim(-1),
     m_source(nullptr),
     m_target(nullptr),
     m_model(nullptr)
@@ -51,6 +53,7 @@ GraphOfConvexSets::GraphOfConvexSets(
   : m_dimension(2),  // we're always in 2D
     m_order(order),
     m_continuity(continuity),
+    m_vertex_dim(2 * (order + 1)),
     m_source(nullptr),
     m_target(nullptr),
     m_options(options)
@@ -194,7 +197,10 @@ void GraphOfConvexSets::removeVertex(GCSVertex* vertex)
       it->second->m_phi->remove();
       it->second->m_z->remove();
       it->second->m_z->remove();
-      it->second->m_ell->remove();
+
+      for (auto ell : it->second->m_ell)
+        ell->remove();  // remove from model
+
       it = m_edges.erase(it);
     } else {
       ++it;
@@ -213,7 +219,8 @@ void GraphOfConvexSets::removeEdge(GCSEdge* edge)
   edge->m_phi->remove();
   edge->m_z->remove();
   edge->m_z->remove();
-  edge->m_ell->remove();
+  for (auto ell : edge->m_ell)
+    ell->remove();  // remove from model
   m_edges.erase(edge->id());
 }
 
@@ -266,19 +273,10 @@ std::vector<const GCSEdge*> GraphOfConvexSets::edges() const
 
 
 //---------------------------------------------------------
-// Adding Constraints
-
-bool GraphOfConvexSets::populateModel()
-{
-  addContinuityConstraints();
-  // printModel();
-  return (true);
-}
-
+// Add Constraints and Costs
 
 void GraphOfConvexSets::addContinuityConstraints()
 {
-  int vertex_dim{m_dimension * (m_order + 1)};
   int scale_factor = 1;
   int dim{m_dimension};  // rneame to make typing easier
 
@@ -301,8 +299,8 @@ void GraphOfConvexSets::addContinuityConstraints()
 
   for (int deriv{0}; deriv <= m_continuity; deriv++) {
     // matrices are zero to start
-    Eigen::MatrixXi Aeq_u{Eigen::MatrixXi::Zero(dim, vertex_dim)};
-    Eigen::MatrixXi Aeq_v{Eigen::MatrixXi::Zero(dim, vertex_dim)};
+    Eigen::MatrixXi Aeq_u{Eigen::MatrixXi::Zero(dim, m_vertex_dim)};
+    Eigen::MatrixXi Aeq_v{Eigen::MatrixXi::Zero(dim, m_vertex_dim)};
 
     int pascal{1}, num_coeff{deriv + 1};
     int sign{deriv % 2 == 0 ? 1 : -1};  // sign of coefficients alternates
@@ -327,7 +325,7 @@ void GraphOfConvexSets::addContinuityConstraints()
     Aeq_v *= scale_factor;
     scale_factor *= (m_order - deriv);
 
-    Eigen::MatrixXi Aeq(m_dimension, 2 * vertex_dim);
+    Eigen::MatrixXi Aeq(m_dimension, 2 * m_vertex_dim);
     Aeq << Aeq_u, Aeq_v;
 
     // add continuity constraints to all edges except from source/to target
@@ -335,7 +333,7 @@ void GraphOfConvexSets::addContinuityConstraints()
   }
 
   // build source->vertex continuity constraint matrix
-  Eigen::MatrixXi src_Aeq(Eigen::MatrixXi::Zero(dim, 1 + dim + vertex_dim));
+  Eigen::MatrixXi src_Aeq(Eigen::MatrixXi::Zero(dim, 1 + dim + m_vertex_dim));
   // first col is 0, next block is -I for source y, next block is I for vertex z
   src_Aeq.block(0, 1, dim, dim) = -Eigen::MatrixXi::Identity(dim, dim);
   src_Aeq.block(0, 1 + dim, dim, dim) = Eigen::MatrixXi::Identity(dim, dim);
@@ -343,22 +341,22 @@ void GraphOfConvexSets::addContinuityConstraints()
 
   // add continuity constraints on source edges
   for (auto e : m_source->outgoing_edges()) {
-    mosek::fusion::Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
-    std::string name{"e_" + std::to_string(e->id()) + "_continuity"};
+    Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
+    std::string name{"e_" + e->strId() + "_continuity"};
     m_model->constraint(name, Expr::mul(src_Aeq_mosek, phi_y_z), Domain::equalsTo(0));
   }
 
   // build vertex->target continuity constraint matrix
-  Eigen::MatrixXi targ_Aeq(Eigen::MatrixXi::Zero(dim, 1 + dim + vertex_dim));
+  Eigen::MatrixXi targ_Aeq(Eigen::MatrixXi::Zero(dim, 1 + dim + m_vertex_dim));
   // first col is 0, next block is -I for vertex y, last block is I for target z
-  targ_Aeq.block(0, 1 + vertex_dim - dim, dim, dim) = -Eigen::MatrixXi::Identity(dim, dim);
+  targ_Aeq.block(0, 1 + m_vertex_dim - dim, dim, dim) = -Eigen::MatrixXi::Identity(dim, dim);
   targ_Aeq.rightCols(dim) = Eigen::MatrixXi::Identity(dim, dim);
   auto targ_Aeq_mosek{toMosekArray(targ_Aeq)};
 
   // add continuity constraints on target edges
   for (auto e : m_target->incoming_edges()) {
-    mosek::fusion::Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
-    std::string name{"e_" + std::to_string(e->id()) + "_continuity"};
+    Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
+    std::string name{"e_" + e->strId() + "_continuity"};
     m_model->constraint(name, Expr::mul(targ_Aeq_mosek, phi_y_z), Domain::equalsTo(0));
   }
 }
@@ -366,7 +364,10 @@ void GraphOfConvexSets::addContinuityConstraints()
 
 void GraphOfConvexSets::addContinuityConstraint(int deriv, const Eigen::MatrixXi& Aeq)
 {
+  // todo: consider adding a dedicated Equality Perspective Constraint function
+  // A = Aeq, b = Zeros
   // add extra column to Aeq for to build perspective constraint
+    // A*x = b becomes A*x = phi*b
   Eigen::MatrixXi Aeq_ext(Aeq.rows(), Aeq.cols() + 1);
   Aeq_ext.col(0).setConstant(0);
   Aeq_ext.rightCols(Aeq.cols()) = Aeq;
@@ -377,11 +378,63 @@ void GraphOfConvexSets::addContinuityConstraint(int deriv, const Eigen::MatrixXi
   for (auto e : edge_vector) {
     if ((e->u().id() == m_source->id()) || (e->v().id() == m_target->id()))
       continue;
-    mosek::fusion::Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
-    std::string name{"e_" + std::to_string(e->id()) + "_continuity_" + std::to_string(deriv)};
+    Variable::t phi_y_z{Var::vstack(e->m_phi, e->m_y, e->m_z)};
+    std::string name{"e_" + e->strId()+ "_continuity_" + std::to_string(deriv)};
     m_model->constraint(name, Expr::mul(Aeq_mosek, phi_y_z), Domain::equalsTo(0));
   }
 }
+
+
+void GraphOfConvexSets::addPathLengthCost(double weight)
+{
+  addPathLengthCost(weight * Eigen::MatrixXd::Identity(m_dimension, m_dimension));
+}
+
+
+void GraphOfConvexSets::addPathLengthCost(Eigen::MatrixXd weight_matrix)
+{
+  int dim{m_dimension};
+  Eigen::MatrixXd A(dim, m_vertex_dim);
+  Eigen::MatrixXd A_cone(dim + 1, m_vertex_dim + 2);
+  std::vector<GCSEdge*> edge_vector{edges()};
+
+  for (int i{0}; i < m_order; i++) {
+    A.setConstant(0);
+    A.block(0, i * dim, dim, dim) = -Eigen::MatrixXd::Identity(dim, dim);
+    A.block(0, (i + 1) * dim, dim, dim) = Eigen::MatrixXd::Identity(dim, dim);
+    A = weight_matrix * A;
+
+    // todo: consider adding a dedicated add L2Norm Perspective Constraint method
+    // A = A, b = zeros
+    // set up matrix for quadratic cone constraint
+    A_cone.setConstant(0);
+    A_cone(0, 1) = 1;  // x_0 = ell
+    // A_cone.block(1, 0, A.rows(), 1) = Eigen::VectorXd::Zero(A.rows());  // b*phi
+    A_cone.block(1, 2, A.rows(), A.cols()) = A;  // A * x_i
+    auto A_cone_mosek{toMosekArray(A_cone)};
+
+
+    for (auto e : edge_vector) {
+      if (e->u().id() == m_source->id())
+        continue;
+
+      std::pair<std::string, Variable::t> ell{e->addCostVar()};  // add new cost to edge
+      Variable::t phi_ell_y{Var::vstack(e->m_phi, ell.second, e->m_y)};
+      std::string name{"e_" + e->strId() + "_path_cost_" + std::to_string(i)};
+      m_model->constraint(name, Expr::mul(A_cone_mosek, phi_ell_y), Domain::inQCone());
+    }
+  }
+}
+
+
+//---------------------------------------------------------
+// Populate Model
+
+bool GraphOfConvexSets::populateModel()
+{
+  return (true);
+}
+
 
 //---------------------------------------------------------
 // Utilities
