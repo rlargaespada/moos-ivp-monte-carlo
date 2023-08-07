@@ -472,6 +472,7 @@ void GraphOfConvexSets::addVertexConstraints()
   for (auto& vertex : m_vertices) {
     GCSVertex* v{vertex.second.get()};
     addConservationOfFlowConstraints(v);
+    addDegreeConstraints(v);
   }
 }
 
@@ -479,7 +480,6 @@ void GraphOfConvexSets::addVertexConstraints()
 // conservation of flow, spatial conservation of flow constraints
 void GraphOfConvexSets::addConservationOfFlowConstraints(GCSVertex* v)
 {
-  std::cout << v->name() << std::endl;
   bool is_src{v->id() == m_source->id()};
   bool is_targ{v->id() == m_target->id()};
 
@@ -525,6 +525,32 @@ void GraphOfConvexSets::addConservationOfFlowConstraints(GCSVertex* v)
         Expr::dot(a_mosek, zy_mosek), Domain::equalsTo(0));
     }
   }
+}
+
+
+void GraphOfConvexSets::addDegreeConstraints(GCSVertex* v)
+{
+  bool is_src{v->id() == m_source->id()};
+  bool is_targ{v->id() == m_target->id()};
+
+  const std::vector<GCSEdge*>& incoming{v->incoming_edges()};
+  const std::vector<GCSEdge*>& outgoing{v->outgoing_edges()};
+
+  if (outgoing.empty())
+    return;
+
+  // create phi_out vector
+  std::vector<Variable::t> vars(outgoing.size());
+  for (size_t i{0}; i < outgoing.size(); i++) {
+    vars[i] = outgoing[i]->m_phi;
+  }
+  auto phi_out{Var::vstack(monty::new_array_ptr<Variable::t>(vars))};
+
+  // Degree constraint: sum(phi_out) <= 1 - is_target
+  m_model->constraint("v_" + v->strId() + "_degree",
+    Expr::sum(phi_out), Domain::inRange(0, is_targ ? 0 : 1));
+
+  // two cycle constraints
 }
 
 

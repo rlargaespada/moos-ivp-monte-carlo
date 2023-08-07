@@ -118,7 +118,7 @@ class GraphOfConvexSets
 
   void addVertexConstraints();
   void addConservationOfFlowConstraints(GCSVertex* v);
-  void addDegreeConstraints();
+  void addDegreeConstraints(GCSVertex* v);
   void addCyclicConstraints();
 
   void relaxationRounding();

@@ -284,6 +284,9 @@ bool GCS2D::buildGraph()
 
 bool GCS2D::populateModel()
 {
+  m_gcs->addContinuityConstraints();
+  m_gcs->addPathLengthCost(m_path_length_weight);
+  m_gcs->populateModel();
   return (true);
 }
 
@@ -490,6 +493,7 @@ bool GCS2D::OnStartUp()
     }
   }
   checkConfigAssertions();
+  m_options = GraphOfConvexSetsOptions();  // todo: enable modifying these options
 
   // fill in subscription variables with defaults if they weren't set in config
   // leave these variables empty in constructor so that we don't register for
