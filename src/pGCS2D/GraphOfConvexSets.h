@@ -116,7 +116,8 @@ class GraphOfConvexSets
   void addObjective();
   void addSpatialNonNegativityConstraints();
 
-  void addConservationOfFlowConstraints();
+  void addVertexConstraints();
+  void addConservationOfFlowConstraints(GCSVertex* v);
   void addDegreeConstraints();
   void addCyclicConstraints();
 

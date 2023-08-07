@@ -436,6 +436,7 @@ bool GraphOfConvexSets::populateModel()
   addObjective();
   // todo: handle phi constraints
   addSpatialNonNegativityConstraints();
+  addVertexConstraints();
   return (true);
 }
 
@@ -462,6 +463,67 @@ void GraphOfConvexSets::addSpatialNonNegativityConstraints()
       e->u().set().addPerspectiveConstraint(m_model, e->m_phi, e->m_y, name_base + "_y");
     if (e->v().dim() > 0)
       e->v().set().addPerspectiveConstraint(m_model, e->m_phi, e->m_z, name_base + "_z");
+  }
+}
+
+
+void GraphOfConvexSets::addVertexConstraints()
+{
+  for (auto& vertex : m_vertices) {
+    GCSVertex* v{vertex.second.get()};
+    addConservationOfFlowConstraints(v);
+  }
+}
+
+
+// conservation of flow, spatial conservation of flow constraints
+void GraphOfConvexSets::addConservationOfFlowConstraints(GCSVertex* v)
+{
+  std::cout << v->name() << std::endl;
+  bool is_src{v->id() == m_source->id()};
+  bool is_targ{v->id() == m_target->id()};
+
+  const std::vector<GCSEdge*>& incoming{v->incoming_edges()};
+  const std::vector<GCSEdge*>& outgoing{v->outgoing_edges()};
+
+  size_t degree{incoming.size() + outgoing.size()};
+  if (degree == 0)  // no edges, don't add constraints
+    return;
+
+  // setup coefficient vector
+  std::vector<double> a;
+  a.insert(a.end(), incoming.size(), -1);
+  a.insert(a.end(), outgoing.size(), 1);
+  auto a_mosek{monty::new_array_ptr<double>(a)};
+
+  // setup phis vector
+  std::vector<Variable::t> vars(degree);
+  int i{0};
+  for (const GCSEdge* e : incoming)
+    vars[i++] = e->m_phi;
+  for (const GCSEdge* e : outgoing)
+    vars[i++] = e->m_phi;
+  auto phis_mosek{Var::vstack(monty::new_array_ptr<Variable::t>(vars))};
+
+  // Conservation of flow: sum(phi_out) - sum(phi_in) = is_src - is_targ
+  int phi_sum{(is_src ? 1 : 0) - (is_targ ? 1 : 0)};
+  m_model->constraint("v_" + v->strId() + "_cons_flow",
+    Expr::dot(a_mosek, phis_mosek), Domain::equalsTo(phi_sum));
+
+  if ((!is_src) && (!is_targ)) {
+    for (int d{0}; d < v->dim(); d++) {
+      // setup zy vector
+      i = 0;
+      for (const GCSEdge* e : incoming)
+        vars[i++] = e->m_z->index(d);
+      for (const GCSEdge* e : outgoing)
+        vars[i++] = e->m_y->index(d);
+      auto zy_mosek{Var::vstack(monty::new_array_ptr<Variable::t>(vars))};
+
+      // Spatial conservation of flow: sum(z_in) = sum(y_out)
+      m_model->constraint("v_" + v->strId() + "_spat_cons_flow_" + std::to_string(d),
+        Expr::dot(a_mosek, zy_mosek), Domain::equalsTo(0));
+    }
   }
 }
 
