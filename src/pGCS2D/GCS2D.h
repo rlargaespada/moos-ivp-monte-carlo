@@ -52,9 +52,10 @@ class GCS2D : public AppCastingMOOSApp
   void clearIRISRegions();
   bool requestIRISRegions();
   bool buildGraph();
-  bool populateModel();
+  bool populateModel1();
+  bool populateModel2();
   // todo: pull any other preconditions from gcs code
-  bool checkPlanningPreconditions();  // todo: graph needs start and goal, edges from these, model
+  bool checkPlanningPreconditions();
 
   bool planPath();
   void handlePlanningFail(const std::string& warning_msg = "");
@@ -118,7 +119,8 @@ class GCS2D : public AppCastingMOOSApp
   {
     BUILD_GRAPH,
     PREPROCESS_GRAPH,
-    POPULATE_MODEL,
+    POPULATE_MODEL_1,
+    POPULATE_MODEL_2,
     START_MOSEK,
     MOSEK_RUNNING,
     CONVEX_ROUNDING,

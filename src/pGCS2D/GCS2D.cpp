@@ -282,10 +282,16 @@ bool GCS2D::buildGraph()
 }
 
 
-bool GCS2D::populateModel()
+bool GCS2D::populateModel1()
 {
   m_gcs->addContinuityConstraints();
   m_gcs->addPathLengthCost(m_path_length_weight);
+  return (true);
+}
+
+
+bool GCS2D::populateModel2()
+{
   m_gcs->populateModel();
   return (true);
 }
@@ -298,8 +304,11 @@ bool GCS2D::planPath()
   switch (m_mode) {
     // initial request to start planning
     case (PlannerMode::REQUEST_PENDING):
+      if (m_run_iris_on_new_path)
+        clearIRISRegions();
+
       // check if we need to run IRIS
-      if ((m_run_iris_on_new_path) || (m_safe_regions.empty())) {
+      if (m_safe_regions.empty()) {
         if (requestIRISRegions()) {
           m_mode = PlannerMode::IRIS_IN_PROGRESS;
           m_gcs_step = GCSStep::BUILD_GRAPH;  // force gcs back to first step
@@ -314,7 +323,7 @@ bool GCS2D::planPath()
         if (buildGraph()) {
           m_mode = PlannerMode::GCS_IN_PROGRESS;
             // m_gcs_step = GCSStep::PREPROCESS_GRAPH;  // todo: implement preprocessing
-          m_gcs_step = GCSStep::POPULATE_MODEL;
+          m_gcs_step = GCSStep::POPULATE_MODEL_1;
         // otherwise report failure
         } else {
           handlePlanningFail("Failed to build GCS!");
@@ -331,7 +340,7 @@ bool GCS2D::planPath()
           // if graph was built successfully, move onto the next step next iteration
           if (buildGraph()) {
             // m_gcs_step = GCSStep::PREPROCESS_GRAPH;  // todo: implement preprocessing
-            m_gcs_step = GCSStep::POPULATE_MODEL;
+            m_gcs_step = GCSStep::POPULATE_MODEL_1;
           // otherwise report failure
           } else {
             handlePlanningFail("Failed to build GCS!");
@@ -339,9 +348,20 @@ bool GCS2D::planPath()
           }
           break;
 
-        case (GCSStep::POPULATE_MODEL):
+        case (GCSStep::POPULATE_MODEL_1):
           // if model was populated successfully, move onto the next step next iteration
-          if (populateModel()) {
+          if (populateModel1()) {
+            m_gcs_step = GCSStep::POPULATE_MODEL_2;
+          // otherwise report failure
+          } else {
+            handlePlanningFail("Failed to populate MOSEK model!");
+            m_gcs_step = GCSStep::FAILED;
+          }
+          break;
+
+        case (GCSStep::POPULATE_MODEL_2):
+          // if model was populated successfully, move onto the next step next iteration
+          if (populateModel2()) {
             m_gcs_step = GCSStep::START_MOSEK;
           // otherwise report failure
           } else {
@@ -612,7 +632,8 @@ std::string GCS2D::printGCSStep()
     return ("BUILD_GRAPH");
   case (GCSStep::PREPROCESS_GRAPH):
     return ("PREPROCESS_GRAPH");
-  case (GCSStep::POPULATE_MODEL):
+  case (GCSStep::POPULATE_MODEL_1):
+  case (GCSStep::POPULATE_MODEL_2):
     return ("POPULATE_MODEL");
   case (GCSStep::START_MOSEK):
     return ("START_MOSEK");
