@@ -286,6 +286,7 @@ bool GCS2D::populateModel1()
 {
   m_gcs->addContinuityConstraints();
   m_gcs->addPathLengthCost(m_path_length_weight);
+  // todo: add derivative regularization
   return (true);
 }
 
@@ -376,22 +377,24 @@ bool GCS2D::planPath()
             handlePlanningFail();  // checkPlanningPreconditions posts its own warnings
             m_gcs_step = GCSStep::FAILED;
           } else {
-            // todo: start mosek in separate thread
+            m_gcs->solveGCS();  // starts MOSEK optimization in a separate thread
             m_gcs_step = GCSStep::MOSEK_RUNNING;
           }
           break;
 
         case (GCSStep::MOSEK_RUNNING):
-          // todo: check if mosek is done or not
-          // todo: if it's not done, increment some counter
-          // todo: if it's done, parse out path, return true if it succeeds
+          if (m_gcs->checkGCSDone()) {
+            // placeholders while testing
+            path_found = true;
+            m_path.add_vertex(m_start_point);
+            m_path.add_vertex(m_goal_point);
+            m_gcs_step = GCSStep::COMPLETE;
+          }
+
+          // todo: if mosek isn't done, increment some counter
+          // todo: parse out path, return true if it succeeds
           // todo: implement convex rounding
 
-          // placeholders while testing
-          path_found = true;
-          m_path.add_vertex(m_start_point);
-          m_path.add_vertex(m_goal_point);
-          m_gcs_step = GCSStep::COMPLETE;
           break;
         default:  // shouldn't get here
           break;

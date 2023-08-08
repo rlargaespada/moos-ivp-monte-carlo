@@ -349,7 +349,7 @@ ProcessConfig = pIRIS2D
   // optimization config
   mode = manual
   desired_regions = 20  // default
-  max_iters = 50  // default
+  max_iters = 10
   termination_threshold = 0.5  // default
   iris_bounds = $(SEARCH_BOUNDS)
 }

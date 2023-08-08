@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -34,7 +35,7 @@
 
 
 struct GraphOfConvexSetsOptions {
-  bool convex_relaxation{false};  // todo: turn back on when rounding is implemented
+  bool convex_relaxation{true};
   unsigned int max_rounded_paths{10};
   bool preprocessing{true};
   unsigned int max_rounding_trials{100};
@@ -90,9 +91,11 @@ class GraphOfConvexSets
   void addContinuityConstraints();
   void addPathLengthCost(double weight);
   void addPathLengthCost(Eigen::MatrixXd weight_matrix);
-
   bool populateModel();
+
   void solveGCS();
+  bool checkGCSDone();
+
   void getSolutionPath();
 
   // development and debugging
@@ -138,6 +141,8 @@ class GraphOfConvexSets
 
   const GraphOfConvexSetsOptions m_options;
   mosek::fusion::Model::t m_model;
+  std::thread m_mosek_thread;
+  bool m_model_running;
 };
 
 #endif  // GCS2D_GRAPHOFCONVEXSETS_HEADER

@@ -1,7 +1,9 @@
 #include <Eigen/Dense>
 #include <cassert>
+#include <functional>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -40,7 +42,8 @@ GraphOfConvexSets::GraphOfConvexSets()
     m_vertex_dim(-1),
     m_source(nullptr),
     m_target(nullptr),
-    m_model(nullptr)
+    m_model(nullptr),
+    m_model_running(false)
 {}
 
 
@@ -57,7 +60,8 @@ GraphOfConvexSets::GraphOfConvexSets(
     m_vertex_dim(2 * (order + 1)),
     m_source(nullptr),
     m_target(nullptr),
-    m_options(options)
+    m_options(options),
+    m_model_running(false)
 {
   assert(m_order > 0);
   assert(m_continuity >= 0);
@@ -608,12 +612,28 @@ void GraphOfConvexSets::addDegreeConstraints(GCSVertex* v)
 
 
 //---------------------------------------------------------
-// Solve model and extract path
+// Solve model
 
 void GraphOfConvexSets::solveGCS()
 {
-  m_model->solve();
+  // todo: add a callback function to model: https://docs.mosek.com/latest/cxxfusion/callback.html
+  // todo: add a timeout, breakSolver and return failure if it's hit
+  m_model_running = true;
+  std::thread T(std::function<void(void)>([&]() { m_model->solve(); m_model_running = false; }) );
+  m_mosek_thread = std::move(T);
 }
+
+
+bool GraphOfConvexSets::checkGCSDone()
+{
+  if (!m_model_running) {
+    m_mosek_thread.join();
+    return (true);
+  }
+
+  return (false);
+}
+
 
 //---------------------------------------------------------
 // Utilities
