@@ -28,6 +28,15 @@ class ConvexSet
     mosek::fusion::Model::t M,
     mosek::fusion::Variable::t x,
     const std::string& name) const = 0;
+  virtual void addPerspectiveConstraint(
+    mosek::fusion::Model::t M,
+    const Eigen::MatrixXd& A_x,
+    const Eigen::VectorXd& b_x,
+    const Eigen::VectorXd& c,
+    double d,
+    mosek::fusion::Variable::t scale,
+    mosek::fusion::Variable::t x,
+    const std::string& name) const = 0;
   std::unique_ptr<ConvexSet> clone() const {return (makeClone());}
 
  protected:
@@ -47,6 +56,15 @@ class PointSet : public ConvexSet
 
   virtual void addPerspectiveConstraint(
     mosek::fusion::Model::t M,
+    mosek::fusion::Variable::t scale,
+    mosek::fusion::Variable::t x,
+    const std::string& name) const;
+  virtual void addPerspectiveConstraint(
+    mosek::fusion::Model::t M,
+    const Eigen::MatrixXd& A_x,
+    const Eigen::VectorXd& b_x,
+    const Eigen::VectorXd& c,
+    double d,
     mosek::fusion::Variable::t scale,
     mosek::fusion::Variable::t x,
     const std::string& name) const;
@@ -86,6 +104,15 @@ class PolyhedronSet : public ConvexSet
 
   virtual void addPerspectiveConstraint(
     mosek::fusion::Model::t M,
+    mosek::fusion::Variable::t scale,
+    mosek::fusion::Variable::t x,
+    const std::string& name) const;
+  virtual void addPerspectiveConstraint(
+    mosek::fusion::Model::t M,
+    const Eigen::MatrixXd& A_x,
+    const Eigen::VectorXd& b_x,
+    const Eigen::VectorXd& c,
+    double d,
     mosek::fusion::Variable::t scale,
     mosek::fusion::Variable::t x,
     const std::string& name) const;

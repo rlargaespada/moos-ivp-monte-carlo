@@ -34,7 +34,7 @@
 
 
 struct GraphOfConvexSetsOptions {
-  bool convex_relaxation{true};
+  bool convex_relaxation{false};  // todo: turn back on when rounding is implemented
   unsigned int max_rounded_paths{10};
   bool preprocessing{true};
   unsigned int max_rounding_trials{100};
@@ -119,7 +119,6 @@ class GraphOfConvexSets
   void addVertexConstraints();
   void addConservationOfFlowConstraints(GCSVertex* v);
   void addDegreeConstraints(GCSVertex* v);
-  void addCyclicConstraints();
 
   void relaxationRounding();
 

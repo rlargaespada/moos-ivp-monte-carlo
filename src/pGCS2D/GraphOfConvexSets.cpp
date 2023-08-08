@@ -64,6 +64,7 @@ GraphOfConvexSets::GraphOfConvexSets(
   assert(m_continuity < m_order);
 
   m_model = new Model("gcs");
+  // todo: only use variable/constraint names when debugging
 
   // add a vertex for each input region
   for (const auto& region : regions)
@@ -410,10 +411,9 @@ void GraphOfConvexSets::addPathLengthCost(Eigen::MatrixXd weight_matrix)
     // set up matrix for quadratic cone constraint
     A_cone.setConstant(0);
     A_cone(0, 1) = 1;  // x_0 = ell
-    // A_cone.block(1, 0, A.rows(), 1) = Eigen::VectorXd::Zero(A.rows());  // b*phi
+    A_cone.block(1, 0, A.rows(), 1) = Eigen::VectorXd::Zero(A.rows());  // b*phi
     A_cone.block(1, 2, A.rows(), A.cols()) = A;  // A * x_i
     auto A_cone_mosek{toMosekArray(A_cone)};
-
 
     for (auto e : edge_vector) {
       if (e->u().id() == m_source->id())
@@ -540,19 +540,80 @@ void GraphOfConvexSets::addDegreeConstraints(GCSVertex* v)
     return;
 
   // create phi_out vector
-  std::vector<Variable::t> vars(outgoing.size());
-  for (size_t i{0}; i < outgoing.size(); i++) {
-    vars[i] = outgoing[i]->m_phi;
-  }
-  auto phi_out{Var::vstack(monty::new_array_ptr<Variable::t>(vars))};
+  std::vector<Variable::t> phi_vec(outgoing.size());
+  for (int i{0}; i < outgoing.size(); i++)
+    phi_vec[i] = outgoing[i]->m_phi;
+  auto phi_mosek{Var::vstack(monty::new_array_ptr<Variable::t>(phi_vec))};
 
   // Degree constraint: sum(phi_out) <= 1 - is_target
   m_model->constraint("v_" + v->strId() + "_degree",
-    Expr::sum(phi_out), Domain::inRange(0, is_targ ? 0 : 1));
+    Expr::sum(phi_mosek), Domain::inRange(0, is_targ ? 0 : 1));
 
   // two cycle constraints
+  if ((is_src) || (is_targ))
+    return;
+
+  // setup A_yz matrix, yz vector, a vector
+  int vdim{v->dim()};
+  // std::vector<double> a(outgoing.size(), 1);
+  Eigen::VectorXd a(Eigen::VectorXd::Ones(outgoing.size()));
+  std::vector<Variable::t> yz_vec(outgoing.size());
+  Eigen::MatrixXd A_yz(vdim, outgoing.size() * vdim);
+  for (int i{0}; i < outgoing.size(); i++) {
+    yz_vec[i] = outgoing[i]->m_y;
+    A_yz.block(0, i * vdim, vdim, vdim) = Eigen::MatrixXd::Identity(vdim, vdim);
+  }
+
+  for (int i{0}; i < outgoing.size(); i++) {
+    const GCSEdge* e_out{outgoing[i]};
+    if ((e_out->v().id() == m_source->id()) || (e_out->v().id() == m_target->id()))
+      continue;
+
+    for (const GCSEdge* e_in : incoming) {
+      if (e_in->u().id() == e_out->v().id()) {
+        a[i] = -1;
+        phi_vec[i] = e_in->m_phi;
+
+        // two-cycle constraint: sum(phi_u,out) - phi_uv - phi_vu >= 0
+        std::vector<double> a_vec{a.data(), a.data() + a.size()};
+        auto a_mosek{monty::new_array_ptr<double>(a_vec)};
+        phi_mosek = Var::vstack(monty::new_array_ptr<Variable::t>(phi_vec));
+        m_model->constraint("v_" + v->strId() + "_two_cycle_" + std::to_string(i),
+          Expr::dot(a_mosek, phi_mosek), Domain::inRange(0, 1));
+
+        A_yz.block(0, i * vdim, vdim, vdim) = -Eigen::MatrixXd::Identity(vdim, vdim);
+        yz_vec[i] = e_in->m_z;
+
+        // two-cycle spatial constraints
+        auto yz_mosek{Var::vstack(monty::new_array_ptr<Variable::t>(yz_vec))};
+        v->set().addPerspectiveConstraint(
+          m_model,
+          A_yz,
+          Eigen::VectorXd::Zero(vdim),
+          a,
+          0,
+          phi_mosek,
+          yz_mosek,
+          "v_" + v->strId() + "_spatial_two_cycle_" + std::to_string(i));
+
+        // reset a, phi_vec, A_yz, yz_vec
+        a[i] = 1;
+        phi_vec[i] = e_out->m_phi;
+        A_yz.block(0, i * vdim, vdim, vdim) = Eigen::MatrixXd::Identity(vdim, vdim);
+        yz_vec[i] = e_out->m_y;
+      }
+    }
+  }
 }
 
+
+//---------------------------------------------------------
+// Solve model and extract path
+
+void GraphOfConvexSets::solveGCS()
+{
+  m_model->solve();
+}
 
 //---------------------------------------------------------
 // Utilities
