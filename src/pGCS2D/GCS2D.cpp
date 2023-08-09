@@ -384,18 +384,28 @@ bool GCS2D::planPath()
 
         case (GCSStep::MOSEK_RUNNING):
           if (m_gcs->checkGCSDone()) {
-            // placeholders while testing
-            path_found = true;
-            m_path.add_vertex(m_start_point);
-            m_path.add_vertex(m_goal_point);
-            m_gcs_step = GCSStep::COMPLETE;
+            if (m_options.convex_relaxation) {
+              m_gcs->getRoundedPaths();
+              m_gcs_step = GCSStep::CONVEX_ROUNDING;
+            } else {
+              m_gcs_step = GCSStep::EXTRACT_PATH;
+            }
           }
-
-          // todo: if mosek isn't done, increment some counter
-          // todo: parse out path, return true if it succeeds
-          // todo: implement convex rounding
-
+          // todo: if mosek isn't done yet, increment some counter
           break;
+
+        case (GCSStep::CONVEX_ROUNDING):
+          m_gcs->relaxationRounding();  // todo: add some validity checks
+          m_gcs_step = GCSStep::EXTRACT_PATH;
+          break;
+
+        case (GCSStep::EXTRACT_PATH):
+          // placeholders while testing
+          path_found = true;
+          m_path.add_vertex(m_start_point);
+          m_path.add_vertex(m_goal_point);
+          m_gcs_step = GCSStep::COMPLETE;
+
         default:  // shouldn't get here
           break;
       }
@@ -644,6 +654,8 @@ std::string GCS2D::printGCSStep()
     return ("MOSEK_RUNNING");
   case (GCSStep::CONVEX_ROUNDING):
     return ("CONVEX_ROUNDING");
+  case (GCSStep::EXTRACT_PATH):
+    return ("EXTRACT_PATH");
   case (GCSStep::FAILED):
     return ("FAILED");
   default:

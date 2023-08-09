@@ -124,6 +124,7 @@ class GCS2D : public AppCastingMOOSApp
     START_MOSEK,
     MOSEK_RUNNING,
     CONVEX_ROUNDING,
+    EXTRACT_PATH,
     COMPLETE,
     FAILED,
   };
