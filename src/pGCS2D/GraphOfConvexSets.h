@@ -103,6 +103,8 @@ class GraphOfConvexSets
 
   void getRoundedPaths();
   bool relaxationRounding();
+
+  void reconstructX();
   void getSolutionPath();
 
   // development and debugging

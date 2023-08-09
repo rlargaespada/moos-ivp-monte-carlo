@@ -1,7 +1,9 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <random>
@@ -828,6 +830,42 @@ bool GraphOfConvexSets::relaxationRounding()
 
 //---------------------------------------------------------
 // Extract Solution
+
+void GraphOfConvexSets::reconstructX() {
+  if (m_model->getPrimalSolutionStatus() != SolutionStatus::Optimal)
+    return;
+
+  for (const auto& vpair : m_vertices) {
+    GCSVertex* v{vpair.second.get()};
+    double sum_phi{0};
+    v->m_x.setConstant(0);
+
+    // reconstruct vertex x values by summing y's, z's
+    if (v->id() == m_target->id()) {
+      sum_phi = 1;
+      for (const auto& e : v->incoming_edges()) {
+        for (int d{0}; d < v->dim(); d++) {
+          v->m_x(d) += (*e->m_z->level())[d];
+        }
+      }
+    } else {
+      for (const auto& e : v->outgoing_edges()) {
+        sum_phi += (*e->m_phi->level())[0];
+        for (int d{0}; d < v->dim(); d++) {
+          v->m_x(d) += (*e->m_y->level())[d];
+        }
+      }
+    }
+
+    // remove phi scaling
+    // if vertex is not in path (i.e. sum_phi ~ 0), set to nan
+    if (sum_phi < 100 * std::numeric_limits<double>::epsilon())
+      v->m_x.setConstant(std::nan(""));
+    else  // phi is good, divide vector by phi to project back into set
+      v->m_x /= sum_phi;
+  }
+}
+
 
 
 //---------------------------------------------------------
