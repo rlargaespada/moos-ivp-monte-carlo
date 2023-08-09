@@ -1,7 +1,10 @@
 #include <Eigen/Dense>
+#include <algorithm>
 #include <cassert>
 #include <functional>
+#include <map>
 #include <memory>
+#include <random>
 #include <string>
 #include <thread>
 #include <utility>
@@ -43,6 +46,7 @@ GraphOfConvexSets::GraphOfConvexSets()
     m_source(nullptr),
     m_target(nullptr),
     m_model(nullptr),
+    m_best_rounded_model(nullptr),
     m_model_running(false)
 {}
 
@@ -60,8 +64,10 @@ GraphOfConvexSets::GraphOfConvexSets(
     m_vertex_dim(2 * (order + 1)),
     m_source(nullptr),
     m_target(nullptr),
-    m_options(options),
-    m_model_running(false)
+    m_model(nullptr),
+    m_best_rounded_model(nullptr),
+    m_model_running(false),
+    m_options(options)
 {
   assert(m_order > 0);
   assert(m_continuity >= 0);
@@ -618,6 +624,8 @@ void GraphOfConvexSets::solveGCS()
 {
   // todo: add a callback function to model: https://docs.mosek.com/latest/cxxfusion/callback.html
   // todo: add a timeout, breakSolver and return failure if it's hit
+  // todo: check solution status and handle optimization failure
+  // https://docs.mosek.com/latest/cxxfusion/accessing-solution.html
   m_model_running = true;
   std::thread T(std::function<void(void)>([&]() { m_model->solve(); m_model_running = false; }) );
   m_mosek_thread = std::move(T);
@@ -632,6 +640,86 @@ bool GraphOfConvexSets::checkGCSDone()
   }
 
   return (false);
+}
+
+
+//---------------------------------------------------------
+// Extract Results
+
+void GraphOfConvexSets::getRoundedPaths()
+{
+  if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0)) {
+    return;
+  }
+  assert(m_options.max_rounding_trials > 0);  // todo: handle this more gracefully
+
+  // set up random generator
+  std::default_random_engine generator(m_options.rounding_seed);
+  std::uniform_real_distribution<double> uniform{0, 1};
+
+  // grab flows from all edges
+  std::map<EdgeId, double> flows;
+  for (const auto& e : m_edges) {
+    // todo: handle phi constraints here
+    flows[e.first] = (*e.second->m_phi->level())[0];
+  }
+
+  m_rounded_paths.clear();
+  int num_trials{0};
+  while ((m_rounded_paths.size() < m_options.max_rounded_paths) &&
+         (num_trials < m_options.max_rounding_trials)) {
+    num_trials++;
+
+    // find candidate path by traversing the graph with a depth first wearch,
+    // edges are taken with probability proportional to their flow
+    std::vector<VertexId> visited_vertex_ids{m_source->id()};
+    std::vector<VertexId> path_vertex_ids{m_source->id()};
+    std::vector<const GCSEdge*> new_path;
+
+    while (path_vertex_ids.back() != m_target->id()) {
+      // determine candidate edges
+      std::vector<const GCSEdge*> candidate_edges;
+      for (const GCSEdge* e : m_vertices[path_vertex_ids.back()]->outgoing_edges()) {
+        if ((std::find(visited_vertex_ids.begin(), visited_vertex_ids.end(),
+            e->v().id()) == visited_vertex_ids.end()) &&
+            (flows[e->id()] > m_options.flow_tolerance)) {
+          candidate_edges.emplace_back(e);
+        }
+      }
+
+      // if depth first search is at a node with no candidate edges, backtrack
+      if (candidate_edges.size() == 0) {
+        path_vertex_ids.pop_back();
+        new_path.pop_back();
+        assert(path_vertex_ids.size() > 0);  // todo: handle this more gracefully
+        continue;
+      }
+
+      // get flows for candidate edges only
+      Eigen::VectorXd candidate_flows(candidate_edges.size());
+      for (int i{0}; i < candidate_edges.size(); i++)
+        candidate_flows(i) = flows[candidate_edges[i]->id()];
+
+      // randomly select next edge, with edges weighted by their flows
+      double edge_sample{uniform(generator) * candidate_flows.sum()};
+      for (int i{0}; i < candidate_edges.size(); i++) {
+        if (edge_sample >= candidate_flows[i]) {
+          edge_sample -= candidate_flows[i];
+        } else {
+          visited_vertex_ids.push_back(candidate_edges[i]->v().id());
+          path_vertex_ids.push_back(candidate_edges[i]->v().id());
+          new_path.emplace_back(candidate_edges[i]);
+          break;
+        }
+      }
+    }
+
+    // try again if we've already taken this path, otherwise save this path
+    if (std::find(m_rounded_paths.begin(), m_rounded_paths.end(), new_path) !=
+      m_rounded_paths.end())
+      continue;
+    m_rounded_paths.push_back(new_path);
+  }
 }
 
 

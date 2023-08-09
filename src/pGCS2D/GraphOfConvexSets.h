@@ -96,6 +96,8 @@ class GraphOfConvexSets
   void solveGCS();
   bool checkGCSDone();
 
+  void getRoundedPaths();
+  void relaxationRounding();
   void getSolutionPath();
 
   // development and debugging
@@ -123,26 +125,31 @@ class GraphOfConvexSets
   void addConservationOfFlowConstraints(GCSVertex* v);
   void addDegreeConstraints(GCSVertex* v);
 
-  void relaxationRounding();
-
  private:
   static VertexId s_vertex_id;
   static EdgeId s_edge_id;
 
+  // curve params and options
   const int m_order;
   const int m_continuity;
   const int m_dimension;
   const int m_vertex_dim;
+  const GraphOfConvexSetsOptions m_options;
 
+  // graph members
   std::map<int, std::unique_ptr<GCSVertex>> m_vertices;
   std::map<int, std::unique_ptr<GCSEdge>> m_edges;
   GCSVertex* m_source;
   GCSVertex* m_target;
 
-  const GraphOfConvexSetsOptions m_options;
+  // mosek optimization members
   mosek::fusion::Model::t m_model;
   std::thread m_mosek_thread;
   bool m_model_running;
+
+  // rounding members
+  std::vector<std::vector<const GCSEdge*>> m_rounded_paths;
+  mosek::fusion::Model::t m_best_rounded_model;
 };
 
 #endif  // GCS2D_GRAPHOFCONVEXSETS_HEADER
