@@ -26,6 +26,8 @@ using mosek::fusion::Expr;
 // using mosek::fusion::Matrix;
 using mosek::fusion::Model;
 using mosek::fusion::ObjectiveSense;
+using mosek::fusion::ProblemStatus;
+using mosek::fusion::SolutionStatus;
 using mosek::fusion::Variable;
 using mosek::fusion::Var;
 
@@ -627,7 +629,20 @@ void GraphOfConvexSets::solveGCS()
   // todo: check solution status and handle optimization failure
   // https://docs.mosek.com/latest/cxxfusion/accessing-solution.html
   m_model_running = true;
-  std::thread T(std::function<void(void)>([&]() { m_model->solve(); m_model_running = false; }) );
+  // todo: make accepted solution status an option
+  // m_model->acceptedSolutionStatus(mosek::fusion::AccSolutionStatus::Feasible);
+
+  // solve model in separate thread, with basic exception handling
+  auto solve_func = [&]() {
+    try {
+      m_model->solve();
+    } catch(mosek::fusion::OptimizeError& e) {
+      m_mosek_error_msg = e.toString();  // todo: any additional handling? checks later on?
+    }
+    m_model_running = false;
+  };
+
+  std::thread T(solve_func);
   m_mosek_thread = std::move(T);
 }
 
@@ -649,6 +664,8 @@ bool GraphOfConvexSets::checkGCSDone()
 void GraphOfConvexSets::getRoundedPaths()
 {
   if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0))
+    return;
+  if (m_model->getPrimalSolutionStatus() != SolutionStatus::Optimal)
     return;
   assert(m_options.max_rounding_trials > 0);  // todo: handle this more gracefully
 
@@ -722,10 +739,11 @@ void GraphOfConvexSets::getRoundedPaths()
 }
 
 
-void GraphOfConvexSets::relaxationRounding()
+bool GraphOfConvexSets::relaxationRounding()
 {
+  // todo: support breaking this up into multiple iterations
   if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0))
-    return;
+    return (false);
 
   int best_path_idx{-1};
   double best_cost{-1};
@@ -758,25 +776,28 @@ void GraphOfConvexSets::relaxationRounding()
     }
 
     // solve rounded model, save path if it has a lower cost
-    // todo: better optimization failure handling
     // todo: why is this failing with high orders and continuity constraints?
     try {
       rounded_model->solve();
+    } catch(mosek::fusion::OptimizeError& e) {}  // do nothing on error
+
+    if (rounded_model->getPrimalSolutionStatus() == SolutionStatus::Optimal) {
       if ((best_path_idx < 0) || (rounded_model->primalObjValue() < best_cost)) {
         best_path_idx = i;
         best_cost = rounded_model->primalObjValue();
       }
-    } catch(const mosek::fusion::SolutionError& e) {  // do nothing, continue to next path
-      std::cout << "failed opt\n";
     }
+
     rounded_model->dispose();
   }
 
-  // for the best path, apply the new constraints to the original model and reoptimize
-  // todo: handle best_path_idx = -1 by failing (return false?)
-  if (best_path_idx < 0)
-    return;
+  // no valid paths found, return failure
+  if (best_path_idx < 0) {
+    m_mosek_error_msg = "Failed to find any valid paths from convex relaxation!";
+    return (false);
+  }
 
+  // for the best path, apply the new constraints to the original model and reoptimize
   auto path{m_rounded_paths[best_path_idx]};
   for (const auto& edge : m_edges) {
     // todo: ignore edge if there's phi constraints
@@ -792,7 +813,14 @@ void GraphOfConvexSets::relaxationRounding()
         m_model->constraint(ell, Domain::equalsTo(0));
     }
   }
-  m_model->solve();
+
+  try {
+    m_model->solve();
+  } catch(mosek::fusion::OptimizeError& e) {
+    m_mosek_error_msg = e.toString();
+  }
+
+  return (m_model->getPrimalSolutionStatus() == SolutionStatus::Optimal);
 }
 
 

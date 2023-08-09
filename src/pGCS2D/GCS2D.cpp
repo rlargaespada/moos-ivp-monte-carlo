@@ -271,6 +271,7 @@ bool GCS2D::requestIRISRegions()
 
 bool GCS2D::buildGraph()
 {
+  // todo: add better error checking here
   m_gcs = std::unique_ptr<GraphOfConvexSets> (new GraphOfConvexSets(
     m_safe_regions,
     m_bezier_order,
@@ -284,6 +285,7 @@ bool GCS2D::buildGraph()
 
 bool GCS2D::populateModel1()
 {
+  // todo: add better error checking here
   m_gcs->addContinuityConstraints();
   m_gcs->addPathLengthCost(m_path_length_weight);
   // todo: add derivative regularization
@@ -293,6 +295,7 @@ bool GCS2D::populateModel1()
 
 bool GCS2D::populateModel2()
 {
+  // todo: add better error checking here
   m_gcs->populateModel();
   return (true);
 }
@@ -308,8 +311,7 @@ bool GCS2D::planPath()
       if (m_run_iris_on_new_path)
         clearIRISRegions();
 
-      // check if we need to run IRIS
-      if (m_safe_regions.empty()) {
+      if (m_safe_regions.empty()) {  // check if we need to run IRIS
         if (requestIRISRegions()) {
           m_mode = PlannerMode::IRIS_IN_PROGRESS;
           m_gcs_step = GCSStep::BUILD_GRAPH;  // force gcs back to first step
@@ -318,8 +320,7 @@ bool GCS2D::planPath()
           m_gcs_step = GCSStep::FAILED;
         }
 
-      // if we don't need to run IRIS, start by building graph
-      } else {
+      } else {  // if we don't need to run IRIS, start by building graph
         // if graph was built successfully, move onto the next step next iteration
         if (buildGraph()) {
           m_mode = PlannerMode::GCS_IN_PROGRESS;
@@ -383,21 +384,32 @@ bool GCS2D::planPath()
           break;
 
         case (GCSStep::MOSEK_RUNNING):
-          if (m_gcs->checkGCSDone()) {
-            if (m_options.convex_relaxation) {
+          if (m_gcs->checkGCSDone()) {  // solver thread is done
+            // make sure optimization completed correctly, fail if not
+            if (!m_gcs->checkSolverOk()) {
+              handlePlanningFail("Failed to optimize GCS MOSEK model!");
+              m_gcs_step = GCSStep::FAILED;
+            // handle case where optimization is relaxed
+            } else if (m_options.convex_relaxation) {
               m_gcs->getRoundedPaths();
               m_gcs_step = GCSStep::CONVEX_ROUNDING;
+            // if optimization is not relaxed, can skip to getting full solution
             } else {
               m_gcs_step = GCSStep::EXTRACT_PATH;
             }
           }
+
           // todo: if mosek isn't done yet, increment some counter
           break;
 
         case (GCSStep::CONVEX_ROUNDING):
-          m_gcs->relaxationRounding();  // todo: add some validity checks
-          m_gcs_step = GCSStep::EXTRACT_PATH;
-          break;
+          if (m_gcs->relaxationRounding()) {
+            m_gcs_step = GCSStep::EXTRACT_PATH;
+            break;
+          } else {
+            handlePlanningFail("Failed to get a valid path from the convex relaxation!");
+            m_gcs_step = GCSStep::FAILED;
+          }
 
         case (GCSStep::EXTRACT_PATH):
           // placeholders while testing

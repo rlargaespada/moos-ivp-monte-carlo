@@ -88,6 +88,7 @@ class GraphOfConvexSets
 
   void preprocessGraph();
 
+  // todo: add exception handling on these operations
   void addContinuityConstraints();
   void addPathLengthCost(double weight);
   void addPathLengthCost(Eigen::MatrixXd weight_matrix);
@@ -95,9 +96,13 @@ class GraphOfConvexSets
 
   void solveGCS();
   bool checkGCSDone();
+  // todo: make accepted solution status an option, check problem status as well
+  const bool checkSolverOk() const {
+    return (m_model->getPrimalSolutionStatus() == mosek::fusion::SolutionStatus::Optimal);}
+  const std::string errorMsg() const {return (m_mosek_error_msg);}
 
   void getRoundedPaths();
-  void relaxationRounding();
+  bool relaxationRounding();
   void getSolutionPath();
 
   // development and debugging
@@ -146,6 +151,7 @@ class GraphOfConvexSets
   mosek::fusion::Model::t m_model;
   std::thread m_mosek_thread;
   bool m_model_running;
+  std::string m_mosek_error_msg;  // todo: use this somewhere
 
   // rounding members
   std::vector<std::vector<const GCSEdge*>> m_rounded_paths;
