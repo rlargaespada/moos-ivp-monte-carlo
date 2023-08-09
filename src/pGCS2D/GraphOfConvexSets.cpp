@@ -659,7 +659,7 @@ bool GraphOfConvexSets::checkGCSDone()
 
 
 //---------------------------------------------------------
-// Extract Results
+// Convex Relaxation Rounding
 
 void GraphOfConvexSets::getRoundedPaths()
 {
@@ -744,6 +744,8 @@ bool GraphOfConvexSets::relaxationRounding()
   // todo: support breaking this up into multiple iterations
   if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0))
     return (false);
+  if (m_model->getPrimalSolutionStatus() != SolutionStatus::Optimal)
+    return (false);
 
   int best_path_idx{-1};
   double best_cost{-1};
@@ -822,6 +824,10 @@ bool GraphOfConvexSets::relaxationRounding()
 
   return (m_model->getPrimalSolutionStatus() == SolutionStatus::Optimal);
 }
+
+
+//---------------------------------------------------------
+// Extract Solution
 
 
 //---------------------------------------------------------

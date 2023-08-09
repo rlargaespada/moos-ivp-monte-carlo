@@ -317,7 +317,6 @@ bool GCS2D::planPath()
           m_gcs_step = GCSStep::BUILD_GRAPH;  // force gcs back to first step
         } else {
           handlePlanningFail("Failed to request IRIS regions!");
-          m_gcs_step = GCSStep::FAILED;
         }
 
       } else {  // if we don't need to run IRIS, start by building graph
@@ -329,7 +328,6 @@ bool GCS2D::planPath()
         // otherwise report failure
         } else {
           handlePlanningFail("Failed to build GCS!");
-          m_gcs_step = GCSStep::FAILED;
         }
       }
 
@@ -340,43 +338,33 @@ bool GCS2D::planPath()
       switch (m_gcs_step) {
         case (GCSStep::BUILD_GRAPH):
           // if graph was built successfully, move onto the next step next iteration
-          if (buildGraph()) {
+          if (buildGraph())
             // m_gcs_step = GCSStep::PREPROCESS_GRAPH;  // todo: implement preprocessing
             m_gcs_step = GCSStep::POPULATE_MODEL_1;
-          // otherwise report failure
-          } else {
+          else  // otherwise report failure
             handlePlanningFail("Failed to build GCS!");
-            m_gcs_step = GCSStep::FAILED;
-          }
           break;
 
         case (GCSStep::POPULATE_MODEL_1):
           // if model was populated successfully, move onto the next step next iteration
-          if (populateModel1()) {
+          if (populateModel1())
             m_gcs_step = GCSStep::POPULATE_MODEL_2;
-          // otherwise report failure
-          } else {
+          else  // otherwise report failure
             handlePlanningFail("Failed to populate MOSEK model!");
-            m_gcs_step = GCSStep::FAILED;
-          }
           break;
 
         case (GCSStep::POPULATE_MODEL_2):
           // if model was populated successfully, move onto the next step next iteration
-          if (populateModel2()) {
+          if (populateModel2())
             m_gcs_step = GCSStep::START_MOSEK;
-          // otherwise report failure
-          } else {
+          else  // otherwise report failure
             handlePlanningFail("Failed to populate MOSEK model!");
-            m_gcs_step = GCSStep::FAILED;
-          }
           break;
 
         case (GCSStep::START_MOSEK):
           // if preconditions are met, start MOSEK optimization
           if (!checkPlanningPreconditions()) {
             handlePlanningFail();  // checkPlanningPreconditions posts its own warnings
-            m_gcs_step = GCSStep::FAILED;
           } else {
             m_gcs->solveGCS();  // starts MOSEK optimization in a separate thread
             m_gcs_step = GCSStep::MOSEK_RUNNING;
@@ -388,7 +376,6 @@ bool GCS2D::planPath()
             // make sure optimization completed correctly, fail if not
             if (!m_gcs->checkSolverOk()) {
               handlePlanningFail("Failed to optimize GCS MOSEK model!");
-              m_gcs_step = GCSStep::FAILED;
             // handle case where optimization is relaxed
             } else if (m_options.convex_relaxation) {
               m_gcs->getRoundedPaths();
@@ -403,13 +390,12 @@ bool GCS2D::planPath()
           break;
 
         case (GCSStep::CONVEX_ROUNDING):
-          if (m_gcs->relaxationRounding()) {
+          // start convex rounding on rounded paths
+          if (m_gcs->relaxationRounding())
             m_gcs_step = GCSStep::EXTRACT_PATH;
-            break;
-          } else {
+          else  // if rounding fails, extract path next iteration
             handlePlanningFail("Failed to get a valid path from the convex relaxation!");
-            m_gcs_step = GCSStep::FAILED;
-          }
+          break;
 
         case (GCSStep::EXTRACT_PATH):
           // placeholders while testing
@@ -446,6 +432,7 @@ void GCS2D::handlePlanningFail(const std::string& warning_msg)
   if (!warning_msg.empty()) reportRunWarning(warning_msg);
   reportRunWarning("Planning failed!");
   m_mode = PlannerMode::PLANNING_FAILED;
+  m_gcs_step = GCSStep::FAILED;
   Notify(m_prefix + m_path_failed_var, "true");
 }
 
