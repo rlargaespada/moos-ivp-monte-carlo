@@ -648,9 +648,8 @@ bool GraphOfConvexSets::checkGCSDone()
 
 void GraphOfConvexSets::getRoundedPaths()
 {
-  if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0)) {
+  if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0))
     return;
-  }
   assert(m_options.max_rounding_trials > 0);  // todo: handle this more gracefully
 
   // set up random generator
@@ -720,6 +719,80 @@ void GraphOfConvexSets::getRoundedPaths()
       continue;
     m_rounded_paths.push_back(new_path);
   }
+}
+
+
+void GraphOfConvexSets::relaxationRounding()
+{
+  if (!(m_options.convex_relaxation && m_options.max_rounded_paths > 0))
+    return;
+
+  int best_path_idx{-1};
+  double best_cost{-1};
+  for (int i{0}; i < m_rounded_paths.size(); i++) {
+    // make new mosek model from original graph
+    Model::t rounded_model{m_model->clone()};
+
+    // constrain new model to follow the current path
+    auto path{m_rounded_paths[i]};
+    for (const auto& edge : m_edges) {
+      // todo: ignore edge if there's phi constraints turning edge off/edge is unusable
+      GCSEdge* e{edge.second.get()};
+      Variable::t phi_rounded{rounded_model->getVariable(e->phiName())};
+      Variable::t y_rounded{rounded_model->getVariable(e->yName())};
+      Variable::t z_rounded{rounded_model->getVariable(e->zName())};
+      Variable::t ell_rounded;
+
+      // todo: could be more efficient, implement using a vstack
+      if (std::find(path.begin(), path.end(), e) != path.end()) {
+        rounded_model->constraint(phi_rounded, Domain::equalsTo(1));
+      } else {
+        rounded_model->constraint(phi_rounded, Domain::equalsTo(0));
+        rounded_model->constraint(y_rounded, Domain::equalsTo(0));
+        rounded_model->constraint(z_rounded, Domain::equalsTo(0));
+        for (const std::string& name : e->ellNames()) {
+          ell_rounded = rounded_model->getVariable(name);
+          rounded_model->constraint(ell_rounded, Domain::equalsTo(0));
+        }
+      }
+    }
+
+    // solve rounded model, save path if it has a lower cost
+    // todo: better optimization failure handling
+    // todo: why is this failing with high orders and continuity constraints?
+    try {
+      rounded_model->solve();
+      if ((best_path_idx < 0) || (rounded_model->primalObjValue() < best_cost)) {
+        best_path_idx = i;
+        best_cost = rounded_model->primalObjValue();
+      }
+    } catch(const mosek::fusion::SolutionError& e) {  // do nothing, continue to next path
+      std::cout << "failed opt\n";
+    }
+    rounded_model->dispose();
+  }
+
+  // for the best path, apply the new constraints to the original model and reoptimize
+  // todo: handle best_path_idx = -1 by failing (return false?)
+  if (best_path_idx < 0)
+    return;
+
+  auto path{m_rounded_paths[best_path_idx]};
+  for (const auto& edge : m_edges) {
+    // todo: ignore edge if there's phi constraints
+    GCSEdge* e{edge.second.get()};
+
+    if (std::find(path.begin(), path.end(), e) != path.end()) {
+      m_model->constraint(e->m_phi, Domain::equalsTo(1));
+    } else {
+      m_model->constraint(e->m_phi, Domain::equalsTo(0));
+      m_model->constraint(e->m_y, Domain::equalsTo(0));
+      m_model->constraint(e->m_z, Domain::equalsTo(0));
+      for (const auto& ell : e->m_ell)
+        m_model->constraint(ell, Domain::equalsTo(0));
+    }
+  }
+  m_model->solve();
 }
 
 
