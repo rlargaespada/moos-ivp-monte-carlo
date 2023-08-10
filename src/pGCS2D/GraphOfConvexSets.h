@@ -12,17 +12,6 @@
 #include <vector>
 
 //* external dependencies
-// workaround to use bezier library since both bezier and MOOS libraries define a PI constant
-#ifdef PI
-#define PI_TEMP PI
-#undef PI
-#endif
-#include "bezier.h"
-// undefine our temporary constant
-#ifdef PI_TEMP
-#define PI PI_TEMP
-#undef PI_TEMP
-#endif
 #include "fusion.h"
 
 //* moos dependences
@@ -120,9 +109,6 @@ class GraphOfConvexSets
     const std::vector<XYPolygon>& regions,
     const XYPoint& start,
     const XYPoint& goal) const;
-
-  std::shared_ptr<monty::ndarray<double, 2>> toMosekArray(const Eigen::MatrixXi& M);
-  std::shared_ptr<monty::ndarray<double, 2>> toMosekArray(const Eigen::MatrixXd& M);
 
   void addContinuityConstraint(int deriv, const Eigen::MatrixXi& Aeq);
 

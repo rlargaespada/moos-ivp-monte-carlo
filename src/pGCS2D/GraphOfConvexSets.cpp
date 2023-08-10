@@ -13,13 +13,13 @@
 #include <utility>
 #include <vector>
 
-#include "bezier.h"  // M_PI workaround in header file
 #include "fusion.h"
 
 #include "XYPoint.h"
 #include "XYPolygon.h"
 #include "XYSegList.h"
 
+#include "utils.h"
 #include "convex_sets.h"
 #include "GCSVertex.h"
 #include "GCSEdge.h"
@@ -924,37 +924,4 @@ const XYSegList GraphOfConvexSets::buildTrajectory(double step_size, double tole
   }
 
   return (trajectory);
-}
-
-
-//---------------------------------------------------------
-// Utilities
-
-// todo: put these in a utils file so they can be used in convex_sets.cpp
-// todo: add more conversion utilities
-
-std::shared_ptr<monty::ndarray<double, 2>> GraphOfConvexSets::toMosekArray(const Eigen::MatrixXi& M)
-{
-  // first convert matrix to a vector of vectors so mosek can parse it
-  std::vector<std::vector<double>> M_vec(M.rows());
-  // todo: this can probably be more efficient
-  for (int i{0}; i < M.rows(); i++) {
-    M_vec.at(i).resize(M.cols());
-    for (int j{0}; j < M.cols(); j++)
-      M_vec.at(i).at(j) = M(i, j);
-  }
-  return (monty::new_array_ptr<double>(M_vec));
-}
-
-
-std::shared_ptr<monty::ndarray<double, 2>> GraphOfConvexSets::toMosekArray(const Eigen::MatrixXd& M)
-{
-  std::vector<std::vector<double>> M_vec(M.rows());
-  // todo: this can probably be more efficient
-  for (int i{0}; i < M.rows(); i++) {
-    M_vec.at(i).resize(M.cols());
-    for (int j{0}; j < M.cols(); j++)
-      M_vec.at(i).at(j) = M(i, j);
-  }
-  return (monty::new_array_ptr<double>(M_vec));
 }

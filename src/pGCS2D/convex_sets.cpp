@@ -3,6 +3,7 @@
 
 #include "fusion.h"
 
+#include "utils.h"
 #include "convex_sets.h"
 
 
@@ -31,15 +32,8 @@ void PointSet::addPerspectiveConstraint(
   Aeq.leftCols(d) = Eigen::MatrixXd::Identity(d, d);
   Aeq.col(d) = -m_x;
 
-  // convert Eigen Matrix to MOSEK array
-  std::vector<std::vector<double>> Aeq_vec(Aeq.rows());
-  for (int i{0}; i < Aeq.rows(); i++) {
-    Aeq_vec.at(i).resize(Aeq.cols());
-    for (int j{0}; j < Aeq.cols(); j++)
-      Aeq_vec.at(i).at(j) = Aeq(i, j);
-  }
-  auto Abar_mosek{monty::new_array_ptr<double>(Aeq_vec)};
-
+  // auto Abar_mosek{monty::new_array_ptr<double>(Aeq_vec)};
+  auto Abar_mosek{toMosekArray(Aeq)};
   Variable::t vars{Var::vstack(x, scale)};
   M->constraint(name, Expr::mul(Abar_mosek, vars), Domain::equalsTo(0));
 }
@@ -61,13 +55,7 @@ void PointSet::addPerspectiveConstraint(
   Aeq.rightCols(scale->getSize()) = -m_x * c.transpose();
 
   // convert Eigen Matrix to MOSEK array
-  std::vector<std::vector<double>> Aeq_vec(Aeq.rows());
-  for (int i{0}; i < Aeq.rows(); i++) {
-    Aeq_vec.at(i).resize(Aeq.cols());
-    for (int j{0}; j < Aeq.cols(); j++)
-      Aeq_vec.at(i).at(j) = Aeq(i, j);
-  }
-  auto Aeq_mosek{monty::new_array_ptr<double>(Aeq_vec)};
+  auto Aeq_mosek{toMosekArray(Aeq)};
 
   // set up beq and convert to mosek form
   Eigen::VectorXd beq{b_x - d * m_x};
@@ -153,6 +141,7 @@ bool PolyhedronSet::intersects(const XYPolygon& other) const
   return (m_poly.intersects(other));
 }
 
+
 bool PolyhedronSet::contains(const Eigen::VectorXd &point) const
 {
   return ((m_A * point - m_b).maxCoeff() <= 0);
@@ -183,15 +172,7 @@ void PolyhedronSet::addPerspectiveConstraint(
   Abar.leftCols(m_A.cols()) = m_A;
   Abar.col(m_A.cols()) = -m_b;
 
-  // convert Eigen Matrix to MOSEK array
-  std::vector<std::vector<double>> Abar_vec(Abar.rows());
-  for (int i{0}; i < Abar.rows(); i++) {
-    Abar_vec.at(i).resize(Abar.cols());
-    for (int j{0}; j < Abar.cols(); j++)
-      Abar_vec.at(i).at(j) = Abar(i, j);
-  }
-  auto Abar_mosek{monty::new_array_ptr<double>(Abar_vec)};
-
+  auto Abar_mosek{toMosekArray(Abar)};
   Variable::t vars{Var::vstack(x, scale)};
   M->constraint(name, Expr::mul(Abar_mosek, vars), Domain::lessThan(0));
 }
@@ -213,14 +194,7 @@ void PolyhedronSet::addPerspectiveConstraint(
   Abar.leftCols(x->getSize()) = m_A * A_x;
   Abar.rightCols(scale->getSize()) = -m_b * c.transpose();
 
-  // convert Eigen Matrix to MOSEK array
-  std::vector<std::vector<double>> Abar_vec(Abar.rows());
-  for (int i{0}; i < Abar.rows(); i++) {
-    Abar_vec.at(i).resize(Abar.cols());
-    for (int j{0}; j < Abar.cols(); j++)
-      Abar_vec.at(i).at(j) = Abar(i, j);
-  }
-  auto Abar_mosek{monty::new_array_ptr<double>(Abar_vec)};
+  auto Abar_mosek{toMosekArray(Abar)};
 
   // set up bbar and convert to mosek form
   Eigen::VectorXd bbar{d * m_b - m_A * b_x};
