@@ -28,6 +28,7 @@
 //* moos dependences
 #include "XYPoint.h"
 #include "XYPolygon.h"
+#include "XYSegList.h"
 
 //* local dependences
 #include "GCSVertex.h"
@@ -105,7 +106,7 @@ class GraphOfConvexSets
   bool relaxationRounding();
 
   void reconstructX();
-  void getSolutionPath();
+  const XYSegList buildTrajectory(double step_size, double tolerance = 1e-3) const;
 
   // development and debugging
   void printModel() {m_model->writeTaskStream("ptf", std::cout);}

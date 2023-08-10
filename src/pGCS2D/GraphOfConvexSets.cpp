@@ -9,13 +9,16 @@
 #include <random>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "bezier.h"  // M_PI workaround in header file
 #include "fusion.h"
 
 #include "XYPoint.h"
 #include "XYPolygon.h"
+#include "XYSegList.h"
 
 #include "convex_sets.h"
 #include "GCSVertex.h"
@@ -690,7 +693,7 @@ void GraphOfConvexSets::getRoundedPaths()
 
     // find candidate path by traversing the graph with a depth first wearch,
     // edges are taken with probability proportional to their flow
-    std::vector<VertexId> visited_vertex_ids{m_source->id()};
+    std::vector<VertexId> visited_vertex_ids{m_source->id()};  // todo: make this a set
     std::vector<VertexId> path_vertex_ids{m_source->id()};
     std::vector<const GCSEdge*> new_path;
 
@@ -867,11 +870,68 @@ void GraphOfConvexSets::reconstructX() {
 }
 
 
+const XYSegList GraphOfConvexSets::buildTrajectory(double step_size, double tolerance) const
+{
+  XYSegList trajectory;
+  if (m_model->getPrimalSolutionStatus() != SolutionStatus::Optimal)
+    return (trajectory);  // return empty seglist
+
+  std::unordered_set<const GCSVertex*> visited{m_source};
+  std::vector<const GCSVertex*> path{m_source};
+
+  // use a depth first search with backtracking to find path thorugh the graph
+  while (path.back() != m_target) {
+    double max_flow{0};
+    const GCSVertex* max_flow_vertex{nullptr};
+
+    for (const GCSEdge* e : path.back()->outgoing_edges()) {
+      double flow{(*e->m_phi->level())[0]};
+      // if edge has not been visited and flow is greater than
+      // the current max, save this edge
+      if ((flow >= (1 - tolerance)) &&
+          (flow > max_flow) &&
+          (visited.count(&e->v()))) {
+        max_flow = flow;
+        max_flow_vertex = &e->v();
+      }
+    }
+
+    if (max_flow_vertex == nullptr) {
+      // no valid edges found, so backtrack
+      path.pop_back();
+      if (path.empty())
+        return (trajectory);  // search failed, return empty trajectory
+      continue;
+    }
+
+    visited.insert(max_flow_vertex);
+    path.push_back(max_flow_vertex);
+  }
+
+  // build a bezier curve for each vertex on the path; sample this curve to build trajectory
+  for (const GCSVertex* v : path) {
+    if (v == m_source) {  // add source point directly
+      trajectory.add_vertex(v->m_x(0), v->m_x(1));
+    } else if (v == m_target) {  // no need to add the target point, will get from last curve
+      continue;
+    } else {
+      if (v->m_x.hasNaN())  // if we hit a nan (shouldn't happen), return failure
+        return XYSegList{};
+
+      // grab vertex control points as a matrix, form bezier curve from control points
+      Eigen::MatrixXd vertex_x{v->m_x.reshaped<Eigen::ColMajor>(m_dimension, m_order + 1)};
+    }
+  }
+
+  return (trajectory);
+}
+
 
 //---------------------------------------------------------
 // Utilities
 
 // todo: put these in a utils file so they can be used in convex_sets.cpp
+// todo: add more conversion utilities
 
 std::shared_ptr<monty::ndarray<double, 2>> GraphOfConvexSets::toMosekArray(const Eigen::MatrixXi& M)
 {
