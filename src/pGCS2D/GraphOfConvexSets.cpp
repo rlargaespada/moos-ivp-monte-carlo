@@ -325,6 +325,7 @@ void GraphOfConvexSets::addContinuityConstraints()
     int sign{deriv % 2 == 0 ? 1 : -1};  // sign of coefficients alternates
 
     // calculate members of pascal's triangle, row (deriv + 1)
+    // todo: use LUT in utils for this
     Eigen::RowVectorXi pascal_coeffs(Eigen::RowVectorXi::Zero(num_coeff));
     for (int i{1}; i <= num_coeff; i++) {
       pascal_coeffs(i - 1) = (sign * pascal);
@@ -634,6 +635,9 @@ void GraphOfConvexSets::solveGCS()
   // todo: check solution status and handle optimization failure
   // https://docs.mosek.com/latest/cxxfusion/accessing-solution.html
   m_model_running = true;
+  m_model->setSolverParam("intpntSolveForm", "primal");
+  m_model->setSolverParam("intpntCoTolRelGap", 1e-3);
+  m_model->setSolverParam("mioTolRelGap", 1e-3);
   // todo: make accepted solution status an option
   // m_model->acceptedSolutionStatus(mosek::fusion::AccSolutionStatus::Feasible);
 
@@ -875,6 +879,8 @@ const XYSegList GraphOfConvexSets::buildTrajectory(double step_size, double tole
   XYSegList trajectory;
   if (m_model->getPrimalSolutionStatus() != SolutionStatus::Optimal)
     return (trajectory);  // return empty seglist
+  if ((step_size <= 0) || (step_size > 1))
+    return (trajectory);  // return empty seglist
 
   std::unordered_set<const GCSVertex*> visited{m_source};
   std::vector<const GCSVertex*> path{m_source};
@@ -890,7 +896,7 @@ const XYSegList GraphOfConvexSets::buildTrajectory(double step_size, double tole
       // the current max, save this edge
       if ((flow >= (1 - tolerance)) &&
           (flow > max_flow) &&
-          (visited.count(&e->v()))) {
+          (visited.count(&e->v()) == 0)) {
         max_flow = flow;
         max_flow_vertex = &e->v();
       }
@@ -908,6 +914,12 @@ const XYSegList GraphOfConvexSets::buildTrajectory(double step_size, double tole
     path.push_back(max_flow_vertex);
   }
 
+  // build vector of curve sample times
+  int num_samples{static_cast<int>(std::ceil(1/step_size))};
+  Eigen::VectorXd samples(num_samples);
+  for (int i{0}; i < num_samples; i++)
+    samples(i) = std::min((i + 1) * step_size, 1.0);
+
   // build a bezier curve for each vertex on the path; sample this curve to build trajectory
   for (const GCSVertex* v : path) {
     if (v == m_source) {  // add source point directly
@@ -918,8 +930,13 @@ const XYSegList GraphOfConvexSets::buildTrajectory(double step_size, double tole
       if (v->m_x.hasNaN())  // if we hit a nan (shouldn't happen), return failure
         return XYSegList{};
 
-      // grab vertex control points as a matrix, form bezier curve from control points
-      Eigen::MatrixXd vertex_x{v->m_x.reshaped<Eigen::ColMajor>(m_dimension, m_order + 1)};
+      // grab vertex control points as a matrix, sample bezier curve from control points
+      Eigen::MatrixXd v_ctrl_pts{v->m_x.reshaped<Eigen::ColMajor>(m_dimension, m_order + 1)};
+      Eigen::MatrixXd curve_samples{bezierSample(samples, v_ctrl_pts)};
+
+      // add a point to trajectory for each sample
+      for (auto pt : curve_samples.colwise())
+        trajectory.add_vertex(pt(0), pt(1));
     }
   }
 

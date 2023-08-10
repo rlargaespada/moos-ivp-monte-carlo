@@ -398,11 +398,14 @@ bool GCS2D::planPath()
           break;
 
         case (GCSStep::EXTRACT_PATH):
-          // placeholders while testing
-          path_found = true;
-          m_path.add_vertex(m_start_point);
-          m_path.add_vertex(m_goal_point);
-          m_gcs_step = GCSStep::COMPLETE;
+          m_gcs->reconstructX();
+          m_path = m_gcs->buildTrajectory(.2);  // todo: stepsize should be config param
+          if (m_path.size() > 0) {
+            path_found = true;
+            m_gcs_step = GCSStep::COMPLETE;
+          } else {
+            handlePlanningFail("Failed to extract the final trajectory from GCS!");
+          }
 
         default:  // shouldn't get here
           break;
@@ -577,6 +580,13 @@ void GCS2D::checkConfigAssertions()
           m_derivative_regularization_weight = 0;
           m_derivative_regularization_order = 0;
         }
+  }
+
+  // make sure we got at least one weight
+  if ((m_path_length_weight == 0) && (m_derivative_regularization_weight == 0)) {
+    reportConfigWarning("Path length weight and derivative regularization weight "
+                        "are both 0, setting path length weight to 1.");
+    m_path_length_weight = 1;
   }
 }
 

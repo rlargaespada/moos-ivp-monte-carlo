@@ -118,7 +118,7 @@ bool IRIS2D::OnNewMail(MOOSMSG_LIST &NewMail)
     if (key == m_rebuild_iris_var) {
       m_run_pending = true;
       m_clear_pending = true;
-    } else if (key == m_run_iris_var) {
+    } else if (key == m_run_iris_var) {  // todo: accept desired number of regions in message
       m_run_pending = true;
     } else if (key == m_clear_iris_var) {
       m_clear_pending = true;

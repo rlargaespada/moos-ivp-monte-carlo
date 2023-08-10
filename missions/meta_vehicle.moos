@@ -348,7 +348,7 @@ ProcessConfig = pIRIS2D
 
   // optimization config
   mode = manual
-  desired_regions = 20  // default
+  desired_regions = 15
   max_iters = 10
   termination_threshold = 0.5  // default
   iris_bounds = $(SEARCH_BOUNDS)
@@ -378,8 +378,8 @@ ProcessConfig = pGCS2D
   iris_complete_var = IRIS_COMPLETE  // default
 
   // gcs config
-  bezier_order = 1
-  bezier_continuity = 0
+  bezier_order = 5
+  bezier_continuity = 3
   path_length_weight = 1
   derivative_regularization_weight = 0
   derivative_regularization_order = 2
