@@ -368,7 +368,7 @@ ProcessConfig = pGCS2D
 
   // publication config
   init_plan_flag = $(STATION_UPDATES_VAR) = station_pt=$[START_X],$[START_Y] # center_activate=false
-  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS]
+  traverse_flag = $(PATH_UPDATES_VAR) = points=$[PATH_PTS] # lead=-1
 
   // pIRIS2D interface config
   rerun_iris_on_path_request = true
@@ -379,7 +379,7 @@ ProcessConfig = pGCS2D
 
   // gcs config
   bezier_order = 5
-  bezier_continuity = 3
+  bezier_continuity = 4
   path_length_weight = 1
   derivative_regularization_weight = 0
   derivative_regularization_order = 2

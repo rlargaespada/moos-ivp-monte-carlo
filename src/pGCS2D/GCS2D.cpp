@@ -386,7 +386,7 @@ bool GCS2D::planPath()
             }
           }
 
-          // todo: if mosek isn't done yet, increment some counter
+          // todo: if mosek isn't done yet, increment some counter, also post solve time
           break;
 
         case (GCSStep::CONVEX_ROUNDING):
@@ -406,6 +406,7 @@ bool GCS2D::planPath()
           } else {
             handlePlanningFail("Failed to extract the final trajectory from GCS!");
           }
+          break;
 
         default:  // shouldn't get here
           break;
