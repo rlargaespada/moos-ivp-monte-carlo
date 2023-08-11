@@ -35,9 +35,10 @@ GCS2D::GCS2D()
   m_iris_file = "";  // default: unset
   m_run_iris_on_new_path = false;  // default: false
   m_run_iris_var = "RUN_IRIS";  // default: RUN_IRIS
-  m_clear_iris_var;  // default: CLEAR_IRIS, set in onStartUp
-  m_iris_region_var;  // default: IRIS_REGION, set in onStartUp
-  m_iris_complete_var;  // default: IRIS_COMPLETE, set in onStartUp
+  m_iris_seed_pt_var = "IRIS_SEED_POINT";  // default: IRIS_SEED_POINT
+  m_clear_iris_var = "";  // default: CLEAR_IRIS, set in onStartUp
+  m_iris_region_var = "";  // default: IRIS_REGION, set in onStartUp
+  m_iris_complete_var = "";  // default: IRIS_COMPLETE, set in onStartUp
 
   // publication config
   m_prefix = "";
@@ -265,13 +266,17 @@ void GCS2D::clearIRISRegions()
 bool GCS2D::requestIRISRegions()
 {
   // todo: make sure there's a pIRIS2D app running, otherwise report run warning and return false
-  return (Notify(m_run_iris_var, "now"));
+  Notify(m_run_iris_var, "now");
+  if (m_safe_regions.empty()) {  // todo: when to send these?
+    Notify(m_iris_seed_pt_var, m_start_point.get_spec());
+    Notify(m_iris_seed_pt_var, m_goal_point.get_spec());
+  }
+  return (true);
 }
 
 
 bool GCS2D::buildGraph()
 {
-  // todo: add better error checking here
   m_gcs = std::unique_ptr<GraphOfConvexSets> (new GraphOfConvexSets(
     m_safe_regions,
     m_bezier_order,
@@ -279,7 +284,7 @@ bool GCS2D::buildGraph()
     m_start_point,
     m_goal_point,
     m_options));
-  return (true);
+  return (m_gcs->checkGraphOk());
 }
 
 
@@ -308,7 +313,7 @@ bool GCS2D::planPath()
   switch (m_mode) {
     // initial request to start planning
     case (PlannerMode::REQUEST_PENDING):
-      if (m_run_iris_on_new_path)
+      if (m_run_iris_on_new_path)  // todo: this logic needs work
         clearIRISRegions();
 
       if (m_safe_regions.empty()) {  // check if we need to run IRIS
@@ -483,6 +488,8 @@ bool GCS2D::OnStartUp()
       handled = setBooleanOnString(m_run_iris_on_new_path, value);
     } else if (param == "iris_run_var") {
       handled = setNonWhiteVarOnString(m_run_iris_var, toupper(value));
+    } else if ((param == "iris_seed_pt_var") || (param == "iris_seed_point_var")) {
+      handled = setNonWhiteVarOnString(m_iris_seed_pt_var, toupper(value));
     } else if (param == "iris_clear_var") {
       handled = setNonWhiteVarOnString(m_clear_iris_var, toupper(value));
     } else if (param == "iris_region_var") {

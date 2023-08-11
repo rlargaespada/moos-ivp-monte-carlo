@@ -625,6 +625,9 @@ bool EvalPlanner::exportMetrics()
 
   outf << "# avg_energy_eff=" << doubleToStringX(m_global_metrics.avg_energy_eff, 3) << "\n";
 
+  outf << "# avg_total_speed_change=" <<
+    doubleToStringX(m_global_metrics.avg_total_speed_change, 3) << "\n";
+
   // add trial data as csv items
   outf << "trial_num,trial_successful,timed_out, planning_failed,planning_time," <<
     "duration,collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff," <<

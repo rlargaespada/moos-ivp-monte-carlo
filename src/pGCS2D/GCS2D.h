@@ -78,6 +78,7 @@ class GCS2D : public AppCastingMOOSApp
   std::string m_iris_file;  // default: unset
   bool m_run_iris_on_new_path;  // default: false
   std::string m_run_iris_var;  // default: RUN_IRIS
+  std::string m_iris_seed_pt_var;  // default: IRIS_SEED_POINT
   std::string m_clear_iris_var;  // default: CLEAR_IRIS
   std::string m_iris_region_var;  // default: IRIS_REGION
   std::string m_iris_complete_var;  // default: IRIS_COMPLETE

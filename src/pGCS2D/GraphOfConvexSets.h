@@ -73,6 +73,7 @@ class GraphOfConvexSets
   const GCSVertex* const source() const {return (m_source);}
   const GCSVertex* const target() const {return (m_target);}
   const GraphOfConvexSetsOptions options() const {return (m_options);}
+  const bool checkGraphOk() const {return (m_valid);}
 
   // todo: phi constraints
 
@@ -122,6 +123,8 @@ class GraphOfConvexSets
  private:
   static VertexId s_vertex_id;
   static EdgeId s_edge_id;
+
+  bool m_valid;
 
   // curve params and options
   const int m_order;

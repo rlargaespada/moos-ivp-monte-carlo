@@ -46,7 +46,8 @@ int GraphOfConvexSets::s_edge_id{0};
 
 // default constructor, empty graph, no model, invalid order and continuity
 GraphOfConvexSets::GraphOfConvexSets()
-  : m_dimension(-1),
+  : m_valid(false),
+    m_dimension(-1),
     m_order(-1),
     m_continuity(-1),
     m_vertex_dim(-1),
@@ -65,7 +66,8 @@ GraphOfConvexSets::GraphOfConvexSets(
   const XYPoint& source,
   const XYPoint& target,
   const GraphOfConvexSetsOptions& options)
-  : m_dimension(2),  // we're always in 2D
+  : m_valid(false),
+    m_dimension(2),  // we're always in 2D
     m_order(order),
     m_continuity(continuity),
     m_vertex_dim(2 * (order + 1)),
@@ -81,12 +83,14 @@ GraphOfConvexSets::GraphOfConvexSets(
   assert(m_continuity < m_order);
 
   m_model = new Model("gcs");
-  // todo: only use variable/constraint names when debugging
 
   // add a vertex for each input region
-  for (const auto& region : regions)
+  for (const auto& region : regions) {
     // add regions as cartesian power of region polygons
-    addVertex(ConvexSets::PolyhedronSet{region, m_order + 1}, region.get_label());
+    auto v_ptr = addVertex(ConvexSets::PolyhedronSet{region, m_order + 1}, region.get_label());
+    if (v_ptr == nullptr)  // vertex creation failed
+      return;
+  }
 
   // find edges between regions and add edges to graph
   const std::vector<std::pair<int, int>> edges_between_regions{findEdges(regions)};
@@ -94,7 +98,9 @@ GraphOfConvexSets::GraphOfConvexSets(
   for (auto e : edges_between_regions) {
     GCSVertex* u{vertex_vector.at(e.first)};
     GCSVertex* v{vertex_vector.at(e.second)};
-    addEdge(u, v, u->name() + "->" + v->name());
+    auto e_ptr = addEdge(u, v, u->name() + "->" + v->name());
+    if (e_ptr == nullptr)  // edge creation failed
+      return;
   }
 
   // add start and goal to graph
@@ -103,7 +109,8 @@ GraphOfConvexSets::GraphOfConvexSets(
 
   // find edges from start/to goal and add edges
   auto start_goal_edges{findStartGoalEdges(regions, source, target)};
-  // todo: handle case where there's no start/goal edges
+  if ((start_goal_edges.first.empty()) || (start_goal_edges.second.empty()))
+    return;  // either start or goal doesn't have any edges
   for (int i : start_goal_edges.first) {
     GCSVertex* v{vertex_vector.at(i)};
     addEdge(m_source, v, "source->" + v->name());
@@ -113,18 +120,7 @@ GraphOfConvexSets::GraphOfConvexSets(
     addEdge(u, m_target, u->name() + "->target");
   }
 
-  // print testing
-  // for (const auto& v : m_vertices)
-  //   std::cout << v.second->id() << ": " << v.second->name() << std::endl;
-  // for (const auto& e : edges_between_regions)
-  //   std::cout << e.first << "," << e.second << std::endl;
-  // for (int i : start_goal_edges.first)
-  //   std::cout << "start->" << vertex_vector.at(i)->name() << std::endl;
-  // for (int i : start_goal_edges.second)
-  //   std::cout << vertex_vector.at(i)->name() << "->target" << std::endl;
-  // for (const auto& e : m_edges)
-  //   std::cout << e.second->id() << ": " << e.second->name() << std::endl;
-  // m_model->writeTaskStream("ptf", std::cout);
+  m_valid = true;  // graph constructed successfully
 }
 
 
@@ -141,7 +137,7 @@ GCSVertex* GraphOfConvexSets::addVertex(const ConvexSet& set, std::string name)
   auto emplace_result{m_vertices.emplace(id, new GCSVertex(id, name, set))};
   if (emplace_result.second)
     return (emplace_result.first->second.get());
-  else  // todo: raise a warning or assert here?
+  else
     return (nullptr);
 }
 
@@ -181,7 +177,7 @@ GCSEdge* GraphOfConvexSets::addEdge(GCSVertex* u, GCSVertex* v, std::string name
     u->addOutgoingEdge(e);
     v->addIncomingEdge(e);
     return (e);
-  } else {  // todo: raise a warning or assert here?
+  } else {
     return (nullptr);
   }
 }
@@ -679,7 +675,9 @@ void GraphOfConvexSets::getRoundedPaths()
   assert(m_options.max_rounding_trials > 0);  // todo: handle this more gracefully
 
   // set up random generator
-  std::default_random_engine generator(m_options.rounding_seed);
+  std::default_random_engine generator{};
+  if (m_options.rounding_seed > 0)
+    generator.seed(m_options.rounding_seed);
   std::uniform_real_distribution<double> uniform{0, 1};
 
   // grab flows from all edges
