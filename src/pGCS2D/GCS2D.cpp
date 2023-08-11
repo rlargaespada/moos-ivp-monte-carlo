@@ -63,6 +63,7 @@ GCS2D::GCS2D()
   m_path_len_traversed = 0;
   m_next_path_idx = 0;
   m_gcs_step = GCSStep::BUILD_GRAPH;
+  m_mosek_start_time = 0;
 }
 
 
@@ -371,6 +372,7 @@ bool GCS2D::planPath()
           if (!checkPlanningPreconditions()) {
             handlePlanningFail();  // checkPlanningPreconditions posts its own warnings
           } else {
+            m_mosek_start_time = MOOSTime();
             m_gcs->solveGCS();  // starts MOSEK optimization in a separate thread
             m_gcs_step = GCSStep::MOSEK_RUNNING;
           }
@@ -378,6 +380,9 @@ bool GCS2D::planPath()
 
         case (GCSStep::MOSEK_RUNNING):
           if (m_gcs->checkGCSDone()) {  // solver thread is done
+            double solve_time{MOOSTime() - m_mosek_start_time};
+            reportEvent("MOSEK Model Solve Time: " + doubleToStringX(solve_time, 3) + "s");
+
             // make sure optimization completed correctly, fail if not
             if (!m_gcs->checkSolverOk()) {
               handlePlanningFail("Failed to optimize GCS MOSEK model!");
@@ -391,7 +396,7 @@ bool GCS2D::planPath()
             }
           }
 
-          // todo: if mosek isn't done yet, increment some counter, also post solve time
+          // todo: if mosek isn't done yet, increment some counter
           break;
 
         case (GCSStep::CONVEX_ROUNDING):
@@ -785,6 +790,7 @@ bool GCS2D::buildReport()
   } else {
     m_msgs << "  Rerun IRIS on new path request: " << boolToString(m_run_iris_on_new_path) << endl;
     m_msgs << "  iris_run_var: " << m_run_iris_var << endl;
+    m_msgs << "  iris_seed_pt_var: " << m_iris_seed_pt_var << endl;
     m_msgs << "  iris_clear_var: " << m_clear_iris_var << endl;
     m_msgs << "  iris_region_var: " << m_iris_region_var << endl;
     m_msgs << "  iris_complete_var: " << m_iris_complete_var << endl;

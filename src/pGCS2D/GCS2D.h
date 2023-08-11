@@ -151,6 +151,7 @@ class GCS2D : public AppCastingMOOSApp
 // todo: if we have regions already, reuse existing graph edges
   std::unique_ptr<GraphOfConvexSets> m_gcs;
   GCSStep m_gcs_step;
+  double m_mosek_start_time;
 };
 
 #endif
