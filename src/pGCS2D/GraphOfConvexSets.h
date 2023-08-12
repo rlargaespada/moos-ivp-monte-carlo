@@ -54,7 +54,8 @@ class GraphOfConvexSets
   // todo: constructor from existing graph to reuse vertices
   // todo: and edges with a new model (transfer ownership?)
 
-  ~GraphOfConvexSets() {if (!(m_model == nullptr)) m_model->dispose();}
+  void dispose();
+  ~GraphOfConvexSets() {dispose();}
 
  public:
   GCSVertex* addVertex(const ConvexSet& set, std::string name = "");

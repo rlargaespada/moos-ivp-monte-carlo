@@ -744,6 +744,7 @@ bool DStarLite::parsePathFromGrid()
 
   int current_cell{m_start_cell}, next_cell;
   double wpt_x, wpt_y, min_cost, neighbor_cost;
+  double start{MOOSTime()};
   while (current_cell != m_goal_cell) {
     // check no path found condition, don't set path if not found
     if (std::isinf(m_grid.getVal(current_cell, g_cix))) {
@@ -767,6 +768,9 @@ bool DStarLite::parsePathFromGrid()
       }
     }
     current_cell = next_cell;
+
+    if ((MOOSTime() - start) > 10)  // if we somehow get stuck here, kill after 10 seconds
+      return (false);
   }
 
   path.mod_vertex(0, m_start_point.x(), m_start_point.y());  // change first point to be start point

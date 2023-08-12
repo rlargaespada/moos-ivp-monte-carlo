@@ -124,6 +124,14 @@ GraphOfConvexSets::GraphOfConvexSets(
 }
 
 
+void GraphOfConvexSets::dispose()
+{
+  if (!(m_model == nullptr))
+    m_model->dispose();
+  // todo: double check all pointers are deallocated
+}
+
+
 //---------------------------------------------------------
 // Methods for Changing Graph
 

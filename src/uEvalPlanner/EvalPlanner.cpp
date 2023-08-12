@@ -812,7 +812,8 @@ bool EvalPlanner::handleNextTrial() {
 
   // post trial complete
   Notify("TRIALS_COMPLETED", m_trial_data.size() + 1);
-  reportEvent("Trial " + intToString(m_trial_data.size()) + " complete!");
+  reportEvent("Trial " + intToString(m_trial_data.size()) + " complete! "
+              "Status: " + (m_current_trial.trial_successful ? "SUCCESS" : "FAIL"));
 
   // calculate and post final metrics now that trial is done
   m_current_trial.end_time = MOOSTime();
