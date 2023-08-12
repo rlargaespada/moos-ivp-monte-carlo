@@ -278,7 +278,9 @@ bool GCS2D::requestIRISRegions()
 
 bool GCS2D::buildGraph()
 {
-  m_gcs->dispose();
+  if (m_gcs)
+    m_gcs->dispose();
+
   m_gcs = std::unique_ptr<GraphOfConvexSets> (new GraphOfConvexSets(
     m_safe_regions,
     m_bezier_order,
