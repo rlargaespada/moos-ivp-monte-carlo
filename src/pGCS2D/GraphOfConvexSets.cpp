@@ -534,6 +534,10 @@ void GraphOfConvexSets::addConservationOfFlowConstraints(GCSVertex* v)
         vars[i++] = e->m_y->index(d);
       auto zy_mosek{Var::vstack(monty::new_array_ptr<Variable::t>(vars))};
 
+      // add an extra dimension to zy_mosek if needed
+      if (zy_mosek->getND() == 0)
+        zy_mosek = zy_mosek->reshape(1);
+
       // Spatial conservation of flow: sum(z_in) = sum(y_out)
       m_model->constraint("v_" + v->strId() + "_spat_cons_flow_" + std::to_string(d),
         Expr::dot(a_mosek, zy_mosek), Domain::equalsTo(0));
@@ -714,7 +718,9 @@ void GraphOfConvexSets::getRoundedPaths()
       if (candidate_edges.size() == 0) {
         path_vertex_ids.pop_back();
         new_path.pop_back();
-        assert(path_vertex_ids.size() > 0);  // todo: handle this more gracefully
+        // todo: handle case where there's no path (how does drake do it?)
+        if (path_vertex_ids.empty())
+          break;
         continue;
       }
 
