@@ -503,7 +503,8 @@ ProcessConfig = uEvalPlanner
 
   // drift and wind vector config
   #ifdef DRIFT_TYPE random
-  initflag = SEND_RANDOM_DRIFT=true  // start timerscript
+  trialflag = SEND_RANDOM_DRIFT=true  // start timerscript
+  trialflag = DRIFT_VECTOR=0,0  // stop drift at end of session
   endflag = DRIFT_VECTOR=0,0  // stop drift at end of session
   #elseifdef DRIFT_TYPE given
   initflag = DRIFT_VECTOR_ADD=$(DRIFT_VEC)
@@ -511,7 +512,8 @@ ProcessConfig = uEvalPlanner
   #endif
 
   #ifdef WIND_TYPE random
-  initflag = SEND_RANDOM_WIND=true  // start timerscript
+  trialflag = SEND_RANDOM_WIND=true  // start timerscript
+  trialflag = WIND_VECTOR=0,0  // stop wind at end of session
   endflag = WIND_VECTOR=0,0  // stop wind at end of session
   #elseifdef WIND_TYPE given
   initflag = WIND_VECTOR_ADD=$(WIND_VEC)
@@ -537,7 +539,7 @@ ProcessConfig = uTimerScript_RANDOM_DRIFT
   upon_awake = restart
 
   randvar = varname=ANG, min=0,   max=359, key=at_reset
-  randvar = varname=MAG, min=0, max=1, key=at_reset
+  randvar = varname=MAG, min=0, max=0.5, key=at_reset
 
   event = var=DRIFT_VECTOR_ADD, val="$[ANG],$[MAG]", time=0
   event = var=SEND_RANDOM_DRIFT, val="false", time=1
@@ -557,8 +559,8 @@ ProcessConfig = uTimerScript_RANDOM_WIND
   upon_awake = restart
 
   randvar = varname=ANG, min=0,   max=359, key=at_reset
-  randvar = varname=MAG, min=0, max=1, key=at_reset
+  randvar = varname=MAG, min=0, max=0.5, key=at_reset
 
-  event = var=DRIFT_VECTOR_ADD, val="$[ANG],$[MAG]", time=0
+  event = var=WIND_VECTOR_ADD, val="$[ANG],$[MAG]", time=0
   event = var=SEND_RANDOM_WIND, val="false", time=1
 }

@@ -39,7 +39,7 @@ Processconfig = ANTLER
   Run = pMarinePIDV22    @ NewConsole = false
   Run = pNodeReporter    @ NewConsole = false
   #ifdef RANDOM_GUSTS true
-  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_WIND
+  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_GUSTS
   #endif
 
   Run = pShare           @ NewConsole = false
@@ -241,7 +241,7 @@ ProcessConfig = pNodeReporter
 // uTimerScript_RANDOM_WIND configuration  block
 // simulates random drift vectors on vehicle
 // todo: for multiple vehicles, this should be on the shoreside, what conditions?
-ProcessConfig = uTimerScript_RANDOM_WIND
+ProcessConfig = uTimerScript_RANDOM_GUSTS
 {
   AppTick   = 2
   CommsTick = 2
@@ -256,7 +256,7 @@ ProcessConfig = uTimerScript_RANDOM_WIND
   upon_awake = restart
 
   randvar = varname=ANG, min=0,   max=359, key=at_reset
-  randvar = varname=MAG, min=0.5, max=2, key=at_reset
+  randvar = varname=MAG, min=0.5, max=1.5, key=at_reset
 
   event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=0
   event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=2

@@ -54,15 +54,15 @@ for ARGI; do
         echo "    Vector defining constant water currents affecting "
         echo "    obstacle and vehicle motion. Default is no drifts."
         echo "    Random drifts are generated with a random angle and"
-        echo "    magnitude between 0 and 1 m/s."
+        echo "    magnitude between 0 and 0.5 m/s."
         echo "  --wind_vector=<heading>,<magnitude> or \"random\"   "
         echo "    Vector defining cpnstant winds affecting vehicle motion"
         echo "    only. Default is no winds. Random winds are generated"
-        echo "    with a random angle and magnitude between 0 and 1 m/s. "
+        echo "    with a random angle and magnitude between 0 and 0.5 m/s. "
         echo "  --random_gusts                                   "
         echo "    Add random varying gusts of wind disturbing vehicle"
         echo "    motion. Gusts are generated with a random direction"
-        echo "    and a random magnitude between 0.5 and 2.      "
+        echo "    and a random magnitude between 0.5 and 1.5.      "
         exit 0;
     elif [ "${ARGI//[^0-9]/}" = "$ARGI" -a "$TIME_WARP" = 1 ] ; then
         TIME_WARP=$ARGI
