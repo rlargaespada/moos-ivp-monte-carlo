@@ -354,7 +354,7 @@ bool GCS2D::planPath()
             handlePlanningFail("Failed to build GCS!");
           break;
 
-        case (GCSStep::POPULATE_MODEL_1):
+        case (GCSStep::POPULATE_MODEL_1):  // todo: try running populate steps in the same iter
           // if model was populated successfully, move onto the next step next iteration
           if (populateModel1())
             m_gcs_step = GCSStep::POPULATE_MODEL_2;

@@ -1,0 +1,470 @@
+//*******************************************************
+// definitions
+// uEvalPlanner - Planner interface
+
+// Planner - helm interface
+
+
+
+//*******************************************************
+// Vehicle Configuration File
+
+ServerHost = localhost
+ServerPort = 9105
+Community  = artemis
+
+MOOSTimeWarp = 10
+
+LatOrigin  = 43.825300
+LongOrigin = -70.330400
+
+
+//------------------------------------------------------------
+Processconfig = ANTLER
+{
+  MSBetweenLaunches = 100
+
+  Run = MOOSDB           @ NewConsole = false
+  Run = pRealm           @ NewConsole = false
+  Run = pHelmIvP         @ NewConsole = false
+
+  // Run = pLogger          @ NewConsole = false
+  Run = uProcessWatch    @ NewConsole = false
+  Run = uLoadWatch       @ NewConsole = false
+
+  Run = uSimMarineV22    @ NewConsole = false
+  Run = pMarinePIDV22    @ NewConsole = false
+  Run = pNodeReporter    @ NewConsole = false
+  Run = uTimerScript     @ NewConsole = false ~ uTimerScript_RANDOM_WIND
+
+  Run = pShare           @ NewConsole = false
+  Run = pHostInfo        @ NewConsole = false
+  Run = uFldNodeBroker   @ NewConsole = false
+
+  Run = pObstacleMgr     @ NewConsole = false
+
+  Run = pDStarLite       @ NewConsole = false
+}
+
+
+//----------------------------------------------------
+// pHelmIvP Configuration Block
+
+ProcessConfig = pHelmIvP
+{
+  AppTick    = 4
+  CommsTick  = 4
+
+  behaviors    = targ_artemis.bhv
+  verbose      = false
+  domain       = course:0:359:360
+  domain       = speed:0:4:41
+}
+
+
+//------------------------------------------
+// pLogger config block
+
+ProcessConfig = pLogger
+{
+  AppTick       = 5
+  CommsTick     = 5
+
+  SyncLog       = true @ 0.2
+  AsyncLog      = true
+
+  File = MOOSLog_ARTEMIS
+  FileTimeStamp = false  // false while developing
+
+  WildCardLogging = true
+
+  WildCardOmitPattern = *_STATUS
+  WildCardOmitPattern = APPCAST
+  WildCardOmitPattern = DB_VARSUMMARY
+  WildCardOmitPattern = DB_RWSUMMARY
+}
+
+
+//------------------------------------------
+// uProcessWatch config block
+ProcessConfig = uProcessWatch
+{
+  AppTick   = 1
+  CommsTick = 1
+
+  watch_all = true
+  summary_wait = 60
+  nowatch = uXMS*
+  nowatch = uPokeDB*
+  nowatch   = uQueryDB*
+  nowatch   = uMAC*
+}
+
+
+//------------------------------------------
+// uLoadWatch config block
+ProcessConfig = uLoadWatch
+{
+  AppTick   = 2
+  CommsTick = 2
+
+  thresh = app=pHelmIvP, gapthresh=1.5
+  thresh = app=any,      gapthresh=2.0
+
+  near_breach_thresh = 0.9  // default
+
+  breach_trigger = 1    // default (first offense forgiven)
+}
+
+
+//------------------------------------------
+// uSimMarineV22 config block
+
+ProcessConfig = uSimMarineV22
+{
+  AppTick  	= 4
+  CommsTick	= 4
+
+  prefix = NAV
+
+  // start pose
+  start_pos = -100,-220  // x=, y=
+  start_heading = 35  // depends on map/layout
+  // start_speed = 0
+  // start_depth = 0
+
+  // drift config
+  drift_vector = 0,0
+  rotate_speed = 0
+
+  // keep default turn speed, acceleration parameters
+  // depth and buoyancy rate unused
+  // no wind conditions
+
+  turn_rate = 40
+  thrust_map = 0:0, 20:1, 40:2, 60:3, 80:4, 100:5
+
+  // post_des_thrust      = DESIRED_THRUSTX
+  // post_des_rudder      = DESIRED_RUDDERX
+
+  // // BELOW are embedded PID controller config params
+  // depth_control = false
+
+  // // Yaw PID controller
+  // yaw_pid_kp             = 1,2
+  // yaw_pid_kd             = 0.0
+  // yaw_pid_ki             = 0.3
+  // yaw_pid_integral_limit = 0.07
+
+  // // Speed PID controller
+  // speed_pid_kp           = 1.0
+  // speed_pid_kd           = 0.0
+  // speed_pid_ki           = 0.0
+  // speed_pid_integral_limit = 0.07
+
+  // // Maximums
+  // maxrudder  = 100
+  // maxthrust  = 100
+
+  // // A non-zero SPEED_FACTOR overrides use of SPEED_PID
+  // // Will set DESIRED_THRUST = DESIRED_SPEED * SPEED_FACTOR
+  // speed_factor = 20
+
+  // NOTE: using sim resets instead of wormholes
+  // add wormhole from goal back to start
+  // wormhole = tag=next_trial, madrid_poly={format=radial, x=$(GOAL_X), y=$(GOAL_Y), radius=8, pts=6}
+  // wormhole = tag=next_trial, weber_poly={format=radial, x=$(START_X), y=$(START_Y), radius=8, pts=6}
+  // wormhole = tag=next_trial, connection=from_madrid
+
+}
+
+
+//------------------------------------------
+// pMarinePIDV22 config block
+ProcessConfig = pMarinePIDV22
+{
+  AppTick    = 20
+  CommsTick  = 20
+
+  verbose       = true
+  depth_control = false
+  active_start  = true
+
+  // Yaw PID controller
+  yaw_pid_kp             = 1.2
+  yaw_pid_kd             = 0.0
+  yaw_pid_ki             = 0.3
+  yaw_pid_integral_limit = 0.07
+
+  // Speed PID controller
+  speed_pid_kp           = 1.0
+  speed_pid_kd           = 0.0
+  speed_pid_ki           = 0.0
+  speed_pid_integral_limit = 0.07
+
+  // Maximums
+  maxrudder  = 100
+  maxthrust  = 100
+
+  // A non-zero SPEED_FACTOR overrides use of SPEED_PID
+  // Will set DESIRED_THRUST = DESIRED_SPEED * SPEED_FACTOR
+  speed_factor = 20
+}
+
+
+//------------------------------------------
+// pNodeReporter config block
+
+ProcessConfig = pNodeReporter
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  platform_type = kayak
+  platform_color = red
+}
+
+
+//------------------------------------------
+// uTimerScript_RANDOM_WIND configuration  block
+// simulates random drift vectors on vehicle
+// todo: for multiple vehicles, this should be on the shoreside, what conditions?
+ProcessConfig = uTimerScript_RANDOM_WIND
+{
+  AppTick   = 2
+  CommsTick = 2
+  condition = DEPLOY=true
+  paused        = false
+  reset_max     = unlimited
+  reset_time    = end
+  delay_reset   = 10
+  time_warp     = 0.25:2.0
+  script_name   = RANDOM_WIND
+  script_atomic = false
+  upon_awake = restart
+
+  randvar = varname=ANG, min=0,   max=359, key=at_reset
+  randvar = varname=MAG, min=0.5, max=1.5, key=at_reset
+
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=0
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=2
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=4
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=6
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*0.2}", time=8
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=10
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=12
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=14
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", time=16
+  event = var=DRIFT_VECTOR_ADD, val="$[ANG],{$[MAG]*-0.2}", Time=18
+}
+
+
+//---------------------------------------------------------
+// pShare config block (created from plugin)
+
+ProcessConfig = pShare
+{
+  AppTick    = 4
+  CommsTick  = 4
+
+  input = route =  localhost:9305
+}
+
+
+//--------------------------------------------------
+// pHostInfo config block (created from plugin)
+
+ProcessConfig = pHostInfo
+{
+  AppTick    = 1
+  CommsTick  = 1
+}
+
+
+//------------------------------------------------
+// uFldNodeBroker config block (created from plugin)
+
+ProcessConfig = uFldNodeBroker
+{
+  AppTick   = 1
+  CommsTick = 1
+
+  try_shore_host = pshare_route=localhost:9205
+
+  // bridge = src=BHV_WARNING, alias=BHV_WARNING_ARTEMIS
+  // bridge = src=DESIRED_HEADING, alias=DESIRED_HEADING_ARTEMIS
+  // bridge = src=DESIRED_SPEED, alias=DESIRED_SPEED_ARTEMIS
+  // bridge = src=DIST_TO_STATION, alias=DIST_TO_STATION_ARTEMIS
+  // bridge = src=IVPHELM_ALLSTOP, alias=IVPHELM_ALLSTOP_ARTEMIS
+  // bridge = src=IVPHELM_STATE, alias=IVPHELM_STATE_ARTEMIS
+  // bridge = src=IVPHELM_BHV_ACTIVE, alias=IVPHELM_BHV_ACTIVE_ARTEMIS
+  // bridge = src=IVPHELM_BHV_IDLE, alias=IVPHELM_BHV_IDLE_ARTEMIS
+  // bridge = src=IVPHELM_BHV_RUNNING, alias=IVPHELM_BHV_RUNNING_ARTEMIS
+  // bridge = src=LOAD_WARNING, alias=LOAD_WARNING_ARTEMIS
+  // bridge = src=MODE, alias=MODE_ARTEMIS
+  // bridge = src=MOOS_DEBUG, alias=MOOS_DEBUG_ARTEMIS
+  // bridge = src=NAV_X, alias=NAV_X_ARTEMIS
+  // bridge = src=NAV_Y, alias=NAV_Y_ARTEMIS
+  // bridge = src=NAV_SPEED, alias=NAV_SPEED_ARTEMIS
+  // bridge = src=NAV_HEADING, alias=NAV_HEADING_ARTEMIS
+  // bridge = src=OBM_MIN_DIST_EVER, alias=OBM_MIN_DIST_EVER_ARTEMIS
+  // bridge = src=OUT_OF_BOUNDS, alias=OUT_OF_BOUNDS_ARTEMIS
+  // bridge = src=PROC_WATCH_ALL_OK, alias=PROC_WATCH_ALL_OK_ARTEMIS
+  // bridge = src=PROC_WATCH_SUMMARY, alias=PROC_WATCH_SUMMARY_ARTEMIS
+
+  bridge = src=VIEW_POLYGON
+  bridge = src=VIEW_POINT
+  bridge = src=VIEW_SEGLIST
+  bridge = src=VIEW_GRID
+  bridge = src=VIEW_GRID_DELTA
+  bridge = src=VEHICLE_CONNECT
+  bridge = src=APPCAST
+  bridge = src=NODE_PSHARE_VARS
+  bridge = src=NODE_REPORT_LOCAL,  alias=NODE_REPORT
+  bridge = src=NODE_MESSAGE_LOCAL, alias=NODE_MESSAGE
+  bridge = src=PATH_STATS
+  bridge = src=PATH_COMPLETE
+  bridge = src=PATH_FAILED
+  bridge = src=WPT_ADVANCED
+}
+
+
+//--------------------------------------------------
+// pObstacleMgr config block (created from plugin)
+
+ProcessConfig = pObstacleMgr
+{
+  AppTick   = 4
+  CommsTick = 4
+
+  post_dist_to_polys = close
+  alert_range = 30   // set by OBM_ALERT_REQUEST from obstacle avoidance behavior
+  given_max_duration = 180
+
+  general_alert = name=gen_alert, update_var=GENERAL_OBSTACLE_ALERT, alert_range=2000
+
+  // parameters for handling unknown obstacles
+  point_var = TRACKED_FEATURE
+  max_pts_per_cluster = 20   // default is 20
+  max_age_per_point = 20     // (secs)  default is 20
+  ignore_range = 40          // (meters) default is -1, (off)
+
+  // laso option configuration
+  lasso = false
+//   lasso_points = 8
+//   lasso_radius = 5
+
+  // visualization configuration
+  post_view_polys = false  //handled by obstacle avoidance behaviors
+
+  // To squeeze more viewer efficiency when large # of obstacles:
+  poly_label_thresh = 25     // Set label color=off if amt>25
+  poly_shade_thresh = 100    // Set shade color=off if amt>100
+  poly_vertex_thresh = 150   // Set vertex size=0 if amt>150
+}
+
+
+
+//------------------------------------------
+// pNullPlanner config block
+ProcessConfig = pNullPlanner
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  path_request_var = PLAN_PATH_REQUESTED
+  obs_alert_var = GENERAL_OBSTACLE_ALERT
+  wpt_complete_var = WAYPOINTS_COMPLETE
+
+  // publication config
+  init_plan_flag = STATION_UPDATES = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = PATH_UPDATES = points=$[PATH_PTS] # lead=-1
+}
+
+
+//------------------------------------------
+// pDstarLite config block
+ProcessConfig = pDStarLite
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  path_request_var = PLAN_PATH_REQUESTED
+  obs_alert_var = GENERAL_OBSTACLE_ALERT
+  wpt_complete_var = WAYPOINTS_COMPLETE
+
+  // publication config
+  init_plan_flag = STATION_UPDATES = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = PATH_UPDATES = points=$[PATH_PTS]
+  replan_flag = STATION_UPDATES = center_activate=true
+
+  grid_bounds = {-150,50:-150,-250:250,-250:250,50}
+  grid_cell_size = 5
+
+  max_planning_iters = 100
+}
+
+
+//------------------------------------------
+// pIRIS2D config block
+ProcessConfig = pIRIS2D
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  iris_rebuild_var = REBUILD_IRIS  // default
+  iris_run_var = RUN_IRIS  // default
+  iris_cLEAR_var = CLEAR_IRIS  // default
+  obs_alert_var = GENERAL_OBSTACLE_ALERT
+  seed_point_var = IRIS_SEED_POINT  // default
+
+  // publications
+  iris_region_var = IRIS_REGION
+  iris_complete_var = IRIS_COMPLETE
+
+  // visuals
+  post_ellipses = false
+
+  // optimization config
+  mode = manual
+  desired_regions = 15
+  max_iters = 10
+  termination_threshold = 0.5  // default
+  iris_bounds = {-150,50:-150,-250:250,-250:250,50}
+}
+
+
+//------------------------------------------
+// pGCS2D config block
+ProcessConfig = pGCS2D
+{
+  AppTick    = 4
+  CommsTick	 = 4
+
+  // vars to subscribe for
+  path_request_var = PLAN_PATH_REQUESTED
+  wpt_complete_var = WAYPOINTS_COMPLETE
+
+  // publication config
+  init_plan_flag = STATION_UPDATES = station_pt=$[START_X],$[START_Y] # center_activate=false
+  traverse_flag = PATH_UPDATES = points=$[PATH_PTS] # lead=-1
+
+  // pIRIS2D interface config
+  rerun_iris_on_path_request = true
+  iris_run_var = REBUILD_IRIS  // force pIRIS2D to start from scratch
+  iris_clear_var = CLEAR_IRIS  // default
+  iris_region_var = IRIS_REGION  // default
+  iris_complete_var = IRIS_COMPLETE  // default
+
+  // gcs config
+  bezier_order = 5
+  bezier_continuity = 4
+  path_length_weight = 1
+  derivative_regularization_weight = 0
+  derivative_regularization_order = 2
+
+  // optimization options are all defaults
+}

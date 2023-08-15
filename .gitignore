@@ -65,3 +65,7 @@ targ*.txt
 # other
 .vscode/
 .scratch/
+
+# save all thesis metrics
+!logs/thesis_metrics/**
+!logs/thesis_metrics/**
