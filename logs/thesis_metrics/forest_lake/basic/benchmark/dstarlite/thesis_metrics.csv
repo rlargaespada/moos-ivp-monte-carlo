@@ -18,7 +18,7 @@
 # max_deviation=382.798
 # avg_energy_eff=1.063
 # avg_total_speed_change=17.757
-trial_num,trial_successful,timed_out, planning_failed,planning_time,duration,collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff,total_deviation,max_deviation,energy_eff,total_speed_change
+trial_num,trial_successful,timed_out,planning_failed,planning_time,duration,collision_count,min_dist_to_obs,dist_traveled,path_len,dist_eff,total_deviation,max_deviation,energy_eff,total_speed_change
 0,1,0,0,1.57,112.31517,0,3.15,408.5,415.62,0.98287,0,0,1,12.17
 1,1,0,0,4.54,118.58255,0,9.63,430.7,434.28,0.99176,21.97691,7.3361,1.0449,15.53
 2,0,0,0,10.84,129.66959,1,0.2,437.1,429.28,1.01822,268.28099,24.58221,1.02564,23.44
